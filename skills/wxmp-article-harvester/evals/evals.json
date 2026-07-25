@@ -1,0 +1,59 @@
+{
+  "skill_name": "wxmp-article-harvester",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "搜一下润宇创业笔记公众号，确认能不能抓文章。",
+      "expected_output": "Uses wxmp-article-harvester, runs the wcx runner search path, and returns account candidates without writing article exports.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "抓下润宇创业笔记最近 50 篇文章，只要索引，先不要补全文。",
+      "expected_output": "Runs harvest_wxmp.py with --limit 50 --no-fulltext, creates index.md/index.json/index.csv, and reports output directory plus success/failure counts.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "导出润宇创业笔记最近 10 篇文章，正文要完整。",
+      "expected_output": "Runs wcx metadata fetch/export through wcx_run.py, checks weak article bodies, uses reusable Playwright browser extraction as the primary fulltext path, does not call paid Metaso without explicit user authorization, and writes harvest-report.md with partial failures.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "把这个微信公众号链接保存成 Markdown：https://mp.weixin.qq.com/s/example",
+      "expected_output": "Treats the request as clip-url, validates the host as https://mp.weixin.qq.com/s..., uses browser_reader.py, and saves one Markdown clipping without calling Metaso unless explicitly authorized.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "抓取润宇创业笔记 2026 年全部文章到 00_收件箱/Clippings，正文要完整，不要用付费 API。",
+      "expected_output": "Runs harvest_wxmp.py with --year 2026 --fulltext and the requested output directory, avoids manual overlapping date batches, uses browser fulltext extraction, defaults to no Metaso, and writes index plus harvest-report.md.",
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "先检查这个公众号抓取 Skill 的运行环境，不要自动安装任何东西。",
+      "expected_output": "Runs scripts/preflight.py --json, reports wcx, Playwright/Chromium and optional Metaso status, and does not install or upgrade dependencies.",
+      "files": []
+    },
+    {
+      "id": 7,
+      "prompt": "把腾讯WorkBuddy最近一个月的教程类公众号文章下载成 Markdown。",
+      "expected_output": "Searches and confirms 腾讯WorkBuddy, uses an exact one-month date range, applies a transparent tutorial title regex, fetches no more than 80 metadata items, fills text with Playwright, preserves inline image order, and reports success/partial/failed separately.",
+      "files": []
+    },
+    {
+      "id": 8,
+      "prompt": "继续上次的年度公众号抓取任务，远端这两天可能又发了新文章。",
+      "expected_output": "Resumes from the saved task fingerprint and offset, compares remote total/head aid and the saved boundary aid, shifts the offset only when the prior boundary is still provable, and exits with cursor_drift instead of silently skipping when continuity cannot be proven.",
+      "files": []
+    },
+    {
+      "id": 9,
+      "prompt": "重新刷新已有的完整公众号文章，如果微信弹验证码，不要把旧正文弄丢。",
+      "expected_output": "Uses --refresh-fulltext, opens a browser circuit breaker on the first WeChat verification page, stops subsequent browser requests, preserves every existing article that still passes the quality gate, and reports the incomplete refresh as partial without overwriting validated Markdown.",
+      "files": []
+    }
+  ]
+}

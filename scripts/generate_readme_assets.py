@@ -64,7 +64,7 @@ def portfolio() -> str:
         text(58, 62, "ZHIJIAN / OPEN AGENT SKILLS", 16, mint, 650, family=MONO, letter_spacing="2"),
         text(58, 140, "Zhijian", 58, paper, 700),
         text(58, 200, "Skills", 58, paper, 700),
-        text(58, 244, "One source. Twelve focused capabilities.", 22, muted, 450),
+        text(58, 244, "One source. Thirteen focused capabilities.", 22, muted, 450),
         rect(58, 278, 356, 46, mint, 8),
         text(78, 308, "$ npx skills add zjp1997720/zhijian-skills", 16, bg, 700, family=MONO),
         line(478, 42, 478, 318, "#355B75", 2),
@@ -73,14 +73,14 @@ def portfolio() -> str:
     groups = [
         (520, 90, "CONTROL", ["doctor", "routing", "admin", "theme"], mint),
         (735, 90, "CREATE", ["clone", "pro", "html", "styler"], orange),
-        (950, 90, "SHIP", ["plan", "release", "search", "bridge"], "#A78BFA"),
+        (950, 90, "SHIP", ["plan", "release", "search", "harvest", "bridge"], "#A78BFA"),
     ]
     for x, y, label, skills, colour in groups:
         body += [text(x, y, label, 14, colour, 700, family=MONO, letter_spacing="1.5")]
         for index, skill in enumerate(skills):
             yy = y + 18 + index * 42
             body += [rect(x, yy, 184, 32, "#173B57", 6), rect(x, yy, 5, 32, colour, 2), text(x + 18, yy + 22, skill, 15, paper, 600, family=MONO)]
-    return svg("Zhijian Skills", "One canonical portfolio of twelve focused and independently verified Agent Skills.", bg, "portfolio-outcome-map", body)
+    return svg("Zhijian Skills", "One canonical portfolio of thirteen focused and independently verified Agent Skills.", bg, "portfolio-outcome-map", body)
 
 
 def codex_doctor() -> str:
@@ -261,6 +261,42 @@ def wechat_search() -> str:
     return svg("WeChat Article Search", "A WeChat-green search interface turns a keyword into dated, source-labelled article evidence.", bg, "search-evidence-stack", body)
 
 
+def wxmp_harvester() -> str:
+    bg, paper, green, amber, red, panel, muted = "#0E2C2C", "#F7F2E7", "#27C487", "#F2B84B", "#F06A6A", "#173C3C", "#9FC1B7"
+    body = [
+        text(48, 50, "VERIFIED ARTICLE ARCHIVE", 15, green, 800, family=MONO, letter_spacing="1.8"),
+        text(48, 108, "WeChat Article", 46, paper, 760), text(48, 158, "Harvester", 46, paper, 760),
+        text(48, 202, "Index, verify, and report every body.", 21, muted, 500),
+        rect(48, 246, 336, 48, panel, 7, green, 2), text(68, 277, "CURSOR PROOF  •  BODY GATE", 15, paper, 800, family=MONO),
+        rect(448, 36, 700, 288, panel, 12, "#35615C", 2),
+        text(476, 70, "PUBLIC ACCOUNT", 14, muted, 800, family=MONO),
+        text(1120, 70, "23 INDEXED", 15, green, 850, family=MONO, text_anchor="end"),
+        line(476, 86, 1120, 86, "#35615C", 2),
+        text(704, 111, "QUALITY GATE", 13, amber, 800, family=MONO, text_anchor="middle"),
+    ]
+    rows = [
+        (126, "2026-07-24", "tutorial.md", "COMPLETE", green),
+        (184, "2026-07-23", "workflow.md", "COMPLETE", green),
+        (242, "2026-07-02", "video-post", "PARTIAL", amber),
+    ]
+    for y, published, filename, status, colour in rows:
+        body += [
+            text(476, y + 20, published, 14, paper, 650, family=MONO),
+            line(586, y + 15, 674, y + 15, "#547A75", 2),
+            circle(704, y + 15, 11, colour),
+            path(f"M699 {y+15} L703 {y+20} L711 {y+9}" if status == "COMPLETE" else f"M698 {y+15} L710 {y+15}", stroke=bg, stroke_width=3, stroke_linecap="round", stroke_linejoin="round"),
+            rect(738, y - 2, 382, 36, "#214B49", 6),
+            text(758, y + 21, filename, 15, paper, 700, family=MONO),
+            text(1100, y + 21, status, 13, colour, 850, family=MONO, text_anchor="end"),
+        ]
+    body += [
+        rect(476, 286, 644, 22, "#102F2F", 4),
+        text(492, 302, "index.json   articles/   harvest-report.md", 13, muted, 700, family=MONO),
+        circle(1098, 297, 7, red),
+    ]
+    return svg("WeChat Public Account Harvester", "A public-account index flows through a body quality gate into Markdown files and a truthful complete-or-partial status ledger.", bg, "article-status-ledger", body)
+
+
 def wechat_styler() -> str:
     bg, paper, wine, gold, ink = "#6F1D35", "#FFF8EC", "#B43E5D", "#E8B86D", "#24191D"
     body = [
@@ -309,6 +345,7 @@ HEROES = {
     ROOT / "docs/skills/wechat-article-search/assets/readme/hero.svg": wechat_search,
     ROOT / "docs/skills/wechat-styler/assets/readme/hero.svg": wechat_styler,
     ROOT / "docs/skills/workbuddy-cli-model-bridge/assets/readme/hero.svg": model_bridge,
+    ROOT / "docs/skills/wxmp-article-harvester/assets/readme/hero.svg": wxmp_harvester,
 }
 
 

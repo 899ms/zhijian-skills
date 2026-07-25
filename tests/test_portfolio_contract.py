@@ -20,6 +20,7 @@ EXPECTED_SKILLS = {
     "wechat-article-search",
     "wechat-styler",
     "workbuddy-cli-model-bridge",
+    "wxmp-article-harvester",
 }
 CAPABILITY_KEYS = {"network", "subprocess", "filesystem", "credentials"}
 ALLOWED_CAPABILITY_VALUES = {"none", "read", "write", "required"}

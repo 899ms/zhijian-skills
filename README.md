@@ -1,7 +1,7 @@
 # Zhijian Skills
 
 <p align="center">
-  <img src="./assets/readme/portfolio-hero.svg" width="100%" alt="Zhijian Skills: one canonical portfolio of twelve focused Agent Skills">
+  <img src="./assets/readme/portfolio-hero.svg" width="100%" alt="Zhijian Skills: one canonical portfolio of thirteen focused Agent Skills">
 </p>
 
 <p align="center"><strong>Install focused Agent Skills from one trusted source, with complete payloads and independently verified releases.</strong></p>
@@ -12,11 +12,11 @@
   <a href="./CONTRIBUTING.md">Contribute</a>
 </p>
 
-Zhijian Skills is the canonical source for twelve focused Agent Skills spanning Codex operations and experience, workflow orchestration, model reasoning and infrastructure, knowledge systems, research, information design, and publishing.
+Zhijian Skills is the canonical source for thirteen focused Agent Skills spanning Codex operations and experience, workflow orchestration, model reasoning and infrastructure, knowledge systems, research, information design, and publishing.
 
 ## Start in 30 seconds
 
-List all twelve Skills:
+List all thirteen Skills:
 
 ```bash
 npx skills add zjp1997720/zhijian-skills --list
@@ -53,6 +53,7 @@ npx skills add zjp1997720/zhijian-skills \
 | Content research | [`wechat-article-search`](docs/skills/wechat-article-search/README.md) | Discover WeChat public-account articles as structured JSON | [Docs](docs/skills/wechat-article-search/README.md) |
 | Editorial publishing | [`wechat-styler`](docs/skills/wechat-styler/README.md) | Convert Markdown into polished, WeChat-compatible inline HTML | [Docs](docs/skills/wechat-styler/README.md) |
 | Model infrastructure | [`workbuddy-cli-model-bridge`](docs/skills/workbuddy-cli-model-bridge/README.md) | Connect verified CLI subscription models to WorkBuddy through a loopback proxy | [Docs](docs/skills/workbuddy-cli-model-bridge/README.md) |
+| Content archiving | [`wxmp-article-harvester`](docs/skills/wxmp-article-harvester/README.md) | Export a public WeChat account into verified Markdown, indexes, and a completion report | [Docs](docs/skills/wxmp-article-harvester/README.md) |
 
 ## Why one Portfolio
 

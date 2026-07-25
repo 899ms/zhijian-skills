@@ -271,6 +271,29 @@
         "credentials": "required"
       },
       "harnesses": ["codex", "claude-code", "agents"]
+    },
+    {
+      "name": "wxmp-article-harvester",
+      "lifecycle": "active",
+      "version": "1.0.0",
+      "path": "skills/wxmp-article-harvester",
+      "documentation": "docs/skills/wxmp-article-harvester/README.md",
+      "documentation_zh": "docs/skills/wxmp-article-harvester/README.zh-CN.md",
+      "changelog": "docs/changelogs/wxmp-article-harvester.md",
+      "canonical_tag": "wxmp-article-harvester/v1.0.0",
+      "validation": {
+        "commands": [
+          "python3 -m unittest discover -s skills/wxmp-article-harvester/tests -v"
+        ],
+        "live_smoke": null
+      },
+      "capabilities": {
+        "network": "required",
+        "subprocess": "required",
+        "filesystem": "write",
+        "credentials": "required"
+      },
+      "harnesses": ["codex", "claude-code", "agents"]
     }
   ]
 }
