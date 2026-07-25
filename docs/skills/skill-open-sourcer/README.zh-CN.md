@@ -33,6 +33,7 @@ npx skills add zjp1997720/zhijian-skills \
 - 验证 Skill、整个 Portfolio、声明测试、README 结构与资产、本地发现和隔离复制安装。
 - 以显式的统一仓库根目录作为 README 共享链接的审计边界。
 - 使用顶层 CLI 帮助和只读列表发现，避免帮助探测误触真实安装。
+- 默认用 `--skill <name>` 只规划一个 Skill，避免把其他待发布改动带入候选集；只有明确执行 Portfolio 发布波次时才使用 `--all`。
 - 只推送统一仓库，只创建 `<skill>/v<version>` Tag。
 - 输出统一安装命令和发布文案。
 

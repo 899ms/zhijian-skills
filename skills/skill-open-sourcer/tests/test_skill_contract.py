@@ -22,6 +22,14 @@ class SkillContractTests(unittest.TestCase):
             self.assertIn("npx skills add <source> --help", text)
             self.assertIn("may perform a real installation", text)
 
+    def test_single_skill_release_selector_is_the_documented_default(self) -> None:
+        skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        contract = (ROOT / "references" / "release-contract.md").read_text(encoding="utf-8")
+        for text in (skill, contract):
+            self.assertIn("--skill <name>", text)
+            self.assertIn("mutually exclusive", text)
+            self.assertIn("--exclude", text)
+
 
 if __name__ == "__main__":
     unittest.main()

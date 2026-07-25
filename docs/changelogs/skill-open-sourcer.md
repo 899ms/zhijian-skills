@@ -1,5 +1,11 @@
 # skill-open-sourcer Changelog
 
+## 2.2.0 — 2026-07-25
+
+- Add `release_portfolio.py plan --skill <name>` for narrow, deterministic single-Skill release plans.
+- Make `--skill` and `--all` mutually exclusive, reject `--skill` plus `--exclude`, and fail on unknown Skill names before creating candidate refs.
+- Keep repeated `--skill` available for an explicitly authorized small release set while preserving `--all` for intentional Portfolio waves.
+
 ## 2.1.0 — 2026-07-24
 
 - Add a required eight-field README release story and explicit `clean-doc` / `proof-led` tier decision.

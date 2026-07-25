@@ -33,6 +33,7 @@ Then invoke `$skill-open-sourcer` with a local `SKILL.md` or Skill directory.
 - Validates the Skill, full Portfolio, declared tests, README structure and assets, local discovery, and isolated copy installation.
 - Audits shared Portfolio README links against an explicit canonical repository boundary.
 - Uses top-level CLI help and list-only discovery so a help probe cannot trigger an unintended installation.
+- Plans one Skill with `--skill <name>` by default, so unrelated pending releases cannot enter the candidate set; `--all` remains available for an intentional Portfolio wave.
 - Pushes only the canonical Portfolio and creates only `<skill>/v<version>` Tags.
 - Produces the canonical install command and launch copy.
 

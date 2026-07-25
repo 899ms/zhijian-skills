@@ -191,15 +191,30 @@ def record_changed(repo: Path, record: dict[str, Any]) -> tuple[bool, str]:
     return changed, "content_change" if changed else "unchanged"
 
 
-def build_release_plan(repo: Path, *, excluded: set[str] | None = None) -> dict[str, Any]:
+def build_release_plan(
+    repo: Path,
+    *,
+    selected: set[str] | None = None,
+    excluded: set[str] | None = None,
+) -> dict[str, Any]:
     repo = repo.resolve()
+    selected = selected or set()
     excluded = excluded or set()
+    if selected and excluded:
+        raise ReleaseError("plan.selector_conflict: --exclude cannot be used with --skill")
     if not worktree_is_clean(repo):
         raise ReleaseError("plan.dirty: commit or stash canonical changes before planning")
     head = repository_head(repo)
     identity = executor_identity(repo)
+    records = sorted(load_registry(repo), key=lambda item: item["name"])
+    active_names = {record["name"] for record in records}
+    unknown = sorted(selected - active_names)
+    if unknown:
+        raise ReleaseError(f"plan.skill_unknown: {', '.join(unknown)}")
     releases: list[dict[str, Any]] = []
-    for record in sorted(load_registry(repo), key=lambda item: item["name"]):
+    for record in records:
+        if selected and record["name"] not in selected:
+            continue
         if record["name"] in excluded:
             continue
         changed, reason = record_changed(repo, record)
@@ -333,9 +348,22 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
     plan = subparsers.add_parser("plan")
     plan.add_argument("--repo", required=True)
-    plan.add_argument("--all", action="store_true", required=True)
+    selector = plan.add_mutually_exclusive_group(required=True)
+    selector.add_argument("--all", action="store_true")
+    selector.add_argument(
+        "--skill",
+        action="append",
+        default=[],
+        metavar="NAME",
+        help="plan only the named active Skill; repeat to select multiple Skills",
+    )
     plan.add_argument("--dry-run", action="store_true", required=True)
-    plan.add_argument("--exclude", action="append", default=[])
+    plan.add_argument(
+        "--exclude",
+        action="append",
+        default=[],
+        help="exclude a Skill from --all planning; cannot be combined with --skill",
+    )
     plan.add_argument("--plan-out", required=True)
     verify = subparsers.add_parser("verify")
     verify.add_argument("--plan", required=True)
@@ -356,7 +384,11 @@ def main() -> int:
     args = build_parser().parse_args()
     try:
         if args.command == "plan":
-            plan = build_release_plan(Path(args.repo), excluded=set(args.exclude))
+            plan = build_release_plan(
+                Path(args.repo),
+                selected=set(args.skill),
+                excluded=set(args.exclude),
+            )
             Path(args.plan_out).write_text(
                 json.dumps(plan, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
                 encoding="utf-8",
