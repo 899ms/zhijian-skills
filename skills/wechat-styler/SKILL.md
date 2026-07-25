@@ -2,7 +2,7 @@
 name: wechat-styler
 slug: wechat-styler
 displayName: WeChat Styler
-version: 1.8.0
+version: 1.9.0
 description: 将 Markdown 文章转换为微信公众号可用的内联样式 HTML，支持多主题切换、结构化组件和 SVG 开场动画。用于公众号排版、文章 HTML 生成、替代不稳定外部排版服务。默认纯净排版,加 --components 启用 Agent 智能改写(组件+开场动画)。
 summary: Markdown → 公众号 HTML，多主题 + 组件 + SVG 开场动画。
 tags: [wechat, markdown, html, publishing, design]
@@ -25,6 +25,9 @@ license: MIT
 # 组件模式（Agent 智能改写 + 开场动画 + 8 种结构化表达）
 /wechat-styler path/to/article.md --components
 
+# 丰富组件模式（仅在用户明确要求“激进一点 / 多用组件”时启用）
+/wechat-styler path/to/article.md --components --component-density rich
+
 # 批量转换
 /wechat-styler "articles/*.md" --theme kami
 
@@ -35,6 +38,16 @@ license: MIT
 **两种模式：**
 - **默认模式**：直接转换，克制排版，无组件无动画。90% 场景用这个。
 - **组件模式（`--components`）**：Agent 分析文章结构，智能改写 Markdown，自动加开场动画。生成前向用户确认。
+
+组件密度由 Agent 改写层控制，不传时保持 `standard`：
+
+| 密度 | 触发方式 | 结构组件预算 |
+|------|----------|--------------|
+| `restrained` | 用户说“克制、少组件、轻排版” | 2-4 个 |
+| `standard` | 默认 | 3-6 个 |
+| `rich` | 用户说“激进一点、丰富一点、多用组件” | 7-12 个；超过 8000 字可到 14 个 |
+
+普通图片、正文引用和行内高亮不计入结构组件预算。密度只改变组件候选数量，不放宽防重复、卡片短文本和微信兼容规则。
 
 ## 可用主题
 
@@ -61,9 +74,19 @@ license: MIT
 
 Agent **不直接调用 convert**，先执行 5 步智能改写流程：
 
+**写作层前置硬门：先检查段落密度**
+
+WeChat Styler 不负责把拥挤长段自动切开。段落边界属于写作语义，渲染器按标点拆段会破坏作者节奏。组件改写前先运行：
+
+```bash
+npm run qa:density -- /absolute/path/to/article.md --strict
+```
+
+如果失败，停止排版，回到上游 Markdown 按事实、判断、机制、例子、边界和行动的切换点拆段。不要用缩小字号、放大行高或增加组件掩盖正文阅读墙。
+
 **第 1 步：分析文章结构**
 
-读完整篇 Markdown，识别适合用组件呈现的内容（表格→对比卡片、流程→步骤块、金句→金句块等）。只改写确实适合的内容，一篇文章组件数量控制在 3-6 个。详见 `references/component-guide.md`。
+读完整篇 Markdown，识别适合用组件呈现的内容（表格→对比卡片、流程→步骤块、金句→金句块等）。只改写确实适合的内容，并按 `component-density` 执行预算；未指定时使用 `standard` 的 3-6 个。详见 `references/component-guide.md`。
 
 **⛔ 防重复硬规则**：金句块/提示块/警告块的核心原则是**替换原文，不是追加**。如果原文已经把同样的意思说清楚了，不要在原文后面追加组件重复一遍。正确做法是删掉原文的概括句，只保留视觉权重更高的组件；或者原文已完整表达时不加组件。生成前必须全文扫描确认无重复。
 
@@ -92,6 +115,8 @@ Agent **不直接调用 convert**，先执行 5 步智能改写流程：
 - `:::compare` / `:::flow` 围栏是否独占一行
 - 矩阵对比是否被误转成 compare
 - 开场动画标题长度是否超出 viewBox
+- 结构组件数量是否落在选定密度预算内
+- 段落密度硬门是否通过；记录中位数、P90、百字长段占比和最长连续长段
 
 **第 5 步：生成**
 
@@ -99,11 +124,24 @@ Agent **不直接调用 convert**，先执行 5 步智能改写流程：
 
 ```bash
 node scripts/convert.mjs /tmp/rewritten.md --theme zhijian --components \
+  --strict-density \
   --cover --cover-template typewriter \
   --cover-title "..." --cover-subtitle "..." --cover-tags "..."
 ```
 
 `--components` 启用时自动包含 `--cover`（开场动画）。
+
+生成 HTML 后，`zhijian` 主题必须执行移动端视觉检查：
+
+```bash
+npm run qa:mobile -- /absolute/path/to/article.html \
+  --expect-zhijian --strict-image-uniqueness \
+  --screenshot /tmp/article-mobile.png
+```
+
+检查项包括 390px 视口横向溢出、坏图、图片 URL 异常重复、引用符号与首行同段对齐、引用是否误用左侧竖线、H2 暖陶色层级。失败时先修排版，再注入公众号。
+
+`convert.mjs` 默认会打印段落密度软门报告；正式发布候选必须传 `--strict-density`。该门自动阻止明显的阅读墙；连续超短段只提醒人工检查，不能仅凭数量判失败。渲染器不自动修改正文。
 
 ## SVG 开场动画
 
@@ -133,13 +171,15 @@ Agent 选定模板后，在确认环节明确告知用户："我选了 X 模板�
 
 ## 注入微信编辑器
 
-微信编辑器的粘贴过滤器会剥离 `<animate>` 标签。用 opencli 直接操作 DOM 绕过：
+微信编辑器的粘贴过滤器会剥离 `<animate>` 标签。当前稳定路径是用 OpenCLI 直接操作 DOM：
 
 ```bash
-export OPENCLI_PROFILE=4nwbtdn6
+export OPENCLI_PROFILE="<your-opencli-profile>"
 export WX_EDITOR_URL="https://mp.weixin.qq.com/..."
 node scripts/inject-to-wechat.mjs article_wechat.html
 ```
+
+**发布后端选择规则：** Codex 内置 Chrome 只有在公众号编辑页允许 DOM 访问和写入时才可能成为注入后端。当前 Chrome Browser 安全策略会在 `mp.weixin.qq.com/cgi-bin/appmsg` 拒绝页面访问，并明确禁止通过 CDP 绕过，因此不能用来注入或验证 SVG 动画。遇到该策略拦截时直接使用 OpenCLI；不得改走 CDP、其他浏览器自动化或间接脚本规避。未来只有在同一编辑页完成“只读探测 → 正文写入 → `<animate>` 回读 → 草稿保存”四项实测后，才能调整默认后端。
 
 稳定发布模式：
 
@@ -149,11 +189,16 @@ node scripts/inject-to-wechat.mjs article_wechat.html \
   --title "公众号标题" \
   --summary "转发摘要" \
   --sync-cover-from-body \
+  --cover-file /path/to/local-cover.jpg \
   --save-draft \
   --report /tmp/wechat-publish-report.json
 ```
 
-注入器会轮询定位正文编辑区，避开标题 ProseMirror；同步标题、摘要，并可把正文第一张 2.35:1 图片设为封面；自动压缩超过 2MB 的远程图片；等待微信完成图片转存；保存后验证 `appmsgid`、SVG、动画、图片和正文首尾。使用 `--verify-only --reuse-current` 可以只读检查已经打开的草稿。
+`--cover-file` 是推荐的明确封面入口：已有封面时会替换为指定文件；没有封面时会自动打开图片库、上传本地封面、选择素材，并依次完成“下一步”和裁剪确认。只使用 `--sync-cover-from-body` 且不传文件时，才会优先沿用已有封面或从正文选择第一张图。本地封面建议使用 2.35:1，超过 180KB 时在 macOS 自动压成适合页面注入的 JPEG。
+
+注入器会轮询定位正文编辑区，避开标题 ProseMirror；同步标题、摘要；自动压缩超过 2MB 的远程图片；等待微信完成图片转存；把 `mmbiz.qlogo.cn`、`mmbiz.qpic.cn` 和 `wx.qlogo.cn` 都视为微信已接管的图片；保存后通过“出现新的 `appmsgid`”或“已有 `appmsgid` + 本次保存提示/历史变更”确认草稿，并验证 SVG、动画、图片和正文首尾。`history` 等页面字段缺失时会归一化为空数组，不再触发脚本异常。
+
+发布命令应始终带 `--report`。成功报告包含 `cover.strategy`、图片状态和保存证据；任何阶段失败也会写入 `mode: "failed"`、`phase`、脱敏后的错误、只读现场状态与可直接执行的恢复动作。使用 `--verify-only --reuse-current` 可以只读检查已经打开的草稿。
 
 详细流程见 `references/opencli-injection.md`。
 
@@ -188,6 +233,8 @@ node scripts/inject-to-wechat.mjs article_wechat.html \
 | `--max-width` | 内容最大宽度（px） | `640` |
 | `--output` | 输出文件路径 | `<input>_wechat.html` |
 | `--components` | 启用组件模式（智能改写+动画+组件） | `false` |
+| `--component-density` | Agent 改写层组件密度：`restrained / standard / rich`，不传给 `convert.mjs` | `standard` |
+| `--strict-density` | 段落密度失败时停止生成；正式发布候选必传 | `false` |
 | `--cover` | 生成开场动画（`--components` 自动包含） | `false` |
 | `--cover-template` | 开场动画模板 | `ink-wash` |
 | `--cover-title` | 开场动画主标题 | 从 frontmatter.title 取 |
@@ -196,10 +243,11 @@ node scripts/inject-to-wechat.mjs article_wechat.html \
 
 ### 字号建议
 
-手机端公众号文字显示比电脑端大，主题默认字号在电脑端看着合适，手机端会显挤。建议：
+`zhijian` 默认正文为 15px / 1.68 行高。大鹏已确认 15px 在手机端阅读更舒服。字号只控制显示尺度，不能替代内容层的段落修复。建议：
 
-- **长文/信息密度高的文章**：`--font-size 15`（比默认 17 小一号，手机端更舒展）
-- **短文/情感类文章**：用主题默认字号即可
+- **公众号长文/信息密度高的文章**：保持默认 15px，同时先通过段落密度硬门
+- **叙事文章、年长读者或希望更舒展**：可使用 17px
+- **16px 舒展模式**：读者年龄偏高或正文术语较多时可显式使用
 - **极简主题 minimal**：默认就偏小，一般不需要调
 
 ## 占位符机制
@@ -225,11 +273,11 @@ node scripts/inject-to-wechat.mjs article_wechat.html \
 | 文件 | 内容 |
 |------|------|
 | `references/theme-guide.md` | 8 主题完整配置、Renderer Presets、扩展指南、技术实现 |
-| `references/component-guide.md` | 6 组件完整语法示例、设计原则、智能改写规则 |
+| `references/component-guide.md` | 8 种结构化表达的语法示例、设计原则与智能改写规则 |
 | `references/svg-animation-design.md` | 5 模板设计原则、技术约束、11 条踩坑清单 |
 | `references/wechat-compatibility.md` | 公众号兼容硬规则（ERROR/WARN 详情） |
-| `references/opencli-injection.md` | opencli 注入流程、前置条件、封装踩坑 |
+| `references/opencli-injection.md` | OpenCLI 注入流程、浏览器能力边界、前置条件与故障恢复 |
 
 ---
 
-**版本：** 1.8.0 · **作者：** 大鹏
+**版本：** 1.9.0 · **作者：** 大鹏

@@ -3,8 +3,8 @@ description: 智见AI 品牌主题 - 暖纸感 × 顾问可信度，深暖陶行
 renderer_preset: zhijian-warm-paper
 font_family_cn: "'Source Han Serif SC VF','Source Han Serif SC','Noto Serif CJK SC','Songti SC',STSong,SimSun,Georgia,serif"
 font_family_en: "'Source Han Serif SC VF','Source Han Serif SC',Georgia,serif"
-font_size: 17
-line_height: 1.58
+font_size: 15
+line_height: 1.68
 accent_color: "#B85235"
 accent_secondary: "#1B365D"
 background_color: "#F5F4ED"
@@ -17,8 +17,10 @@ ui_font: "'Source Han Serif SC VF','Source Han Serif SC','Noto Serif CJK SC','So
 code_font: "'SF Mono','JetBrains Mono',Menlo,Consolas,'Source Han Serif SC VF','Source Han Serif SC',monospace"
 code_bg: "#30302E"
 code_color: "#F5F4ED"
-quote_border: "#B85235"
-quote_bg: "#FAF9F5"
+quote_border: "#1B365D"
+quote_bg: "#EEF2F7"
+quote_text: "#35465A"
+quote_mark: "#1B365D"
 divider_color: "#E5E3D8"
 border_color: "#E5E3D8"
 tag_bg: "#FAF9F5"
@@ -31,20 +33,20 @@ max_width: 640
 type_scale:
   h1: 28
   h2: 22
-  h3: 18
-  body: 17
-  caption: 13
+  h3: 19
+  body: 15
+  caption: 12
   code: 14
 rhythm:
-  body_line_height: 1.58
+  body_line_height: 1.68
   heading_line_height: 1.22
-  paragraph_margin: 20
+  paragraph_margin: 19
   section_padding_first: 20
   section_padding: 32
   list_item_margin: 10
 block_style:
   heading_style: warm-bar
-  quote_style: human-callout
+  quote_style: trust-quote
   list_style: standard
   code_style: dark-terminal
   image_style: soft-frame

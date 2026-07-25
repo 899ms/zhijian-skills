@@ -1,0 +1,140 @@
+#!/usr/bin/env node
+
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+
+import { chromium } from 'playwright-core';
+
+function parseArgs(argv) {
+  const options = {
+    input: '',
+    screenshot: '',
+    width: 390,
+    height: 844,
+    expectZhijian: false,
+    strictImageUniqueness: false,
+  };
+  for (let index = 0; index < argv.length; index += 1) {
+    const value = argv[index];
+    if (!value.startsWith('--') && !options.input) options.input = value;
+    else if (value === '--screenshot') options.screenshot = argv[++index];
+    else if (value === '--viewport') {
+      const match = String(argv[++index]).match(/^(\d+)x(\d+)$/);
+      if (!match) throw new Error('viewport must look like 390x844');
+      options.width = Number(match[1]);
+      options.height = Number(match[2]);
+    } else if (value === '--expect-zhijian') options.expectZhijian = true;
+    else if (value === '--strict-image-uniqueness') options.strictImageUniqueness = true;
+    else throw new Error(`unknown option: ${value}`);
+  }
+  if (!options.input) throw new Error('HTML input file is required');
+  return options;
+}
+
+async function inspect(page, options) {
+  return page.evaluate(({ expectZhijian, strictImageUniqueness }) => {
+    const textRangeAfter = (mark, paragraph) => {
+      const walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT);
+      let textNode = walker.nextNode();
+      while (textNode) {
+        if (!mark.contains(textNode)) {
+          const offset = textNode.data.search(/\S/);
+          if (offset >= 0) {
+            const range = document.createRange();
+            range.setStart(textNode, offset);
+            range.setEnd(textNode, Math.min(offset + 1, textNode.length));
+            return range.getBoundingClientRect();
+          }
+        }
+        textNode = walker.nextNode();
+      }
+      return null;
+    };
+    const root = document.querySelector('[data-wechat-root="article"]');
+    if (!root) return { failures: ['article root not found'] };
+
+    const images = [...root.querySelectorAll('img')];
+    const imageUrls = images.map((image) => image.currentSrc || image.src || '');
+    const duplicateImageUrls = [...new Set(imageUrls.filter((url, index) => url && imageUrls.indexOf(url) !== index))];
+    const brokenImages = images.filter((image) => !image.complete || image.naturalWidth === 0).length;
+    const quoteReports = [...root.querySelectorAll('[data-wechat-block="quote"]')].map((quote) => {
+      const paragraph = quote.querySelector('p');
+      const mark = paragraph ? [...paragraph.querySelectorAll('span')].find((span) => span.textContent === '“') : null;
+      const markRect = mark?.getBoundingClientRect();
+      const textRect = mark && paragraph ? textRangeAfter(mark, paragraph) : null;
+      const borderLeftWidth = Number.parseFloat(getComputedStyle(quote).borderLeftWidth || '0');
+      return {
+        hasMark: Boolean(mark),
+        sameParagraph: Boolean(mark && paragraph && mark.parentElement === paragraph),
+        topDelta: markRect && textRect ? Number(Math.abs(markRect.top - textRect.top).toFixed(2)) : null,
+        lineSeparated: markRect && textRect ? markRect.bottom < textRect.top - 1 : true,
+        hasLeftBorder: borderLeftWidth > 0,
+      };
+    });
+    const h2s = [...root.querySelectorAll('h2')];
+    const warmBarH2s = h2s.filter((heading) => {
+      const style = getComputedStyle(heading);
+      return Number.parseFloat(style.borderLeftWidth || '0') >= 3
+        && style.borderLeftColor === 'rgb(184, 82, 53)';
+    });
+    const failures = [];
+    if (document.documentElement.scrollWidth > window.innerWidth + 1) failures.push('document has horizontal overflow');
+    if (root.scrollWidth > root.clientWidth + 1) failures.push('article root has horizontal overflow');
+    if (brokenImages > 0) failures.push(`${brokenImages} image(s) failed to load`);
+    if (strictImageUniqueness && duplicateImageUrls.length > 0) {
+      failures.push(`${duplicateImageUrls.length} duplicate image URL(s) found`);
+    }
+    quoteReports.forEach((report, index) => {
+      if (!report.hasMark || !report.sameParagraph || report.lineSeparated || report.topDelta > 12) {
+        failures.push(`quote ${index + 1} mark is not aligned with its first text line`);
+      }
+      if (expectZhijian && report.hasLeftBorder) failures.push(`quote ${index + 1} unexpectedly has a left border`);
+    });
+    if (expectZhijian && h2s.length > 0 && warmBarH2s.length !== h2s.length) {
+      failures.push(`Zhijian warm-bar H2 count ${warmBarH2s.length}/${h2s.length}`);
+    }
+    return {
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+      article: { scrollWidth: root.scrollWidth, clientWidth: root.clientWidth },
+      images: images.length,
+      uniqueImages: new Set(imageUrls).size,
+      duplicateImageUrls,
+      brokenImages,
+      quotes: quoteReports,
+      h2Count: h2s.length,
+      warmBarH2Count: warmBarH2s.length,
+      failures,
+    };
+  }, {
+    expectZhijian: options.expectZhijian,
+    strictImageUniqueness: options.strictImageUniqueness,
+  });
+}
+
+let browser;
+try {
+  const options = parseArgs(process.argv.slice(2));
+  const input = path.resolve(options.input);
+  if (!fs.existsSync(input)) throw new Error(`HTML file not found: ${input}`);
+  const screenshot = path.resolve(
+    options.screenshot || path.join(os.tmpdir(), `${path.parse(input).name}-mobile-${options.width}.png`),
+  );
+  browser = await chromium.launch({ channel: process.env.CHROME_CHANNEL || 'chrome', headless: true });
+  const page = await browser.newPage({ viewport: { width: options.width, height: options.height } });
+  await page.goto(pathToFileURL(input).href, { waitUntil: 'networkidle' });
+  await page.evaluate(() => document.fonts?.ready);
+  await page.screenshot({ path: screenshot, fullPage: true });
+  const report = await inspect(page, options);
+  report.ok = report.failures.length === 0;
+  report.input = input;
+  report.screenshot = screenshot;
+  console.log(JSON.stringify(report, null, 2));
+  if (!report.ok) process.exitCode = 1;
+} catch (error) {
+  console.error(JSON.stringify({ ok: false, error: error.message }, null, 2));
+  process.exitCode = 1;
+} finally {
+  await browser?.close();
+}

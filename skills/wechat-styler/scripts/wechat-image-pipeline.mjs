@@ -1,7 +1,10 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+
+import { isWeChatHostedImageUrl } from './wechat-image-hosts.mjs';
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -30,7 +33,7 @@ export function findRemoteImageUrls(content) {
   const urls = [...content.matchAll(/<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi)]
     .map((match) => match[1].replaceAll('&amp;', '&'))
     .filter((url) => /^https?:/i.test(url))
-    .filter((url) => !/(?:mmbiz|qpic)\.(?:cn|com)/i.test(url));
+    .filter((url) => !isWeChatHostedImageUrl(url));
   return [...new Set(urls)];
 }
 
@@ -40,6 +43,25 @@ export function replaceImageUrls(content, mapping) {
     updated = updated.replace(new RegExp(escapeRegExp(source), 'g'), target);
   }
   return updated;
+}
+
+export function optimizedFilenameForUrl(url) {
+  const identity = createHash('sha256').update(url).digest('hex').slice(0, 16);
+  return `wechat-${identity}.jpg`;
+}
+
+export function assertDistinctUploadedUrls(mapping) {
+  const owners = new Map();
+  for (const [source, target] of mapping.entries()) {
+    const previousSource = owners.get(target);
+    if (previousSource && previousSource !== source) {
+      throw new Error(
+        `PicGo returned the same URL for different source images: ${optimizedFilenameForUrl(previousSource)} and ${optimizedFilenameForUrl(source)}. `
+        + 'The upload has been stopped to prevent image overwrite; verify the PicGo naming strategy or retry with --no-optimize-images.',
+      );
+    }
+    owners.set(target, source);
+  }
 }
 
 async function getContentLength(url, timeoutMs) {
@@ -59,12 +81,12 @@ export async function downloadRemoteImage(url, destination, timeoutMs = 30000) {
   return destination;
 }
 
-function optimizeLocalImage(sourcePath, maxWidth, quality, workDir) {
+function optimizeLocalImage(sourcePath, maxWidth, quality, workDir, targetFilename) {
   if (process.platform !== 'darwin') throw new Error('automatic image resizing currently requires macOS sips');
   const dimensions = run('sips', ['-g', 'pixelWidth', '-g', 'pixelHeight', sourcePath]);
   const widthMatch = dimensions.match(/pixelWidth:\s*(\d+)/);
   const width = Number(widthMatch?.[1] || '0');
-  const targetPath = path.join(workDir, `${path.parse(sourcePath).name}-wechat.jpg`);
+  const targetPath = path.join(workDir, targetFilename);
   const args = ['-s', 'format', 'jpeg', '-s', 'formatOptions', String(quality)];
   if (width > maxWidth) args.push('--resampleWidth', String(maxWidth));
   args.push(sourcePath, '--out', targetPath);
@@ -92,7 +114,13 @@ async function optimizeRemoteImage(url, options) {
     const extension = path.extname(new URL(url).pathname) || '.img';
     const sourcePath = path.join(workDir, `source${extension}`);
     await downloadRemoteImage(url, sourcePath, options.timeoutMs);
-    const optimizedPath = optimizeLocalImage(sourcePath, options.maxWidth, options.quality, workDir);
+    const optimizedPath = optimizeLocalImage(
+      sourcePath,
+      options.maxWidth,
+      options.quality,
+      workDir,
+      optimizedFilenameForUrl(url),
+    );
     return await uploadWithPicGo(optimizedPath, options.picgoServer, options.timeoutMs);
   } finally {
     fs.rmSync(workDir, { recursive: true, force: true });
@@ -108,12 +136,14 @@ export async function optimizeContentImages(content, options = {}) {
     picgoServer: options.picgoServer ?? 'http://127.0.0.1:36677',
   };
   const forced = new Set(options.forceUrls || []);
+  const optimizeRemote = options.optimizeRemote || optimizeRemoteImage;
   const mapping = new Map();
   for (const url of findRemoteImageUrls(content)) {
     const contentLength = forced.has(url) ? settings.maxBytes + 1 : await getContentLength(url, settings.timeoutMs);
     if (!shouldOptimizeImage(contentLength, settings.maxBytes)) continue;
-    const uploadedUrl = await optimizeRemoteImage(url, settings);
+    const uploadedUrl = await optimizeRemote(url, settings);
     mapping.set(url, uploadedUrl);
+    assertDistinctUploadedUrls(mapping);
   }
   return {
     content: replaceImageUrls(content, mapping),

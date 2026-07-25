@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   buildInjectScript,
   buildProbeScript,
+  buildVerifyScript,
   extractArticleDocument,
 } from '../scripts/wechat-publish-core.mjs';
 
@@ -39,4 +40,13 @@ test('probes the body editor without selecting the title ProseMirror', () => {
   assert.match(script, /title-editor__input/);
   assert.match(script, /rich_media_content/);
   assert.match(script, /bodyEditor/);
+});
+
+test('treats qlogo and qpic hosts as settled WeChat images', () => {
+  const script = buildVerifyScript();
+
+  assert.match(script, /mmbiz\.qpic\.cn/);
+  assert.match(script, /mmbiz\.qlogo\.cn/);
+  assert.match(script, /wx\.qlogo\.cn/);
+  assert.match(script, /trustedImageHosts/);
 });

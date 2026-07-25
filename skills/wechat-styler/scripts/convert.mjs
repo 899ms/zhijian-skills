@@ -16,6 +16,7 @@ import { glob } from 'glob';
 import { validateHtml, formatReport } from './validate.mjs';
 import { applyComponentsPreMarkdown, applyComponentsPostMarkdown, applyPureFallback, applyHighlightPreMarkdown } from './components.mjs';
 import { generateCoverAnimation } from './generate-cover-animation.mjs';
+import { analyzeContentDensity, formatDensityReport } from './content-density-audit.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,7 +39,8 @@ function parseArgs() {
     coverTemplate: 'ink-wash',
     coverTitle: null,
     coverSubtitle: null,
-    coverTags: null
+    coverTags: null,
+    strictDensity: false
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -72,6 +74,11 @@ function parseArgs() {
       } else {
         options.cover = true;
       }
+      continue;
+    }
+
+    if (key === 'strict-density') {
+      options.strictDensity = true;
       continue;
     }
 
@@ -116,7 +123,7 @@ function parseArgs() {
 
   if (!options.input) {
     console.error('Error: Input file required');
-    console.error('Usage: node convert.mjs <input.md> [--theme kami] [--font-size 16] [--line-height 1.55] [--output output.html]');
+    console.error('Usage: node convert.mjs <input.md> [--theme zhijian] [--font-size 15] [--line-height 1.68] [--strict-density] [--output output.html]');
     process.exit(1);
   }
 
@@ -241,18 +248,18 @@ const presetDefaults = {
     top_label: 'NOTE'
   },
   'zhijian-warm-paper': {
-    type_scale: { h1: 28, h2: 22, h3: 18, body: 17, caption: 13, code: 14 },
+    type_scale: { h1: 28, h2: 22, h3: 19, body: 16, caption: 12, code: 14 },
     rhythm: {
-      body_line_height: 1.58,
+      body_line_height: 1.68,
       heading_line_height: 1.22,
-      paragraph_margin: 20,
+      paragraph_margin: 19,
       section_padding_first: 20,
       section_padding: 32,
       list_item_margin: 10
     },
     block_style: {
       heading_style: 'warm-bar',
-      quote_style: 'human-callout',
+      quote_style: 'trust-quote',
       list_style: 'standard',
       code_style: 'dark-terminal',
       image_style: 'soft-frame'
@@ -864,8 +871,6 @@ function createZhijianWarmPaperRenderer(theme) {
   const scale = theme.type_scale;
   const rhythm = theme.rhythm;
   const trustBlue = theme.trust_blue || theme.accent_secondary || '#1B365D';
-  const humanAccent = theme.human_accent || '#C96442';
-  const primaryText = theme.primary_text || '#A04A2E';
 
   renderer.heading = (text, level) => {
     const headingFont = `font-family:${theme.heading_font};word-break:break-word;background-color:${theme.background_color};`;
@@ -882,12 +887,17 @@ function createZhijianWarmPaperRenderer(theme) {
   };
 
   renderer.strong = (text) => {
-    return `<strong style="color:${primaryText};font-weight:600;background-color:${theme.background_color};">${bgSpan(theme, text)}</strong>`;
+    return `<strong style="color:${theme.text_color};font-weight:600;background-color:${theme.background_color};">${bgSpan(theme, text)}</strong>`;
   };
 
   renderer.blockquote = (quote) => {
-    const quoteContent = toneBlockContent(quote, theme, theme.surface_color, theme.secondary_color);
-    return `<section style="background-color:${theme.surface_color};border-left:3px solid ${humanAccent};padding:12px 16px;margin:0 0 ${rhythm.paragraph_margin}px;border-radius:0 8px 8px 0;">\n${quoteContent}</section>\n`;
+    const quoteBg = theme.quote_bg || theme.trust_bg || theme.surface_color;
+    const quoteText = theme.quote_text || theme.secondary_color;
+    const quoteMark = theme.quote_mark || trustBlue;
+    const quoteContent = toneBlockContent(quote, theme, quoteBg, quoteText);
+    const quoteMarkHtml = `<span style="display:inline-block;font-family:${theme.heading_font};font-size:21px;font-weight:600;line-height:1;color:${quoteMark};vertical-align:-2px;margin-right:7px;background-color:${quoteBg};">“</span>`;
+    const quotedContent = quoteContent.replace(/(<p\b[^>]*>)/i, `$1${quoteMarkHtml}`);
+    return `<section data-wechat-block="quote" style="background-color:${quoteBg};padding:13px 16px 14px;margin:0 0 ${rhythm.paragraph_margin}px;border-radius:4px;">\n${quotedContent}</section>\n`;
   };
 
   renderer.code = (code) => {
@@ -902,7 +912,7 @@ function createZhijianWarmPaperRenderer(theme) {
 
   renderer.link = (href, title, text) => {
     const titleAttr = title ? ` title="${escapeAttr(title)}"` : '';
-    return `<a href="${escapeAttr(href)}"${titleAttr} style="color:${primaryText};text-decoration:underline;text-underline-offset:3px;text-decoration-color:${theme.border_color};background-color:${theme.background_color};">${bgSpan(theme, text)}</a>`;
+    return `<a href="${escapeAttr(href)}"${titleAttr} style="color:${trustBlue};text-decoration:underline;text-underline-offset:3px;text-decoration-color:${theme.border_color};background-color:${theme.background_color};">${bgSpan(theme, text)}</a>`;
   };
 
   renderer.list = (body, ordered) => {
@@ -917,10 +927,10 @@ function createZhijianWarmPaperRenderer(theme) {
 
   renderer.image = (href, title, text) => {
     const alt = text || title || '';
-    return `<section style="text-align:center;margin:0 0 8px;background-color:${theme.background_color};">
+    return `<section style="text-align:center;margin:0;background-color:${theme.background_color};">
     <img src="${escapeAttr(href)}" alt="${escapeAttr(alt)}" style="${imageStyle('8px')}">
 </section>
-<p style="font-family:${theme.ui_font};font-size:${scale.caption}px;color:${theme.tertiary_color};text-align:center;margin:0 0 ${rhythm.paragraph_margin}px;word-break:break-word;background-color:${theme.background_color};">${bgSpan(theme, alt)}</p>\n`;
+<p style="font-family:${theme.ui_font};font-size:${scale.caption}px;color:${theme.tertiary_color};line-height:1.4;text-align:center;margin:0 12px ${rhythm.paragraph_margin + 3}px;word-break:break-word;background-color:${theme.background_color};">${bgSpan(theme, alt)}</p>\n`;
   };
 
   renderer.hr = () => {
@@ -1046,6 +1056,12 @@ function convertFile(inputPath, theme, options) {
 
   const content = fs.readFileSync(inputPath, 'utf8');
   const { frontmatter, markdown } = parseMarkdown(content);
+  const densityReport = analyzeContentDensity(markdown, inputPath, 'markdown');
+  console.log(formatDensityReport(densityReport));
+  if (options.strictDensity && densityReport.status === 'fail') {
+    console.error('Error: 段落密度硬门未通过，已停止生成 HTML');
+    return false;
+  }
 
   // Generate HTML
   const html = generateHTML(markdown, theme, frontmatter, options);
@@ -1110,6 +1126,10 @@ async function main() {
       if (outputPath) results.push(outputPath);
     }
 
+    if (options.strictDensity && results.length !== files.length) {
+      process.exitCode = 1;
+    }
+
     console.log(`\n✓ Converted ${results.length} file(s)`);
     console.log(`\nUsage:`);
     console.log(`1. Open any HTML file in browser`);
@@ -1121,6 +1141,10 @@ async function main() {
     console.log(`Converting: ${options.input}`);
     const inputPath = path.resolve(options.input);
     const outputPath = convertFile(inputPath, theme, options);
+
+    if (!outputPath && options.strictDensity) {
+      process.exitCode = 1;
+    }
 
     if (outputPath) {
       console.log(`\nUsage:`);

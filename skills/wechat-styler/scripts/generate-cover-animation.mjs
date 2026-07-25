@@ -95,12 +95,37 @@ function getCharGap(ch) {
   return 1.5;
 }
 
+function measureTypewriterWidth(text, fontSize) {
+  const chars = [...text];
+  if (chars.length === 0) return 0;
+
+  const width = chars.reduce((total, ch) => total + getCharWidth(ch, fontSize), 0);
+  const gaps = chars.slice(0, -1).reduce((total, ch) => total + getCharGap(ch), 0);
+  return width + gaps;
+}
+
+function fitTypewriterFontSize(text, preferredFontSize, maxWidth) {
+  const preferredWidth = measureTypewriterWidth(text, preferredFontSize);
+  if (!text || preferredWidth <= maxWidth) {
+    return preferredFontSize;
+  }
+
+  let fontSize = Math.floor((preferredFontSize * maxWidth / preferredWidth) * 10) / 10;
+  while (fontSize > 1 && measureTypewriterWidth(text, fontSize) > maxWidth) {
+    fontSize = Math.round((fontSize - 0.1) * 10) / 10;
+  }
+  return Math.max(1, fontSize);
+}
+
 // ─── 逐字打字 + 光标跟随(核心函数) ────────────────────
 function buildTypewriter(text, cx, y, fontSize, fill, font, startDelay, interval, accentColor) {
   const chars = [...text];
+  if (chars.length === 0) {
+    return { svg: '', sx: cx, totalW: 0, endDelay: startDelay, lastCursorX: cx };
+  }
   const widths = chars.map(ch => getCharWidth(ch, fontSize));
   const gaps = chars.map(ch => getCharGap(ch));
-  const totalW = widths.reduce((a, b) => a + b, 0) + gaps.reduce((a, b) => a + b, 0) - gaps[gaps.length - 1];
+  const totalW = measureTypewriterWidth(text, fontSize);
   const sx = cx - totalW / 2;
   const xs = [];
   let acc = sx;
@@ -198,12 +223,25 @@ function templateTypewriter(C, opts) {
   // 品牌标签去掉（zhijian 主题左上角已有智见AI，重复）
   // 主标题紧贴顶部，压缩纵向空档
   const titleStart = 0.3;
-  const title = buildTypewriter(opts.title || '', cx, 65, 48, C.text, C.monoFont, titleStart, 0.13, C.accent);
+  const titleText = opts.title || '';
+  const titleFontSize = fitTypewriterFontSize(titleText, 48, W - 80);
+  const title = buildTypewriter(titleText, cx, 65, titleFontSize, C.text, C.monoFont, titleStart, 0.13, C.accent);
   const lineDelay = title.endDelay + 0.3;
   const subStart = lineDelay + 0.8 + 0.2;
-  const subtitle = buildTypewriter(opts.subtitle || '', cx, 140, 26, C.tertiary, C.serifFont, subStart, 0.08, C.accent);
-  const hintStart = subtitle.endDelay + 0.3;
-  const hint = buildTypewriter('> 向下滑动继续阅读', cx, 210, 18, C.accent, C.monoFont, hintStart, 0.07, C.accent);
+  const subtitleText = opts.subtitle || '';
+  const subtitleFontSize = fitTypewriterFontSize(subtitleText, 26, W - 64);
+  // 逐字定位依赖稳定字宽。副标题混排中英文时使用等宽字体栈，
+  // 避免比例衬线字体里的 M/W 等宽字符侵入后一个字母。
+  const subtitle = buildTypewriter(subtitleText, cx, 140, subtitleFontSize, C.tertiary, C.monoFont, subStart, 0.08, C.accent);
+  const tagText = opts.tags
+    ? opts.tags.split(',').map(tag => tag.trim()).filter(Boolean).join(' · ')
+    : '';
+  const tagFontSize = fitTypewriterFontSize(tagText, 13, W - 80);
+  const tagDelay = subtitle.endDelay + 0.25;
+  const hintStart = (tagText ? tagDelay + 0.55 : subtitle.endDelay) + 0.3;
+  const hintY = 220;
+  const hintFontSize = 18;
+  const hint = buildTypewriter('> 向下滑动继续阅读', cx, hintY, hintFontSize, C.accent, C.monoFont, hintStart, 0.07, C.accent);
   const hintCursorBlink = hint.lastCursorX + 2;
   const arrowDelay = hint.endDelay + 0.5;
 
@@ -213,11 +251,15 @@ function templateTypewriter(C, opts) {
   // 横线:rect + animate width(dur 0.8s) — y 跟随标题底部（标题 y=65，font-size=48）
   svg += `<rect x="${title.sx.toFixed(1)}" y="85" width="0" height="2.5" rx="1.25" fill="${C.accent}" opacity="0"><animate attributeName="width" values="0;${title.totalW.toFixed(1)}" dur="0.8s" begin="${lineDelay.toFixed(2)}s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1"/><animate attributeName="opacity" values="0;1" dur="0.05s" begin="${lineDelay.toFixed(2)}s" fill="freeze"/></rect>`;
   svg += subtitle.svg;
+  if (tagText) {
+    svg += `<text x="${cx}" y="178" text-anchor="middle" font-size="${tagFontSize}" font-weight="600" fill="${C.secondary}" font-family="${C.uiFont}" letter-spacing="1" opacity="0"><tspan leaf="">${tagText}</tspan><animate attributeName="opacity" values="0;1" dur="0.4s" begin="${tagDelay.toFixed(2)}s" fill="freeze"/></text>`;
+  }
   svg += hint.svg;
-  // 提示光标:亮0.6s 灭0.6s — y 跟随提示文字底部（提示 y=210，font-size=16）
-  svg += `<rect x="${hintCursorBlink.toFixed(1)}" y="196" width="2" height="18" fill="${C.accent}" opacity="0"><animate attributeName="opacity" values="0;1" dur="0.05s" begin="${hint.endDelay.toFixed(2)}s" fill="freeze"/><animate attributeName="opacity" values="1;1;0;0" dur="1.2s" begin="${(hint.endDelay + 0.1).toFixed(2)}s" repeatCount="indefinite"/></rect>`;
-  // 箭头 — y=240（提示文字下方）
-  svg += `<g opacity="0"><animate attributeName="opacity" values="0;0.5" dur="0.4s" begin="${arrowDelay.toFixed(2)}s" fill="freeze"/><g transform="translate(${cx},245)"><text x="0" y="0" text-anchor="middle" font-size="18" fill="${C.hint}" font-family="sans-serif"><tspan leaf="">↓</tspan><animateTransform attributeName="transform" type="translate" values="${cx} 245;${cx} 253;${cx} 245" dur="1.5s" begin="${(arrowDelay + 0.2).toFixed(2)}s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.4 0 0.6 1;0.4 0 0.6 1"/></text></g></g>`;
+  // 提示光标:亮0.6s 灭0.6s — y 跟随提示文字底部
+  const hintCursorY = hintY - hintFontSize * 0.7;
+  svg += `<rect x="${hintCursorBlink.toFixed(1)}" y="${hintCursorY.toFixed(1)}" width="2" height="18" fill="${C.accent}" opacity="0"><animate attributeName="opacity" values="0;1" dur="0.05s" begin="${hint.endDelay.toFixed(2)}s" fill="freeze"/><animate attributeName="opacity" values="1;1;0;0" dur="1.2s" begin="${(hint.endDelay + 0.1).toFixed(2)}s" repeatCount="indefinite"/></rect>`;
+  // 箭头（提示文字下方）
+  svg += `<g opacity="0"><animate attributeName="opacity" values="0;0.5" dur="0.4s" begin="${arrowDelay.toFixed(2)}s" fill="freeze"/><g transform="translate(${cx},255)"><text x="0" y="0" text-anchor="middle" font-size="18" fill="${C.hint}" font-family="sans-serif"><tspan leaf="">↓</tspan><animateTransform attributeName="transform" type="translate" values="${cx} 255;${cx} 263;${cx} 255" dur="1.5s" begin="${(arrowDelay + 0.2).toFixed(2)}s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.4 0 0.6 1;0.4 0 0.6 1"/></text></g></g>`;
   svg += `</svg>`;
   return svg;
 }

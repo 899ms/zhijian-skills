@@ -34,6 +34,7 @@ SVG SMIL 动画(`<animate>` / `<animateTransform>`)在微信公众号里**只有
 - **压缩顶部空档**：viewBox 高度从 360 降到 280，主标题 y 从 160 上移到 65，主标题上沿到页面顶部的间距大幅缩小
 - **加大字号**：主标题 36px → 48px，副标题 16px → 26px，提示文字 14px → 18px（手机端原来太小看不清）
 - **动画时序不变**：打字间隔和光标速度保持原样，只是起始 y 坐标整体上移
+- 主标题、副标题和提示文字统一使用等宽字体栈；中文由字体栈中的中文字体回退，避免中英混排时 `Markdown`、`Word` 等单词内部重叠
 - 大写字母字宽 0.72em，小写 0.6em，中文 1em
 - 英文字母间额外加 1.5px 间距
 - `interval >= dur`(推荐 `dur = interval * 0.8`)
@@ -160,11 +161,11 @@ const text = new TextDecoder('utf-8').decode(bytes);
 - 注入到文章内层 `<section style="max-width:640px...">` 的开始标签之后(背景色容器内部)
 - SVG wrapper 用 `<section style="margin:0;padding:0;line-height:0;">` 包裹
 
-### 5. opencli 必须带 --profile
+### 5. OpenCLI 必须带 --profile
 
 **问题**: 不带 `--profile` 会绑到 `about:blank`,虽然能 `open` 但没有登录态。
 
-**解决**: `opencli --profile 4nwbtdn6 browser work open <url>`
+**解决**: 先运行 `opencli doctor` 找到当前环境的 profile，再执行 `opencli --profile <profile-name> browser work open <url>`。公开 Skill 禁止内置作者机器上的 profile。
 
 ### 6. 粘贴过滤器剥离 animate
 
@@ -218,7 +219,8 @@ for (const p of [...editArea.querySelectorAll("p")]) {
 **解决**:
 1. `interval` 必须 >= `dur`(推荐 `dur = interval * 0.8`)
 2. 大写字母字宽用 `0.72em`,小写用 `0.6em`,中文用 `1.0em`
-3. 英文字母之间额外加 `1.5px` 间距
+3. 逐字定位的文本统一使用等宽字体栈；中文走中文字体回退
+4. 英文字母之间额外加 `1.5px` 间距
 
 ### 11. 光标闪烁过快
 

@@ -22,13 +22,15 @@ npx skills add zjp1997720/zhijian-skills -g -a codex --skill wechat-styler -y
 
 - Node.js 18+
 - `marked`、`js-yaml`、`glob`（由 Skill 运行时自动安装，或手动执行 `npm install`）
+- 直接注入公众号编辑器还需要 OpenCLI、已连接的 Chrome profile，以及显式传入的 `--profile` 或 `OPENCLI_PROFILE`。
 
 ## 它解决什么问题
 
 - **一次转好，粘贴不丢格式。** 所有样式内联，背景色全部使用 solid hex；从浏览器复制进公众号编辑器后，颜色、对齐和引用块都能保留。
 - **8 套主题有真正的版式人格。** `magazine-ink` 是经典杂志内页，`magazine-indigo` 是研究栏加全大写标题，`magazine-forest` 是田野笔记加居中楷体标题。每套主题都有自己的标题结构、引用样式、列表 marker 和代码块。
-- **可选组件拓展层（`--components`）。** 6 个结构化组件用于呈现对比、流程和要点。默认关闭；需要结构化呈现时显式启用。组件使用 `section + flex`，避开公众号编辑器会自行加灰边的 `table`。
+- **可选组件拓展层（`--components`）。** 8 种结构化表达（金句、行内标记、提示、警告、步骤、流程、对比、时间线）用于呈现对比、流程、演进和要点。默认关闭；需要结构化呈现时显式启用。布局组件使用 `section + flex`；高密度矩阵在表达更清楚时继续保留 Markdown 表格。
 - **兼容性由脚本把关。** `validate.mjs` 扫描公众号会剥离的内容（`<style>`、`class`、`rgba()`、`position:fixed`、`@media` 等），并输出带行号的报告。转换时自动执行，也能单独用于 CI。
+- **可恢复的公众号后台发布。** OpenCLI 注入器能同步正文、标题、摘要和封面，识别 qlogo/qpic 转存状态；type=77 正文封面选择失败时可用 `--cover-file` 自动上传、选图和裁剪。成功与失败都会生成脱敏 JSON 报告。
 - **占位符机制。** 图床尚未准备好时，在 Markdown 中写 `【插入:文章开头截图】`，即可渲染成虚线占位框；图片就绪后再替换为普通 Markdown 图片链接。
 
 ## 怎么工作的
@@ -36,9 +38,25 @@ npx skills add zjp1997720/zhijian-skills -g -a codex --skill wechat-styler -y
 四个部分，各管一件事：
 
 1. **`scripts/convert.mjs`** — 用 `marked` 解析 Markdown，按主题对应的 renderer（6 个 preset 支撑 8 套主题）渲染，输出全内联 HTML。
-2. **`scripts/components.mjs`** — 可选组件拓展层，通过 `--components` 启用。
+2. **`scripts/components.mjs`** — 8 种结构化表达的可选组件拓展层，通过 `--components` 启用。
 3. **`scripts/validate.mjs`** — 按公众号兼容规则扫描产物（5 类 ERROR + 3 类 WARN）；既作为转换流程的软门，也能独立运行并返回 exit code。
 4. **`themes/*.yaml`** — 每个主题一个文件。颜色、字体、字号、间距和版式风格都写在 YAML 中，新增主题无需修改代码。
+
+需要直接注入公众号后台时，使用稳定发布模式：
+
+```bash
+node scripts/inject-to-wechat.mjs article_wechat.html \
+  --reuse-current \
+  --title "公众号标题" \
+  --summary "转发摘要" \
+  --cover-file /path/to/local-cover.jpg \
+  --save-draft \
+  --report /tmp/wechat-publish-report.json
+```
+
+详细封面状态机、保存证据和故障恢复表见 `skills/wechat-styler/references/opencli-injection.md`。
+
+Codex 内置 Chrome Browser 当前不能作为注入后端：其安全策略可能在访问 `mp.weixin.qq.com/cgi-bin/appmsg` 编辑页 DOM 前直接拒绝，并禁止通过 CDP 绕过。这个 Skill 保留 OpenCLI 作为 Codex 与其他 Agent 都能使用的发布路径。
 
 **一个关键设计选择：主题是 YAML 参数，不是重组件库。** 这样 Skill 保持轻量、跨模型稳定，也方便扩展。当主题需要结构差异时（例如 5 套 magazine 变体），renderer 通过 `magazine_variant` 进入不同分支：同一个脚本，不同版式人格。
 

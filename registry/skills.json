@@ -229,12 +229,12 @@
     {
       "name": "wechat-styler",
       "lifecycle": "active",
-      "version": "1.0.3",
+      "version": "1.9.0",
       "path": "skills/wechat-styler",
       "documentation": "docs/skills/wechat-styler/README.md",
       "documentation_zh": "docs/skills/wechat-styler/README.zh-CN.md",
       "changelog": "docs/changelogs/wechat-styler.md",
-      "canonical_tag": "wechat-styler/v1.0.3",
+      "canonical_tag": "wechat-styler/v1.9.0",
       "validation": {
         "commands": [
           "npm test --prefix skills/wechat-styler"

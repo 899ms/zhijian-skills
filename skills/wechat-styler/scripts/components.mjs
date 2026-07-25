@@ -1,7 +1,7 @@
 /**
  * WeChat Styler - 组件拓展层 (Components Layer)
  *
- * 6 个结构化组件,用排印手段 + section/flex 布局呈现,不用 table(公众号灰边)、
+ * 8 种结构化表达,用排印手段 + section/flex 布局呈现,不用 table(公众号灰边)、
  * 不引入新色块。所有颜色/字体从 theme 参数取,各主题自动适配。
  *
  * 两种模式:

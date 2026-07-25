@@ -13,6 +13,7 @@ import {
 import {
   OpencliError,
   evaluateJson,
+  normalizeVerificationState,
   prepareSession,
   redactUrl,
   saveDraft,
@@ -33,6 +34,7 @@ Options:
   --summary <text>          article summary; existing summary is preserved when omitted
   --author <text>           article author; existing author is preserved when omitted
   --sync-cover-from-body    use the first body image as the WeChat cover
+  --cover-file <path>       upload this local image; replace an existing cover when present
   --save-draft              save and verify the draft after injection
   --verify-only             inspect the current editor without writing
   --no-optimize-images      disable oversized-image optimization
@@ -47,7 +49,7 @@ Options:
 function parseArgs(argv) {
   const options = {
     input: '',
-    profile: process.env.OPENCLI_PROFILE || '4nwbtdn6',
+    profile: process.env.OPENCLI_PROFILE || '',
     url: process.env.WX_EDITOR_URL || '',
     session: 'work',
     reuseCurrent: false,
@@ -55,6 +57,7 @@ function parseArgs(argv) {
     summary: undefined,
     author: undefined,
     syncCoverFromBody: false,
+    coverFile: '',
     saveDraft: false,
     verifyOnly: false,
     optimizeImages: true,
@@ -65,7 +68,7 @@ function parseArgs(argv) {
     report: '',
   };
   const valueOptions = new Set([
-    '--profile', '--url', '--session', '--title', '--summary', '--author',
+    '--profile', '--url', '--session', '--title', '--summary', '--author', '--cover-file',
     '--max-image-bytes', '--max-image-width', '--image-timeout',
     '--editor-timeout', '--report',
   ]);
@@ -85,6 +88,7 @@ function parseArgs(argv) {
     else if (argument === '--title') options.title = argv[++index];
     else if (argument === '--summary') options.summary = argv[++index];
     else if (argument === '--author') options.author = argv[++index];
+    else if (argument === '--cover-file') options.coverFile = argv[++index];
     else if (argument === '--max-image-bytes') options.maxImageBytes = Number(argv[++index]);
     else if (argument === '--max-image-width') options.maxImageWidth = Number(argv[++index]);
     else if (argument === '--image-timeout') options.imageTimeoutMs = Number(argv[++index]);
@@ -97,6 +101,7 @@ function parseArgs(argv) {
     else if (argument === '--no-optimize-images') options.optimizeImages = false;
     else throw new Error(`unknown option: ${argument}`);
   }
+  if (options.coverFile) options.syncCoverFromBody = true;
   return options;
 }
 
@@ -107,6 +112,8 @@ function assertFinitePositive(value, name) {
 function assertOptions(options) {
   if (!options.input) throw new Error('HTML input file is required');
   if (!fs.existsSync(options.input)) throw new Error(`HTML file not found: ${options.input}`);
+  if (!options.profile) throw new Error('--profile or OPENCLI_PROFILE is required');
+  if (options.coverFile && !fs.existsSync(options.coverFile)) throw new Error(`cover file not found: ${options.coverFile}`);
   if (!options.reuseCurrent && !options.url) throw new Error('--url is required unless --reuse-current is used');
   assertFinitePositive(options.maxImageBytes, '--max-image-bytes');
   assertFinitePositive(options.maxImageWidth, '--max-image-width');
@@ -121,7 +128,55 @@ function writeReport(reportPath, report) {
   fs.writeFileSync(absolutePath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
 }
 
+function sanitizeLiveState(value) {
+  if (!value || typeof value !== 'object') return null;
+  return { ...value, url: redactUrl(typeof value.url === 'string' ? value.url : '') };
+}
+
+function redactText(value) {
+  return String(value || '').replace(/([?&]token=)[^&\s]+/gi, '$1[redacted]');
+}
+
+function recoveryForPhase(phase, error, options) {
+  if (phase === 'cover') {
+    const message = `${error instanceof Error ? error.message : ''} ${error instanceof OpencliError ? error.details : ''}`;
+    if (/too large|compress|optimization failed/i.test(message)) {
+      return [
+        'Compress the local cover below 600 KB, keep a 2.35:1 ratio, and rerun the same command.',
+        'On macOS, verify that sips is available if automatic JPEG optimization failed.',
+      ];
+    }
+    if (/file input|image library|selectable/i.test(message) && options?.coverFile) {
+      return [
+        'Close any stale WeChat cover dialog, reopen the image library, and rerun with the same --cover-file.',
+        'If the uploaded filename is already visible in the library, select it manually and run --verify-only.',
+      ];
+    }
+    return [
+      'Pass --cover-file <local 2.35:1 image> so the injector can upload through the image library.',
+      'If a cover is already visible, rerun with --reuse-current --verify-only to confirm the draft state.',
+    ];
+  }
+  if (phase === 'save-draft' || phase === 'verify-saved-draft') {
+    return [
+      'Check that the editor URL contains appmsgid and that a manual-save row appears in the history panel.',
+      'Rerun with --reuse-current --verify-only --report <path>; this performs a read-only inspection.',
+    ];
+  }
+  if (phase.includes('image') || phase === 'inject-body' || phase === 'verify-content') {
+    return [
+      'Inspect live.failedUrls and live.pendingImages in the report; qlogo/qpic URLs are already treated as settled.',
+      'Retry with the default image optimization enabled, or replace the listed external image URLs.',
+    ];
+  }
+  return [
+    'Confirm opencli doctor passes and the active Chrome tab is a WeChat article editor.',
+    'Rerun with --reuse-current --verify-only --report <path> before making another write attempt.',
+  ];
+}
+
 function assertLiveState(state, expected, metadata) {
+  state = normalizeVerificationState(state);
   const failures = [];
   if (!state.ok) failures.push(state.reason || 'live verification failed');
   if (state.svgCount !== expected.svgCount) failures.push(`SVG count ${state.svgCount}/${expected.svgCount}`);
@@ -145,8 +200,16 @@ async function injectAndSettle(options, content, title) {
   });
 }
 
+const runtime = {
+  options: null,
+  phase: 'parse-options',
+  sessionReady: false,
+  liveState: null,
+};
+
 async function main() {
   const options = parseArgs(process.argv.slice(2));
+  runtime.options = options;
   if (options.help) {
     printUsage();
     return;
@@ -160,7 +223,10 @@ async function main() {
     author: options.author,
   };
 
+  runtime.phase = 'prepare-session';
   prepareSession(options);
+  runtime.sessionReady = true;
+  runtime.phase = 'wait-editor';
   await waitForEditor({
     profile: options.profile,
     session: options.session,
@@ -168,8 +234,12 @@ async function main() {
   });
 
   if (options.verifyOnly) {
-    const liveState = evaluateJson(options.profile, options.session, buildVerifyScript(metadata.title || ''));
-    const report = { mode: 'verify-only', live: { ...liveState, url: redactUrl(liveState.url || '') } };
+    runtime.phase = 'verify-only';
+    const liveState = normalizeVerificationState(
+      evaluateJson(options.profile, options.session, buildVerifyScript(metadata.title || '')),
+    );
+    runtime.liveState = liveState;
+    const report = { mode: 'verify-only', phase: 'complete', live: sanitizeLiveState(liveState) };
     writeReport(options.report, report);
     console.log(JSON.stringify(report, null, 2));
     return;
@@ -178,6 +248,7 @@ async function main() {
   let content = documentInfo.content;
   const optimizedMappings = [];
   if (options.optimizeImages) {
+    runtime.phase = 'optimize-images';
     const optimized = await optimizeContentImages(content, {
       maxBytes: options.maxImageBytes,
       maxWidth: options.maxImageWidth,
@@ -187,8 +258,11 @@ async function main() {
     optimizedMappings.push(...optimized.mapping.entries());
   }
 
+  runtime.phase = 'inject-body';
   let liveState = await injectAndSettle(options, content, metadata.title || '');
+  runtime.liveState = liveState;
   if (liveState.failedUrls.length > 0 && options.optimizeImages) {
+    runtime.phase = 'retry-images';
     const retry = await optimizeContentImages(content, {
       forceUrls: liveState.failedUrls,
       maxBytes: options.maxImageBytes,
@@ -199,52 +273,97 @@ async function main() {
     content = retry.content;
     optimizedMappings.push(...retry.mapping.entries());
     liveState = await injectAndSettle(options, content, metadata.title || '');
+    runtime.liveState = liveState;
   }
 
+  runtime.phase = 'metadata';
   evaluateJson(options.profile, options.session, buildMetadataScript(metadata));
+  let coverState = null;
   if (options.syncCoverFromBody) {
-    await syncCoverFromBody({
+    runtime.phase = 'cover';
+    coverState = await syncCoverFromBody({
       profile: options.profile,
       session: options.session,
+      timeoutMs: options.imageTimeoutMs,
+      coverFile: options.coverFile,
     });
   }
 
+  runtime.phase = 'verify-content';
   liveState = await waitForImageSettlement({
     profile: options.profile,
     session: options.session,
     timeoutMs: options.imageTimeoutMs,
     title: metadata.title || '',
   });
+  runtime.liveState = liveState;
   const expected = extractArticleDocument(`<body>${content}</body>`);
   assertLiveState(liveState, expected, metadata);
 
   let saveState = null;
   if (options.saveDraft) {
+    runtime.phase = 'save-draft';
     saveState = await saveDraft({
       profile: options.profile,
       session: options.session,
       timeoutMs: options.editorTimeoutMs,
     });
-    liveState = evaluateJson(options.profile, options.session, buildVerifyScript(metadata.title || ''));
+    runtime.phase = 'verify-saved-draft';
+    liveState = normalizeVerificationState(
+      evaluateJson(options.profile, options.session, buildVerifyScript(metadata.title || '')),
+    );
+    runtime.liveState = liveState;
     assertLiveState(liveState, expected, metadata);
   }
 
+  runtime.phase = 'complete';
   const report = {
     mode: options.saveDraft ? 'saved-draft' : 'injected',
+    phase: 'complete',
     optimizedImages: optimizedMappings.length,
     expected: {
       images: expected.imageUrls.length,
       svg: expected.svgCount,
       animations: expected.animateCount,
     },
-    live: { ...liveState, url: redactUrl(liveState.url || '') },
-    save: saveState ? { ...saveState, url: redactUrl(saveState.url || '') } : null,
+    cover: coverState,
+    live: sanitizeLiveState(liveState),
+    save: saveState ? sanitizeLiveState(saveState) : null,
   };
   writeReport(options.report, report);
   console.log(JSON.stringify(report, null, 2));
 }
 
 main().catch((error) => {
+  const options = runtime.options;
+  let liveState = runtime.liveState;
+  if (!liveState && runtime.sessionReady && options) {
+    try {
+      liveState = normalizeVerificationState(
+        evaluateJson(options.profile, options.session, buildVerifyScript(options.title || '')),
+      );
+    } catch {
+      liveState = null;
+    }
+  }
+  const errorReport = {
+    mode: 'failed',
+    phase: runtime.phase,
+    error: {
+      name: error instanceof Error ? error.name : 'UnknownError',
+      message: redactText(error instanceof Error ? error.message : 'unknown error'),
+      details: redactText(error instanceof OpencliError ? error.details : ''),
+    },
+    recovery: recoveryForPhase(runtime.phase, error, options),
+    live: sanitizeLiveState(liveState),
+  };
+  if (options?.report) {
+    try {
+      writeReport(options.report, errorReport);
+    } catch (reportError) {
+      console.error(`wechat failure report could not be written: ${reportError.message}`);
+    }
+  }
   if (error instanceof OpencliError) {
     console.error(`wechat injection failed: ${error.message}`);
     if (error.details) console.error(error.details.replace(/([?&]token=)[^&\s]+/gi, '$1[redacted]'));
@@ -253,5 +372,7 @@ main().catch((error) => {
   } else {
     console.error('wechat injection failed with an unknown error');
   }
+  console.error(`failed phase: ${runtime.phase}`);
+  console.error(`recovery: ${errorReport.recovery.join(' ')}`);
   process.exitCode = 1;
 });

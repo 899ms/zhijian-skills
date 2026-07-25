@@ -24,13 +24,13 @@
 
 - 纸感背景 `#F5F4ED`，深暖陶行动色 `#B85235`，墨蓝结构色 `#1B365D`
 - 非代码文字统一使用思源宋体 VF：标题和 UI 使用 500 字重，正文使用 400 字重；代码使用 SF Mono
-- H2 左侧暖陶竖线，H3 墨蓝色，引用块 Human Accent 左线
+- H2 左侧暖陶竖线，H3 墨蓝色，引用块使用信任蓝卡片
 
 ```yaml
 font_family_cn: 'Source Han Serif SC VF','Source Han Serif SC','Noto Serif CJK SC','Songti SC',STSong,SimSun,Georgia,serif
 font_family_en: 'Source Han Serif SC VF','Source Han Serif SC',Georgia,serif
-font_size: 17
-line_height: 1.58
+font_size: 15
+line_height: 1.68
 accent_color: '#B85235'
 accent_secondary: '#1B365D'
 background_color: '#F5F4ED'
@@ -143,7 +143,7 @@ code_font: 'JetBrains Mono',monospace
 
 | Preset | 绑定主题 | 版式语气 |
 |--------|----------|----------|
-| `zhijian-warm-paper` | `zhijian` | 品牌讲义：暖陶竖线标题、墨蓝三级标题、Human Accent 引用 |
+| `zhijian-warm-paper` | `zhijian` | 品牌讲义：暖陶章节标题、墨蓝结构层级、信任蓝引用 |
 | `kami-document` | `kami` | 纸感文档：正式、克制、标题左侧 ink-blue 竖线 |
 | `magazine-editorial` | `magazine-*` | 电子杂志家族：通过 `magazine_variant` 分别呈现 classic / research / fieldnote |
 | `elegant-essay` | `elegant` | 复古长文：居中标题、舒展行距 |

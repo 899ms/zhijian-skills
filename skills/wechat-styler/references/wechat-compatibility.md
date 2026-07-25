@@ -58,6 +58,7 @@
 - 所有背景色使用 solid hex，不用 `rgba()`
 - 外层 section / 内容 section / 文本 span 三层重复声明 `background-color`
 - 图片父级 `text-align:center` + 自身 `margin:0 auto;display:block` 双重兜底
+- `zhijian` 图片块与图注之间不额外设置块级 margin；紧凑距离由图注自身的 `line-height` 控制，避免带阴影或边框的截图下方出现一整行空白
 - 所有样式内联，不使用 `<style>` 标签或外部 CSS
 - `<code>` / `<pre>` / `<svg>` 内容在 validate 时被剥离，避免误报
 

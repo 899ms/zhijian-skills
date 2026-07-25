@@ -1,3 +1,5 @@
+import { WECHAT_IMAGE_HOSTS } from './wechat-image-hosts.mjs';
+
 const editorLookupSource = `
   const titleEditor = document.querySelector(".title-editor__input .ProseMirror");
   const ueditor = document.querySelector("#ueditor_0 [contenteditable=true]");
@@ -157,16 +159,33 @@ export function buildVerifyScript(expectedTitle = '') {
   return `(() => {
 ${editorLookupSource}
   if (!bodyEditor) return JSON.stringify({ ok: false, reason: "body editor not found" });
+  const trustedImageHosts = new Set(${JSON.stringify(WECHAT_IMAGE_HOSTS)});
+  const isWeChatHostedImage = (source) => {
+    try { return trustedImageHosts.has(new URL(source, window.location.href).hostname.toLowerCase()); }
+    catch { return false; }
+  };
   const images = [...bodyEditor.querySelectorAll("img")]
     .filter((image) => !image.classList.contains("ProseMirror-separator"));
   const pendingImages = images
     .map((image) => image.currentSrc || image.src || "")
-    .filter((source) => /^https?:/i.test(source) && !/(?:mmbiz|qpic)\\.(?:cn|com)/i.test(source));
+    .filter((source) => /^https?:/i.test(source) && !isWeChatHostedImage(source));
   const failedUrls = [...document.querySelectorAll(".js_catchremoteimageerror")]
     .map((element) => element.getAttribute("data-cacheurl") || "")
     .filter(Boolean);
+  const coverArea = document.querySelector("#js_cover_area") || document.querySelector(".js_cover_btn_area");
+  const coverSources = coverArea ? [...coverArea.querySelectorAll("img,[style*='background']")]
+    .flatMap((element) => {
+      const values = [element.currentSrc || element.src || "", element.style?.backgroundImage || ""];
+      return values.flatMap((value) => value.match(/(?:https?:|blob:|data:image)[^\"')]+/g) || []);
+    }) : [];
+  const history = [...document.querySelectorAll("#history_pop tr")]
+    .slice(1, 4)
+    .map((row) => (row.innerText || "").trim())
+    .filter(Boolean);
   const text = (bodyEditor.innerText || bodyEditor.textContent || "").trim();
   const expectedTitle = ${JSON.stringify(expectedTitle)};
+  const url = window.location.href;
+  const saved = (document.body?.innerText || "").includes("已保存");
   return JSON.stringify({
     ok: true,
     title: document.querySelector("#title")?.value || titleEditor?.innerText || "",
@@ -181,8 +200,16 @@ ${editorLookupSource}
     firstText: text.slice(0, 80),
     lastText: text.slice(-80),
     titleOccurrencesInBody: expectedTitle ? text.split(expectedTitle).length - 1 : 0,
-    saved: (document.body?.innerText || "").includes("已保存"),
-    url: window.location.href
+    cover: { hasImage: coverSources.length > 0, sources: coverSources },
+    saved,
+    history,
+    appmsgid: new URL(url).searchParams.get("appmsgid") || "",
+    saveEvidence: {
+      appmsgid: /[?&]appmsgid=\\d+/.test(url),
+      savedBanner: saved,
+      history: history.length > 0
+    },
+    url
   });
 })()`;
 }
