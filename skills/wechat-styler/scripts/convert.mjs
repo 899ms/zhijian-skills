@@ -12,7 +12,7 @@ import { fileURLToPath } from 'url';
 import { execFile } from 'child_process';
 import { marked } from 'marked';
 import yaml from 'js-yaml';
-import { glob } from 'glob';
+import { glob } from 'tinyglobby';
 import { validateHtml, formatReport } from './validate.mjs';
 import { applyComponentsPreMarkdown, applyComponentsPostMarkdown, applyPureFallback, applyHighlightPreMarkdown } from './components.mjs';
 import { generateCoverAnimation } from './generate-cover-animation.mjs';

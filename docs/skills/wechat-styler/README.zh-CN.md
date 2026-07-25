@@ -21,7 +21,7 @@ npx skills add zjp1997720/zhijian-skills -g -a codex --skill wechat-styler -y
 ## 环境要求
 
 - Node.js 18+
-- `marked`、`js-yaml`、`glob`（由 Skill 运行时自动安装，或手动执行 `npm install`）
+- `marked`、`js-yaml`、`tinyglobby`（由 Skill 运行时自动安装，或手动执行 `npm install`）
 - 直接注入公众号编辑器还需要 OpenCLI、已连接的 Chrome profile，以及显式传入的 `--profile` 或 `OPENCLI_PROFILE`。
 
 ## 它解决什么问题

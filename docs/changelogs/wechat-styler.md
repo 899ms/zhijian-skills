@@ -12,7 +12,7 @@
 - Add a 390px mobile visual QA gate for quote alignment, overflow, broken images, duplicate image URLs, and Zhijian heading semantics.
 - Keep OpenCLI as the verified WeChat injection backend after Codex Chrome rejected the article editor at the browser-policy boundary; document the no-CDP-bypass rule and the four-part acceptance gate for future backends.
 - Remove the author-machine OpenCLI profile default and require an explicit `--profile` or `OPENCLI_PROFILE` value.
-- Upgrade `glob` to `13.0.6` so the published install has no known npm vulnerability from the previous `brace-expansion` dependency chain.
+- Replace the vulnerable `glob` dependency chain with Node 18-compatible `tinyglobby`; the published install now reports zero known npm vulnerabilities without raising the runtime floor.
 
 ## 1.0.3 — 2026-07-17
 

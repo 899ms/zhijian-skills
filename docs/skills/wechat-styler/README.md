@@ -21,7 +21,7 @@ Works with any agent runtime that loads SKILL.md (Codex, Claude Code, OpenCode, 
 ## Requirements
 
 - Node.js 18+
-- `marked`, `js-yaml`, `glob` (auto-installed by the skill runtime or `npm install`)
+- `marked`, `js-yaml`, `tinyglobby` (auto-installed by the skill runtime or `npm install`)
 - Direct WeChat editor injection additionally requires OpenCLI, a connected Chrome profile, and an explicit `--profile` or `OPENCLI_PROFILE` value.
 
 ## What It Does
