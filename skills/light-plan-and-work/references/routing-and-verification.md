@@ -40,6 +40,18 @@ Avoid activity labels such as “think about the prototype.” Replace obsolete 
 
 A passing command proves only the contract it checks. Record unverified assumptions as residual risk.
 
+## Blocked verification protocol
+
+A failed broad gate is not automatically evidence that the current task failed. Classify it with read-only evidence before changing anything:
+
+1. Record the exact command, exit status, and first actionable failure.
+2. Compare the failing paths and contract with the task boundary, repository status, and task diff.
+3. If the failure is demonstrably pre-existing and unrelated, do not revert, stash, edit, stage, or otherwise absorb that work. Run the strongest targeted checks that directly exercise the changed artifact.
+4. In the handoff, state the broad gate as blocked, name the unrelated cause, list the targeted checks that passed, and keep the residual risk explicit. Do not describe the repository or release as fully green.
+5. If failing paths overlap task files, provenance is uncertain, the targeted checks also fail, or the broad gate is mandatory for a release, treat the failure as part of the task. Fix it within scope or stop and escalate.
+
+This protocol preserves honest verification coverage. It does not waive release gates, reduce authorization requirements, or turn an unexplained failure into a pass.
+
 ## Handoff contract
 
-Lead with the outcome, then include changed files or artifacts, verification performed, and any residual risk or intentional deferral. Do not append an unrelated menu of next steps when the requested outcome is complete.
+Lead with the outcome, then include changed files or artifacts, verification performed, blocked broad gates with attribution, and any residual risk or intentional deferral. Do not append an unrelated menu of next steps when the requested outcome is complete.

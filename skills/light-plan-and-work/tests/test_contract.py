@@ -44,6 +44,29 @@ class LightPlanContractTests(unittest.TestCase):
             self.assertTrue(case["assertions"])
             self.assertEqual(case["human_review"]["expected_winner"], "with_skill")
 
+    def test_unrelated_global_verification_protocol_is_explicit(self):
+        skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        reference = (ROOT / "references" / "routing-and-verification.md").read_text(encoding="utf-8")
+        output_cases = (ROOT / "evals" / "output" / "cases.jsonl").read_text(encoding="utf-8")
+
+        for marker in (
+            "pre-existing, unrelated work",
+            "strongest safe task-scoped checks",
+            "without claiming the repository is fully green",
+            "Never revert, stash, edit, or stage unrelated work",
+        ):
+            self.assertIn(marker, skill)
+
+        for marker in (
+            "Blocked verification protocol",
+            "exact command, exit status",
+            "Do not describe the repository or release as fully green",
+            "mandatory for a release",
+        ):
+            self.assertIn(marker, reference)
+
+        self.assertIn('"id":"records-unrelated-global-gate"', output_cases)
+
 
 if __name__ == "__main__":
     unittest.main()

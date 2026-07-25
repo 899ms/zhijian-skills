@@ -27,7 +27,11 @@ Heavy conditions include destructive or sensitive operations, migrations, public
 3. Use the host plan tracker for 3–7 observable steps, with at most one step in progress. Each step must produce or verify something.
 4. Start after the plan is visible. Read before editing, preserve unrelated work, follow project instructions, and keep the plan aligned with evidence.
 5. If a heavy condition appears, preserve completed safe work, pause the affected mutation, explain the evidence, and switch to the heavier workflow.
-6. Verify in proportion to risk; hand back the result, artifacts, evidence, and residual risk.
+6. Verify in proportion to risk. Distinguish checks that directly cover the task from repository-wide or environment-wide gates.
+7. When a broad gate fails, classify the failure before acting. If read-only evidence shows it comes from pre-existing, unrelated work, preserve that work, run the strongest safe task-scoped checks, and record the blocked gate without claiming the repository is fully green. If the failure overlaps task files, causality is uncertain, or the gate is required for a release, treat it as a task blocker and fix, pause, or escalate.
+8. Hand back the result, artifacts, evidence, blocked gates, and residual risk.
+
+Never revert, stash, edit, or stage unrelated work to make a broad verification command pass. Read [routing and verification](references/routing-and-verification.md) for the evidence and handoff contract.
 
 Do not create a durable plan file by default. Create one only for an explicit request, future resumption, external handoff, multiple owners, or a lasting design decision, and follow the project's existing plan location.
 

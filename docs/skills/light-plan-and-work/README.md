@@ -34,6 +34,7 @@ Invoke it explicitly with `$light-plan-and-work`. Automatic invocation is disabl
 - Routes unresolved direction to brainstorming or discovery before execution.
 - Escalates security-sensitive, destructive, cross-system, migration, multi-owner, and release work to a durable planning workflow.
 - Verifies in proportion to risk and hands back concrete evidence.
+- When a repository-wide gate fails on demonstrably pre-existing, unrelated work, preserves that work, completes the strongest task-scoped verification, and records the blocked gate without claiming a fully green repository.
 
 ## How It Works
 
@@ -70,6 +71,7 @@ Use $light-plan-and-work to add this bounded CLI option, run targeted checks, an
 - Production migrations, authentication, billing, compliance, destructive actions, multi-system architecture, and coordinated releases require a heavier workflow.
 - The Skill does not weaken repository instructions, approval boundaries, or external-action permissions.
 - A passing check proves only the contract it actually evaluates; unverified assumptions remain visible in the handoff.
+- A broad gate may be recorded as blocked only when read-only evidence attributes it outside the task. Overlap, uncertain provenance, or a mandatory release gate remains a task blocker.
 
 ## Development
 

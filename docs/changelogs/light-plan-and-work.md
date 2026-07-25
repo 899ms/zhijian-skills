@@ -1,5 +1,12 @@
 # light-plan-and-work Changelog
 
+## Unreleased
+
+- Add an explicit protocol for repository-wide verification blocked by pre-existing, unrelated work.
+- Require read-only attribution, strongest safe task-scoped checks, honest blocked-gate reporting, and residual-risk disclosure.
+- Keep overlapping, uncertain, or release-mandatory failures as task blockers.
+- Add deterministic contract coverage and a baseline-vs-Skill output case for this failure mode.
+
 ## 1.0.0 — 2026-07-23
 
 - Add a manual, lightweight plan-and-execute route for bounded knowledge and engineering work.
