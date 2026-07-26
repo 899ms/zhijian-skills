@@ -1,5 +1,12 @@
 # skill-open-sourcer Changelog
 
+## 2.2.1 — 2026-07-26
+
+- Distinguish literal credential assignments from safe environment, config, and runtime reads.
+- Detect Python string literals structurally across assignments, annotated assignments, mappings, and keyword arguments.
+- Ignore generic fake credential literals in test fixtures while continuing to block provider-formatted tokens in every file.
+- Redact every detected secret value from scanner output and add deterministic regression coverage for true positives, placeholders, and prior false positives.
+
 ## 2.2.0 — 2026-07-25
 
 - Add `release_portfolio.py plan --skill <name>` for narrow, deterministic single-Skill release plans.

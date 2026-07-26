@@ -27,7 +27,7 @@ Then invoke `$skill-open-sourcer` with a local `SKILL.md` or Skill directory.
 
 ## What It Does
 
-- Scans the incoming Skill for secrets, personal paths, caches, private data, unsafe links, and unclear assets.
+- Scans the incoming Skill for literal secrets, personal paths, caches, private data, unsafe links, and unclear assets; runtime credential reads are allowed and every detected value is redacted from scanner output.
 - Imports the complete payload into `skills/<name>/` and creates bilingual docs, Changelog, Registry metadata, and catalog entries.
 - Locks an eight-field release story, chooses a clean-doc or proof-led presentation tier, and rejects generic Hero templates shared across unrelated Skills.
 - Validates the Skill, full Portfolio, declared tests, README structure and assets, local discovery, and isolated copy installation.

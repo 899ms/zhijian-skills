@@ -27,7 +27,7 @@ npx skills add zjp1997720/zhijian-skills \
 
 ## 功能
 
-- 扫描密钥、个人路径、缓存、私有数据、越界链接和授权不清的资产。
+- 扫描真实字面量密钥、个人路径、缓存、私有数据、越界链接和授权不清的资产；允许运行时读取凭证，并对扫描输出中的命中值统一脱敏。
 - 把完整载荷导入 `skills/<name>/`，同步建立中英文文档、Changelog、Registry 和总目录入口。
 - 锁定八字段发布故事，选择 `clean-doc` 或 `proof-led` 呈现层级，并拒绝跨 Skill 复用的通用 Hero 模板。
 - 验证 Skill、整个 Portfolio、声明测试、README 结构与资产、本地发现和隔离复制安装。

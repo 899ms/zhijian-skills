@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import os
 import re
@@ -16,8 +17,35 @@ SECRET_PATTERNS = [
     ("aws_access_key", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
     ("private_key", re.compile(r"-----BEGIN (?:RSA |DSA |EC |OPENSSH )?PRIVATE KEY-----")),
     ("bearer_token", re.compile(r"\bBearer\s+[A-Za-z0-9._~+/=-]{20,}\b", re.IGNORECASE)),
-    ("assignment_secret", re.compile(r"(?i)\b(api[_-]?key|secret|token|password)\b\s*[:=]\s*['\"]?[A-Za-z0-9._~+/=-]{12,}")),
 ]
+
+SECRET_NAME_PATTERN = re.compile(
+    r"(?i)^(?:[a-z0-9]+[_-])*(?:api[_-]?key|secret(?:[_-]?key)?|token|password)$"
+)
+ASSIGNMENT_SECRET_PATTERN = re.compile(
+    r"""(?imx)
+    [\"']?
+    (?P<key>(?:[a-z0-9]+[_-])*(?:api[_-]?key|secret(?:[_-]?key)?|token|password))
+    [\"']?\s*[:=]\s*
+    (?:
+        (?P<quote>[\"'])(?P<quoted>[^\"'\r\n]{12,})(?P=quote)
+        |
+        (?P<bare>[A-Za-z0-9._~+/=${}-]{12,})(?=\s*(?:$|[,;}#]|//))
+    )
+    """
+)
+PLACEHOLDER_MARKERS = (
+    "changeme",
+    "dummy",
+    "example",
+    "placeholder",
+    "redacted",
+    "replace-me",
+    "replace_me",
+    "sample",
+    "your-",
+    "your_",
+)
 
 PRIVATE_PATH_PATTERNS = [
     ("mac_user_path", re.compile(r"/Users/[A-Za-z0-9._-]+/")),
@@ -89,6 +117,95 @@ def add_issue(issues: list[dict], severity: str, path: Path, reason: str, detail
     )
 
 
+def is_secret_name(value: str) -> bool:
+    return bool(SECRET_NAME_PATTERN.fullmatch(value.strip()))
+
+
+def is_placeholder_secret(value: str) -> bool:
+    normalized = value.strip().lower()
+    if not normalized or normalized in {"...", "none", "null"}:
+        return True
+    if normalized.startswith(("${", "{{", "<")):
+        return True
+    if any(marker in normalized for marker in PLACEHOLDER_MARKERS):
+        return True
+    if re.fullmatch(r"[A-Z][A-Z0-9_]{5,}", value.strip()):
+        return True
+    return len(set(normalized) - {"x", "*", "_", "-"}) == 0
+
+
+def is_runtime_reference(value: str) -> bool:
+    normalized = value.strip()
+    if re.fullmatch(r"[A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)+", normalized):
+        return True
+    return normalized.startswith(("process.env.", "Deno.env.", "config.", "settings.", "secrets."))
+
+
+def is_test_fixture_path(path: Path) -> bool:
+    test_parts = {"test", "tests", "fixture", "fixtures", "__fixtures__"}
+    if any(part.lower() in test_parts for part in path.parts):
+        return True
+    name = path.name.lower()
+    return name.startswith("test_") or name.endswith(
+        ("_test.py", ".test.js", ".test.jsx", ".test.ts", ".test.tsx", ".spec.js", ".spec.jsx", ".spec.ts", ".spec.tsx")
+    )
+
+
+def python_literal_secrets(text: str) -> list[tuple[str, str]]:
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return []
+    found: list[tuple[str, str]] = []
+
+    def literal(value: ast.AST | None) -> str | None:
+        return value.value if isinstance(value, ast.Constant) and isinstance(value.value, str) else None
+
+    def add(name: str | None, value_node: ast.AST | None) -> None:
+        value = literal(value_node)
+        if name and value is not None and len(value) >= 12 and is_secret_name(name) and not is_placeholder_secret(value):
+            found.append((name, value))
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    add(target.id, node.value)
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            add(node.target.id, node.value)
+        elif isinstance(node, ast.NamedExpr) and isinstance(node.target, ast.Name):
+            add(node.target.id, node.value)
+        elif isinstance(node, ast.Dict):
+            for key_node, value_node in zip(node.keys, node.values):
+                key = literal(key_node)
+                add(key, value_node)
+        elif isinstance(node, ast.Call):
+            for keyword in node.keywords:
+                add(keyword.arg, keyword.value)
+    return found
+
+
+def assignment_secrets(path: Path, text: str) -> list[tuple[str, str]]:
+    # Test fixtures often need fake literal credentials to verify redaction and
+    # precedence behavior. Provider-specific secret patterns are still scanned
+    # independently for every file, including tests.
+    if is_test_fixture_path(path):
+        return []
+    if path.suffix == ".py":
+        return python_literal_secrets(text)
+    found: list[tuple[str, str]] = []
+    for match in ASSIGNMENT_SECRET_PATTERN.finditer(text):
+        value = match.group("quoted") or match.group("bare") or ""
+        if is_placeholder_secret(value) or is_runtime_reference(value):
+            continue
+        found.append((match.group("key"), value))
+    return found
+
+
+def contains_known_secret(value: str) -> bool:
+    return any(pattern.search(value) for _, pattern in SECRET_PATTERNS)
+
+
 def scan(root: Path) -> dict:
     issues: list[dict] = []
     files_scanned = 0
@@ -139,9 +256,26 @@ def scan(root: Path) -> dict:
 
         text = data.decode("utf-8", errors="ignore")
         for label, pattern in SECRET_PATTERNS:
-            match = pattern.search(text)
-            if match:
-                add_issue(issues, "blocker", rel, f"possible_secret:{label}", match.group(0)[:80])
+            matches = list(pattern.finditer(text))
+            if matches:
+                add_issue(
+                    issues,
+                    "blocker",
+                    rel,
+                    f"possible_secret:{label}",
+                    f"<redacted:{len(matches)} match(es)>",
+                )
+
+        for key, value in assignment_secrets(path, text):
+            if contains_known_secret(value):
+                continue
+            add_issue(
+                issues,
+                "blocker",
+                rel,
+                "possible_secret:assignment_secret",
+                f"{key}=<redacted:{len(value)} chars>",
+            )
 
         for label, pattern in PRIVATE_PATH_PATTERNS:
             match = pattern.search(text)
