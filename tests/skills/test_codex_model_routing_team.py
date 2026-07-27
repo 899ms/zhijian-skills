@@ -400,6 +400,22 @@ class SkillContractTests(unittest.TestCase):
                 check=False,
             )
 
+    def run_route_validator_stdin(
+        self, plan: dict[str, object]
+    ) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [
+                sys.executable,
+                str(SKILL_ROOT / "scripts/validate_route_plan.py"),
+                "-",
+            ],
+            cwd=ROOT,
+            input=json.dumps(plan),
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
     def live_spawn_evidence(
         self,
         model: str = "gpt-5.6-sol",
@@ -518,6 +534,27 @@ class SkillContractTests(unittest.TestCase):
             missing_live_evidence.stderr or missing_live_evidence.stdout,
         )
         self.assertIn("requires tuple-bound live runtime evidence", missing_live_evidence.stdout)
+
+    def test_route_plan_validator_accepts_stdin_without_persisting_a_plan(self) -> None:
+        plan = {
+            "task_class": "NATIVE_SCOUT",
+            "minimum_thinking": "low",
+            "provider_allowlist": ["openai"],
+            "provider_status": {"openai": "allowed"},
+            "data_allowed_providers": ["openai"],
+            "explicit_user_request": False,
+            "risk_acknowledged": False,
+            "candidates": [self.native_candidate()],
+            "max_worker_threads": 1,
+            "max_followups_per_thread": 1,
+        }
+        from_file = self.run_route_validator(plan)
+        from_stdin = self.run_route_validator_stdin(plan)
+        self.assertEqual(from_stdin.returncode, 0, from_stdin.stderr or from_stdin.stdout)
+        self.assertEqual(
+            json.loads(from_stdin.stdout)["candidates"],
+            json.loads(from_file.stdout)["candidates"],
+        )
 
     def test_route_plan_validator_supports_predeclared_cross_surface_fallback(self) -> None:
         plan = {
@@ -668,6 +705,20 @@ class SkillContractTests(unittest.TestCase):
                 check=False,
             )
 
+    def run_ledger_validator_stdin(self, payload: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [
+                sys.executable,
+                str(SKILL_ROOT / "scripts/validate_team_ledger.py"),
+                "-",
+            ],
+            cwd=ROOT,
+            input=json.dumps(payload),
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
     def ledger_record(self, **overrides: object) -> dict[str, object]:
         record: dict[str, object] = {
             "creation_attempt": 1,
@@ -798,6 +849,16 @@ class SkillContractTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
         payload = json.loads(result.stdout)
         self.assertTrue(payload["ledger_valid"])
+
+    def test_ledger_validator_accepts_native_light_ledger_from_stdin(self) -> None:
+        payload = [self.native_ledger_record(worker_attempt=1)]
+        from_file = self.run_ledger_validator(payload)
+        from_stdin = self.run_ledger_validator_stdin(payload)
+        self.assertEqual(from_stdin.returncode, 0, from_stdin.stderr or from_stdin.stdout)
+        self.assertEqual(
+            json.loads(from_stdin.stdout)["record_count"],
+            json.loads(from_file.stdout)["record_count"],
+        )
 
     def test_thread_ledger_requires_compatible_attempt_fields_to_match(self) -> None:
         matching = self.ledger_record(worker_attempt=1)

@@ -28,12 +28,12 @@
     {
       "name": "codex-model-routing-team",
       "lifecycle": "active",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "path": "skills/codex-model-routing-team",
       "documentation": "docs/skills/codex-model-routing-team/README.md",
       "documentation_zh": "docs/skills/codex-model-routing-team/README.zh-CN.md",
       "changelog": "docs/changelogs/codex-model-routing-team.md",
-      "canonical_tag": "codex-model-routing-team/v2.0.0",
+      "canonical_tag": "codex-model-routing-team/v2.1.0",
       "validation": {
         "commands": [
           "python3 -m unittest tests.skills.test_codex_model_routing_team -v"
