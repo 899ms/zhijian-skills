@@ -281,6 +281,41 @@ class ReleasePlanTests(unittest.TestCase):
             self.assertEqual(second.returncode, 0, second.stderr)
             self.assertEqual(json.loads(first.stdout), json.loads(second.stdout))
 
+    def test_post_merge_recording_accepts_a_new_head_containing_planned_source(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            repo.mkdir()
+            self.make_repo(repo)
+            plan_path = Path(tmp) / "plan.json"
+            self.assertEqual(self.plan(repo, plan_path).returncode, 0)
+
+            (repo / "MERGED.md").write_text("merged main\n", encoding="utf-8")
+            self.git(repo, "add", "MERGED.md")
+            self.git(repo, "commit", "-m", "merge result")
+            self.git(repo, "push", "origin", "main")
+            merged_sha = self.git(repo, "rev-parse", "HEAD")
+            command = [
+                sys.executable,
+                str(SCRIPT),
+                "record-step",
+                "--plan",
+                str(plan_path),
+                "--skill",
+                "demo",
+                "--step",
+                "canonical-pushed",
+                "--remote-sha",
+                merged_sha,
+            ]
+            result = subprocess.run(
+                command,
+                text=True,
+                capture_output=True,
+                check=False,
+                env=self.command_env(XDG_STATE_HOME=str(Path(tmp) / "state")),
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_cleanup_deletes_only_the_planned_candidate_ref(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp) / "repo"

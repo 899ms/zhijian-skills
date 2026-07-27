@@ -5,6 +5,7 @@
 - Bind every release plan to the live `origin/main` SHA and fail verification when the remote changes before publication.
 - Require the original checkout path when a temporary clean clone publishes; mark that checkout `needs-sync` and install a pre-commit guard against stale-base commits.
 - Replace direct `main` pushes with short-lived branches and PR merges, and verify that merged remote history contains the planned source before recording publication.
+- Keep post-merge recording valid after GitHub switches the integration checkout to merged `main` by verifying frozen commit objects and candidate refs instead of requiring the old checkout HEAD.
 
 ## 2.3.0 — 2026-07-27
 
