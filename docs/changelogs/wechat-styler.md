@@ -1,6 +1,6 @@
 # wechat-styler Changelog
 
-## Unreleased
+## 1.10.0 — 2026-07-27
 
 - Establish `editorial-weighted-2026-07` as the Zhijian visual baseline: restore Tsanger JinKai headings, 18px/600 H3 hierarchy, 15px/450/1.68 body rhythm, 13px sans-serif metadata, and warm terracotta emphasis while retaining trust-blue links and quotation cards.
 - Add a version comparison, a reproducible 390px mobile baseline, and executable typography checks to prevent silent theme drift.

@@ -1,5 +1,10 @@
 # codex-theme-studio Changelog
 
+## 1.0.5 — 2026-07-27
+
+- Tighten home/task/degraded-state verification, keyboard visibility, overflow, and task-art contracts.
+- Keep renderer injection and theme CSS aligned with the executable verification contract.
+
 ## 1.0.4 — 2026-07-17
 
 - 修复超宽 Codex 窗口从任务页进入 New Chat 后，首页内容轨道因比例门槛高于其固定宽度上限而无法识别、Banner 只能在缩放窗口后出现的问题。

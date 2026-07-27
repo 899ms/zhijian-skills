@@ -5,12 +5,12 @@
     {
       "name": "codex-doctor",
       "lifecycle": "active",
-      "version": "1.0.2",
+      "version": "1.1.0",
       "path": "skills/codex-doctor",
       "documentation": "docs/skills/codex-doctor/README.md",
       "documentation_zh": "docs/skills/codex-doctor/README.zh-CN.md",
       "changelog": "docs/changelogs/codex-doctor.md",
-      "canonical_tag": "codex-doctor/v1.0.2",
+      "canonical_tag": "codex-doctor/v1.1.0",
       "validation": {
         "commands": [
           "python3 -m unittest discover -s skills/codex-doctor/tests -v"
@@ -28,17 +28,17 @@
     {
       "name": "codex-model-routing-team",
       "lifecycle": "active",
-      "version": "1.0.2",
+      "version": "2.0.0",
       "path": "skills/codex-model-routing-team",
       "documentation": "docs/skills/codex-model-routing-team/README.md",
       "documentation_zh": "docs/skills/codex-model-routing-team/README.zh-CN.md",
       "changelog": "docs/changelogs/codex-model-routing-team.md",
-      "canonical_tag": "codex-model-routing-team/v1.0.2",
+      "canonical_tag": "codex-model-routing-team/v2.0.0",
       "validation": {
         "commands": [
           "python3 -m unittest tests.skills.test_codex_model_routing_team -v"
         ],
-        "live_smoke": "Create and read one Codex App background task with an explicit model and thinking level"
+        "live_smoke": "Run one exact-model native subagent canary and one explicit-model Codex App thread canary; record requested, accepted, and observed model identity separately"
       },
       "capabilities": {
         "network": "required",
@@ -72,12 +72,12 @@
     {
       "name": "codex-theme-studio",
       "lifecycle": "active",
-      "version": "1.0.4",
+      "version": "1.0.5",
       "path": "skills/codex-theme-studio",
       "documentation": "docs/skills/codex-theme-studio/README.md",
       "documentation_zh": "docs/skills/codex-theme-studio/README.zh-CN.md",
       "changelog": "docs/changelogs/codex-theme-studio.md",
-      "canonical_tag": "codex-theme-studio/v1.0.4",
+      "canonical_tag": "codex-theme-studio/v1.0.5",
       "validation": {
         "commands": [
           "bash skills/codex-theme-studio/tests/run-tests.sh"
@@ -181,14 +181,37 @@
       "harnesses": ["codex", "claude-code", "agents"]
     },
     {
+      "name": "leadbook",
+      "lifecycle": "active",
+      "version": "1.0.0",
+      "path": "skills/leadbook",
+      "documentation": "docs/skills/leadbook/README.md",
+      "documentation_zh": "docs/skills/leadbook/README.zh-CN.md",
+      "changelog": "docs/changelogs/leadbook.md",
+      "canonical_tag": "leadbook/v1.0.0",
+      "validation": {
+        "commands": [
+          "python3 -m unittest discover -s skills/leadbook/tests -v"
+        ],
+        "live_smoke": null
+      },
+      "capabilities": {
+        "network": "required",
+        "subprocess": "required",
+        "filesystem": "write",
+        "credentials": "none"
+      },
+      "harnesses": ["codex", "claude-code", "agents"]
+    },
+    {
       "name": "skill-open-sourcer",
       "lifecycle": "active",
-      "version": "2.2.1",
+      "version": "2.4.0",
       "path": "skills/skill-open-sourcer",
       "documentation": "docs/skills/skill-open-sourcer/README.md",
       "documentation_zh": "docs/skills/skill-open-sourcer/README.zh-CN.md",
       "changelog": "docs/changelogs/skill-open-sourcer.md",
-      "canonical_tag": "skill-open-sourcer/v2.2.1",
+      "canonical_tag": "skill-open-sourcer/v2.4.0",
       "validation": {
         "commands": [
           "python3 -m unittest discover -s skills/skill-open-sourcer/tests -v"
@@ -229,12 +252,12 @@
     {
       "name": "wechat-styler",
       "lifecycle": "active",
-      "version": "1.9.0",
+      "version": "1.10.0",
       "path": "skills/wechat-styler",
       "documentation": "docs/skills/wechat-styler/README.md",
       "documentation_zh": "docs/skills/wechat-styler/README.zh-CN.md",
       "changelog": "docs/changelogs/wechat-styler.md",
-      "canonical_tag": "wechat-styler/v1.9.0",
+      "canonical_tag": "wechat-styler/v1.10.0",
       "validation": {
         "commands": [
           "npm test --prefix skills/wechat-styler"
@@ -252,12 +275,12 @@
     {
       "name": "workbuddy-cli-model-bridge",
       "lifecycle": "active",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "path": "skills/workbuddy-cli-model-bridge",
       "documentation": "docs/skills/workbuddy-cli-model-bridge/README.md",
       "documentation_zh": "docs/skills/workbuddy-cli-model-bridge/README.zh-CN.md",
       "changelog": "docs/changelogs/workbuddy-cli-model-bridge.md",
-      "canonical_tag": "workbuddy-cli-model-bridge/v1.0.0",
+      "canonical_tag": "workbuddy-cli-model-bridge/v1.1.0",
       "validation": {
         "commands": [
           "python3 -m unittest discover -s skills/workbuddy-cli-model-bridge/tests -v"
