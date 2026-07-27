@@ -45,6 +45,26 @@
       "id": "official-read-overrides-event",
       "prompt": "旧 ledger status 写着 done，但最新 read_thread 显示 turn 仍在 inProgress。",
       "expected_output": "以最新官方 read_thread 为当前状态真相，继续监督原 Thread；旧 status 只作诊断，不创建替代 Worker。"
+    },
+    {
+      "id": "native-sol-exact-routing",
+      "prompt": "派两个原生 Sol Worker：一个 low 快速扫描，一个 medium 完成实现，结果回到父任务集成。",
+      "expected_output": "选择 native_subagent；分别 live 确认 gpt-5.6-sol/low 与 gpt-5.6-sol/medium；显式传 model、reasoning_effort 和 fresh-context 参数；采纳后关闭 agent。"
+    },
+    {
+      "id": "native-terra-rejected",
+      "prompt": "我明确要求 Terra low 原生 Worker，但 V2 spawn 返回 Unknown model gpt-5.6-terra。",
+      "expected_output": "熔断精确 native_subagent/gpt-5.6-terra/low 组合；不静默继承父 Agent；只走派遣前声明的 Sol 或 app_thread fallback，否则主 Agent 接管。"
+    },
+    {
+      "id": "surface-selection-durable",
+      "prompt": "并行做一个五分钟只读检查，以及一个需要独立 worktree、跨会话恢复的实现任务。",
+      "expected_output": "只读检查选 native_subagent；worktree 实现选 app_thread；两者共享并发 6、累计 attempts 8 和单写者上限。"
+    },
+    {
+      "id": "terra-cannot-be-fallback",
+      "prompt": "没有点名 Terra，把它作为 Sol 失败后的备用 Worker。",
+      "expected_output": "拒绝 RoutePlan；gpt-5.6-terra 是 opt-in，只能在用户明确点名时作为首项候选。"
     }
   ]
 }

@@ -11,6 +11,7 @@ from typing import Any
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SCHEMA = SKILL_ROOT / "references" / "audit-schema.json"
+DEFAULT_NATIVE_SCHEMA = SKILL_ROOT / "references" / "native-audit-schema.json"
 MAX_CREATION_ATTEMPTS = 8
 MAX_IN_FLIGHT = 6
 
@@ -25,6 +26,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("ledger", type=Path)
     parser.add_argument("--schema", type=Path, default=DEFAULT_SCHEMA)
+    parser.add_argument("--native-schema", type=Path, default=DEFAULT_NATIVE_SCHEMA)
     return parser.parse_args()
 
 
@@ -65,7 +67,6 @@ def main() -> int:
     }
     try:
         payload = load_json(args.ledger)
-        schema = load_json(args.schema)
         root, records = records_from(payload)
     except (OSError, json.JSONDecodeError, ValueError) as exc:
         result["errors"].append(f"JSON load failed: {exc}")
@@ -73,20 +74,44 @@ def main() -> int:
         return 2
 
     result["record_count"] = len(records)
+    surfaces = {
+        record.get("surface", "app_thread")
+        for record in records
+        if isinstance(record, dict)
+    }
+    try:
+        schema = load_json(args.schema) if "app_thread" in surfaces else {}
+        native_schema = (
+            load_json(args.native_schema) if "native_subagent" in surfaces else {}
+        )
+    except (OSError, json.JSONDecodeError) as exc:
+        result["errors"].append(f"JSON load failed: {exc}")
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 2
+
     required = schema.get("required", []) if isinstance(schema, dict) else []
     states = set(
         schema.get("properties", {})
         .get("control_state", {})
         .get("enum", [])
     )
+    native_required = (
+        native_schema.get("required", []) if isinstance(native_schema, dict) else []
+    )
+    native_states = set(
+        native_schema.get("properties", {})
+        .get("control_state", {})
+        .get("enum", [])
+    )
 
     if len(records) > MAX_CREATION_ATTEMPTS:
-        result["errors"].append("worker records exceed the root creation-attempt cap")
+        result["errors"].append("worker records exceed the root worker-attempt cap")
 
     attempts: list[int] = []
     task_ids: set[str] = set()
     thread_ids: set[str] = set()
     pending_ids: set[str] = set()
+    agent_ids: set[str] = set()
     in_flight_states = {
         "PLANNED",
         "CREATION_PENDING",
@@ -101,6 +126,136 @@ def main() -> int:
             result["errors"].append(f"{prefix} must be an object")
             continue
 
+        surface = record.get("surface", "app_thread")
+        if surface == "native_subagent":
+            missing = [field for field in native_required if field not in record]
+            if missing:
+                result["errors"].append(
+                    f"{prefix} is missing required fields: {', '.join(missing)}"
+                )
+
+            attempt = record.get("worker_attempt")
+            if (
+                not isinstance(attempt, int)
+                or isinstance(attempt, bool)
+                or not 1 <= attempt <= MAX_CREATION_ATTEMPTS
+            ):
+                result["errors"].append(f"{prefix} has invalid worker_attempt")
+            else:
+                attempts.append(attempt)
+
+            subtask_attempt = record.get("subtask_attempt")
+            if (
+                not isinstance(subtask_attempt, int)
+                or isinstance(subtask_attempt, bool)
+                or not 1 <= subtask_attempt <= 2
+            ):
+                result["errors"].append(f"{prefix} has invalid subtask_attempt")
+
+            task_id = record.get("task_id")
+            if not nonempty_string(task_id):
+                result["errors"].append(f"{prefix} has invalid task_id")
+            elif task_id in task_ids:
+                result["errors"].append(f"{prefix} duplicates task_id {task_id}")
+            else:
+                task_ids.add(task_id)
+
+            agent_id = record.get("agent_id")
+            if agent_id is not None and not nonempty_string(agent_id):
+                result["errors"].append(f"{prefix} has invalid agent_id")
+            if nonempty_string(agent_id):
+                if agent_id in agent_ids:
+                    result["errors"].append(f"{prefix} duplicates agent_id {agent_id}")
+                agent_ids.add(agent_id)
+
+            state = record.get("control_state")
+            if state not in native_states:
+                result["errors"].append(f"{prefix} has unknown native control_state")
+            if state in {
+                "PLANNED",
+                "SPAWN_PENDING",
+                "RUNNING",
+                "COMPLETED",
+                "UNKNOWN",
+                "FAILED",
+            }:
+                result["in_flight_count"] += 1
+
+            adopted = record.get("adopted")
+            closed = record.get("closed")
+            if not isinstance(adopted, bool):
+                result["errors"].append(f"{prefix} has non-boolean adopted")
+            if not isinstance(closed, bool):
+                result["errors"].append(f"{prefix} has non-boolean closed")
+
+            if state == "PLANNED" and (agent_id is not None or closed is True):
+                result["errors"].append(f"{prefix} PLANNED native state contains runtime evidence")
+            elif state == "SPAWN_PENDING" and closed is True:
+                result["errors"].append(f"{prefix} SPAWN_PENDING native state is closed")
+            elif state in {"RUNNING", "COMPLETED", "CLOSED"} and not nonempty_string(agent_id):
+                result["errors"].append(f"{prefix} native state lacks an agent_id")
+            if state == "CLOSED" and closed is not True:
+                result["errors"].append(f"{prefix} violates the native close gate")
+            if closed is True and state != "CLOSED":
+                result["errors"].append(f"{prefix} closes a non-CLOSED native state")
+
+            if record.get("fork_mode") != "fresh":
+                result["errors"].append(f"{prefix} native worker must use fresh context")
+            requested_model = record.get("requested_model")
+            if not nonempty_string(requested_model) or record.get("model") != requested_model:
+                result["errors"].append(f"{prefix} requested model mismatch")
+            accepted_model = record.get("platform_accepted_model")
+            if state in {"RUNNING", "COMPLETED", "FAILED", "CLOSED"}:
+                if not nonempty_string(accepted_model) or accepted_model != requested_model:
+                    result["errors"].append(f"{prefix} accepted model mismatch")
+            observed_model = record.get("observed_runtime_model")
+            if (
+                observed_model is not None
+                and observed_model != "unknown"
+                and observed_model != requested_model
+            ):
+                result["errors"].append(f"{prefix} observed model mismatch")
+
+            if not valid_timestamp(record.get("last_observed_at")):
+                result["errors"].append(f"{prefix} has invalid last_observed_at")
+            if state in {"RUNNING", "COMPLETED", "UNKNOWN", "FAILED", "CLOSED"}:
+                if record.get("last_observed_at") is None:
+                    result["errors"].append(
+                        f"{prefix} lacks an official native observation timestamp"
+                    )
+
+            output = record.get("output")
+            if adopted is True and not nonempty_string(output):
+                result["errors"].append(f"{prefix} is adopted without a recorded output")
+            if adopted is True and (state != "CLOSED" or closed is not True):
+                result["errors"].append(
+                    f"{prefix} adopted native output must be closed"
+                )
+
+            task_intent = record.get("task_intent")
+            mutation_authority = record.get("mutation_authority")
+            if task_intent is not None and task_intent not in {"mutate", "inspect", "verify"}:
+                result["errors"].append(f"{prefix} has invalid task_intent")
+            if mutation_authority is not None and mutation_authority not in {
+                "none",
+                "declared-output-only",
+                "declared-workspace",
+                "isolated-worktree",
+            }:
+                result["errors"].append(f"{prefix} has invalid mutation_authority")
+            if task_intent in {"inspect", "verify"} and mutation_authority in {
+                "declared-workspace",
+                "isolated-worktree",
+            }:
+                result["errors"].append(
+                    f"{prefix} grants source mutation to {task_intent} intent"
+                )
+            continue
+
+        if surface != "app_thread":
+            result["errors"].append(f"{prefix} has unknown execution surface")
+            continue
+
         missing = [field for field in required if field not in record]
         if missing:
             result["errors"].append(f"{prefix} is missing required fields: {', '.join(missing)}")
@@ -110,6 +265,18 @@ def main() -> int:
             result["errors"].append(f"{prefix} has invalid creation_attempt")
         else:
             attempts.append(attempt)
+        worker_attempt = record.get("worker_attempt")
+        if worker_attempt is not None:
+            if (
+                not isinstance(worker_attempt, int)
+                or isinstance(worker_attempt, bool)
+                or not 1 <= worker_attempt <= MAX_CREATION_ATTEMPTS
+            ):
+                result["errors"].append(f"{prefix} has invalid worker_attempt")
+            elif worker_attempt != attempt:
+                result["errors"].append(
+                    f"{prefix} worker_attempt must equal creation_attempt"
+                )
 
         subtask_attempt = record.get("subtask_attempt")
         if (
@@ -244,22 +411,34 @@ def main() -> int:
             result["errors"].append(f"{prefix} has invalid result_correlation_id")
 
     if len(attempts) != len(set(attempts)):
-        result["errors"].append("creation_attempt values must be unique")
+        result["errors"].append("Worker attempt values must be unique")
     if attempts and sorted(attempts) != list(range(1, len(attempts) + 1)):
-        result["errors"].append("creation_attempt values must be contiguous from 1")
+        result["errors"].append("Worker attempt values must be contiguous from 1")
     if result["in_flight_count"] > MAX_IN_FLIGHT:
         result["errors"].append("in-flight records exceed the concurrency cap")
 
-    if root is not None and "creation_attempts" in root:
-        root_attempts = root["creation_attempts"]
-        if (
-            not isinstance(root_attempts, int)
-            or isinstance(root_attempts, bool)
-            or root_attempts != len(records)
-        ):
-            result["errors"].append(
-                "root creation_attempts must equal the number of Worker records"
-            )
+    if root is not None:
+        expected_attempt_counts = {
+            "creation_attempts": sum(
+                1
+                for record in records
+                if isinstance(record, dict)
+                and record.get("surface", "app_thread") == "app_thread"
+            ),
+            "worker_attempts": len(records),
+        }
+        for field, expected_count in expected_attempt_counts.items():
+            if field not in root:
+                continue
+            root_attempts = root[field]
+            if (
+                not isinstance(root_attempts, int)
+                or isinstance(root_attempts, bool)
+                or root_attempts != expected_count
+            ):
+                result["errors"].append(
+                    f"root {field} must equal {expected_count} for this ledger"
+                )
 
     if result["errors"]:
         exit_code = 2

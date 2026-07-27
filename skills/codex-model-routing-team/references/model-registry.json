@@ -1,6 +1,6 @@
 {
-  "schema_version": "1.0.0",
-  "updated_at": "2026-07-22",
+  "schema_version": "2.0.0",
+  "updated_at": "2026-07-27",
   "policy": {
     "runtime_metadata_role": "validate_only",
     "unknown_model_action": "reject",
@@ -22,6 +22,10 @@
       "status": "baseline",
       "automatic": true,
       "thinking": ["high", "xhigh", "max"],
+      "surface_thinking": {
+        "native_subagent": ["high", "xhigh", "max"],
+        "app_thread": ["high", "xhigh", "max"]
+      },
       "roles": ["general_worker", "fast_baseline", "research", "draft", "routine_code", "verification"],
       "provider_policy": "openai_baseline",
       "terms_default": "allowed"
@@ -31,8 +35,26 @@
       "provider": "openai",
       "status": "baseline",
       "automatic": true,
-      "thinking": ["high", "xhigh", "max"],
-      "roles": ["architecture", "hard_debugging", "critical_review", "arbitration", "fallback_deep"],
+      "thinking": ["low", "medium", "high", "xhigh", "max"],
+      "surface_thinking": {
+        "native_subagent": ["low", "medium", "high", "xhigh", "max"],
+        "app_thread": ["medium", "high", "xhigh", "max"]
+      },
+      "roles": ["native_scout", "native_worker", "native_smart_worker", "architecture", "hard_debugging", "critical_review", "arbitration", "fallback_deep"],
+      "provider_policy": "openai_baseline",
+      "terms_default": "allowed"
+    },
+    {
+      "id": "gpt-5.6-terra",
+      "provider": "openai",
+      "status": "opt_in",
+      "automatic": false,
+      "thinking": ["low", "medium", "high", "xhigh", "max"],
+      "surface_thinking": {
+        "native_subagent": ["low", "medium", "high", "xhigh", "max"],
+        "app_thread": ["low", "medium", "high", "xhigh", "max"]
+      },
+      "roles": ["opt_in_fast_worker", "opt_in_read_heavy", "opt_in_supporting_documents"],
       "provider_policy": "openai_baseline",
       "terms_default": "allowed"
     },
@@ -42,6 +64,10 @@
       "status": "conditional",
       "automatic": true,
       "thinking": ["low", "medium", "high"],
+      "surface_thinking": {
+        "native_subagent": ["low", "medium", "high"],
+        "app_thread": ["low", "medium", "high"]
+      },
       "roles": ["agentic_code", "terminal_work", "independent_review", "technical_analysis", "cross_provider_challenger"],
       "provider_policy": "xai_conditional",
       "terms_default": "unknown"
@@ -52,6 +78,10 @@
       "status": "manual_only",
       "automatic": false,
       "thinking": ["low", "medium", "high"],
+      "surface_thinking": {
+        "native_subagent": ["low", "medium", "high"],
+        "app_thread": ["low", "medium", "high"]
+      },
       "roles": ["fast_breadth", "long_context_scan", "multimodal_analysis", "structured_extraction"],
       "provider_policy": "google_antigravity_manual_only",
       "terms_default": "blocked"
