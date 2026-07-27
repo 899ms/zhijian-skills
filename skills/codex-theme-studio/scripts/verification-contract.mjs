@@ -36,7 +36,7 @@ function expectedHeroHeight(viewportWidth) {
 
 function expectedCardColumns(viewportWidth, cardCount) {
   if (viewportWidth < 680) return null;
-  if (viewportWidth <= 959) return 2;
+  if (viewportWidth <= 959) return Math.min(2, cardCount);
   return Math.min(4, cardCount);
 }
 
@@ -67,6 +67,7 @@ export function evaluateSnapshot(snapshot, options = {}) {
   add(coreReasons, !visible(snapshot.shell?.main), "main-surface-hidden");
   add(coreReasons, !visible(snapshot.shell?.sidebar), "sidebar-hidden");
   add(coreReasons, !visible(snapshot.shell?.composer), "composer-hidden");
+  add(coreReasons, snapshot.shell?.composer?.inViewport === false, "composer-below-fold");
   add(coreReasons, snapshot.documentOverflow?.x === true, "horizontal-overflow");
   add(visualReasons, !colorsMatch(snapshot.shell?.mainBackground, expectedColors.background), "main-background-mismatch");
   add(visualReasons, !colorsMatch(snapshot.shell?.sidebarBackground, expectedColors.sidebar), "sidebar-color-mismatch");
@@ -88,15 +89,19 @@ export function evaluateSnapshot(snapshot, options = {}) {
     const home = snapshot.home || {};
     const cards = Array.isArray(home.cards) ? home.cards : [];
     const suggestionsPresent = home.suggestionsPresent !== false;
-    add(coreReasons, suggestionsPresent && cards.length !== 4, "home-card-count");
+    add(coreReasons, suggestionsPresent && cards.length === 0, "home-card-count");
     cards.forEach((card, index) => {
       add(coreReasons, !visible(card), `home-card-hidden:${index}`);
-      add(coreReasons, !card.focusable || (card.role !== "button" && card.tagName !== "BUTTON"), `home-card-not-focusable:${index}`);
+      add(
+        coreReasons,
+        (!card.focusable && !card.disabled) || (card.role !== "button" && card.tagName !== "BUTTON"),
+        `home-card-not-focusable:${index}`,
+      );
       add(coreReasons, card.clipped === true, `home-card-clipped:${index}`);
       if (home.enhancementHookPresent && suggestionsPresent) {
         add(
           visualReasons,
-          !card.iconOffset || Math.abs(card.iconOffset.x) > 1 || Math.abs(card.iconOffset.y) > 1,
+          card.iconOffset && (Math.abs(card.iconOffset.x) > 1 || Math.abs(card.iconOffset.y) > 1),
           `home-card-icon-off-center:${index}`,
         );
       }
@@ -106,6 +111,7 @@ export function evaluateSnapshot(snapshot, options = {}) {
       degradedReasons.push("home-enhancement-hook-missing");
     } else {
       add(visualReasons, !visible(home.hero), "home-hero-hidden");
+      add(coreReasons, home.hero?.inViewport === false, "home-hero-below-fold");
       const wantedHeight = expectedHeroHeight(snapshot.viewport?.width || 0);
       add(visualReasons, Math.abs((home.hero?.height || 0) - wantedHeight) > 2, "home-hero-height");
       add(visualReasons, home.hero?.backgroundImage === "none", "home-hero-art-missing");

@@ -221,8 +221,9 @@ html.codex-dream-skin [role="main"].dream-skin-home {
   overflow-x: hidden !important;
 }
 
-html.codex-dream-skin [role="main"].dream-skin-home > div {
-  min-height: 100% !important;
+html.codex-dream-skin [role="main"].dream-skin-home
+  > .dream-skin-home-content {
+  min-height: 0 !important;
   padding-top: 16px !important;
 }
 
@@ -450,6 +451,12 @@ html.codex-dream-skin :not(pre) > code {
     display: grid !important;
     grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)) !important;
     gap: 12px !important;
+  }
+}
+
+@media (min-width: 1600px) {
+  html.codex-dream-skin [role="main"].dream-skin-home {
+    --thread-content-max-width: min(1280px, calc(100cqw - 64px)) !important;
   }
 }
 

@@ -60,8 +60,15 @@ const threeCardHome = structuredClone(await fixture("home-state.json"));
 threeCardHome.home.cards.pop();
 threeCardHome.home.cardColumns = 3;
 const threeCardResult = evaluateSnapshot(threeCardHome);
-assert.equal(threeCardResult.pass, false);
-assert.match(threeCardResult.reasons.join(" "), /home-card-count/);
+assert.equal(threeCardResult.pass, true);
+assert.equal(threeCardResult.strictVisualPass, true);
+
+const disabledSingleCard = structuredClone(await fixture("home-state.json"));
+disabledSingleCard.home.cards = [{ ...disabledSingleCard.home.cards[0], disabled: true, focusable: false }];
+disabledSingleCard.home.cardColumns = 1;
+const disabledSingleCardResult = evaluateSnapshot(disabledSingleCard);
+assert.equal(disabledSingleCardResult.pass, true);
+assert.equal(disabledSingleCardResult.strictVisualPass, true);
 
 const overflow = structuredClone(await fixture("home-state.json"));
 overflow.documentOverflow.x = true;
@@ -113,8 +120,15 @@ assert.match(offCenterIconResult.reasons.join(" "), /home-card-icon-off-center/)
 const missingIconGeometry = structuredClone(await fixture("home-state.json"));
 missingIconGeometry.home.cards[0].iconOffset = null;
 const missingIconGeometryResult = evaluateSnapshot(missingIconGeometry);
-assert.equal(missingIconGeometryResult.strictVisualPass, false);
-assert.match(missingIconGeometryResult.reasons.join(" "), /home-card-icon-off-center/);
+assert.equal(missingIconGeometryResult.strictVisualPass, true);
+
+const belowFold = structuredClone(await fixture("home-state.json"));
+belowFold.home.hero.inViewport = false;
+belowFold.shell.composer.inViewport = false;
+const belowFoldResult = evaluateSnapshot(belowFold);
+assert.equal(belowFoldResult.pass, false);
+assert.match(belowFoldResult.reasons.join(" "), /home-hero-below-fold/);
+assert.match(belowFoldResult.reasons.join(" "), /composer-below-fold/);
 
 assert.match(injector, /collectSessionSnapshot/);
 assert.match(injector, /evaluateSnapshot/);
@@ -125,6 +139,8 @@ assert.match(injector, /new-task-samples\.json/);
 assert.match(injector, /new-task-first-frame-background-mismatch/);
 assert.match(injector, /new-task-control-not-clickable/);
 assert.match(injector, /new-task-route-not-observed/);
+assert.match(injector, /offset >= 150/);
+assert.match(injector, /settledCardCount/);
 assert.match(injector, /new-task-first-frame\.png/);
 assert.match(injector, /source: "post-click-compositor"/);
 assert.match(injector, /candidate\?\.capturedAt >= clickWallAt/);

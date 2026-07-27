@@ -5,7 +5,12 @@
   const CHROME_ID = "codex-dream-skin-chrome";
   const SHELL_ATTR = "data-dream-shell";
   const ART_PLACEMENT_ATTR = "data-dream-art-placement";
-  const HOME_MARKERS = ["dream-skin-home", "dream-skin-home-shell", "dream-skin-home-hero"];
+  const HOME_MARKERS = [
+    "dream-skin-home",
+    "dream-skin-home-content",
+    "dream-skin-home-shell",
+    "dream-skin-home-hero",
+  ];
   const VERSION = __DREAM_SKIN_VERSION_JSON__;
   const THEME = themeConfig && typeof themeConfig === "object" ? themeConfig : {};
   const THEME_VARIABLES = [
@@ -166,25 +171,40 @@
       const homeRect = home.getBoundingClientRect();
       const maxHeight = Math.min(560, Math.max(192, homeRect.height * 0.75));
       const minRailWidth = Math.min(960, homeRect.width * 0.6);
+      let relativeShell = null;
       for (let node = feature.parentElement; node && node !== home; node = node.parentElement) {
         const rect = node.getBoundingClientRect();
+        const style = getComputedStyle(node);
+        if (!relativeShell && style.position === "relative" &&
+            rect.width >= minRailWidth && rect.height >= 40 && rect.height <= maxHeight) {
+          relativeShell = node;
+        }
         if (rect.width >= minRailWidth && rect.height >= 40 && rect.height <= maxHeight) shell = node;
       }
+      if (relativeShell) shell = relativeShell;
     }
 
     const markedHero = home?.querySelector('.dream-skin-home-hero') || null;
     let hero = shell ? [...shell.children].find((node) => node.contains(feature)) || null : null;
     if (!hero && markedHero?.contains(feature)) hero = markedHero;
 
+    let content = shell;
+    while (content && content.parentElement !== home) content = content.parentElement;
+    if (content?.parentElement !== home) content = null;
+
+    document.querySelectorAll('.dream-skin-home-content').forEach((node) => {
+      if (node !== content) node.classList.remove("dream-skin-home-content");
+    });
     document.querySelectorAll('.dream-skin-home-shell').forEach((node) => {
       if (node !== shell) node.classList.remove("dream-skin-home-shell");
     });
     document.querySelectorAll('.dream-skin-home-hero').forEach((node) => {
       if (node !== hero) node.classList.remove("dream-skin-home-hero");
     });
+    content?.classList.add("dream-skin-home-content");
     shell?.classList.add("dream-skin-home-shell");
     hero?.classList.add("dream-skin-home-hero");
-    return { home, feature, suggestions, shell, hero };
+    return { home, content, feature, suggestions, shell, hero };
   };
 
   const ensureChrome = (shell) => {

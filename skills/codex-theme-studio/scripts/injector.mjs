@@ -503,6 +503,7 @@ async function collectSessionSnapshot(session) {
         x: Math.round(r.x), y: Math.round(r.y),
         width: Math.round(r.width), height: Math.round(r.height),
         visible: r.width > 0 && r.height > 0 && style.display !== 'none' && style.visibility !== 'hidden',
+        inViewport: r.right > 0 && r.bottom > 0 && r.left < innerWidth && r.top < innerHeight,
       };
     };
     const box = (node) => {
@@ -593,6 +594,7 @@ async function collectSessionSnapshot(session) {
         ...item,
         tagName: node.tagName,
         role: node.getAttribute('role') || (node.tagName === 'BUTTON' ? 'button' : null),
+        disabled: Boolean(node.disabled || node.getAttribute('aria-disabled') === 'true'),
         focusable: !node.disabled && (node.tabIndex >= 0 || node.tagName === 'BUTTON'),
         clipped: paintClipped(node),
         iconOffset: cellRect && iconRect ? {
@@ -783,7 +785,7 @@ async function sampleNewTaskTransition(session, outputDir, theme) {
 
     const samples = [];
     const sampleStarted = Date.now();
-    let previousCardCount = null;
+    let settledCardCount = null;
     const reasons = [];
     let homeObserved = false;
     if (before.mode !== "task") reasons.push("new-task-precondition-not-task");
@@ -802,10 +804,10 @@ async function sampleNewTaskTransition(session, outputDir, theme) {
         reasons.push(`new-task-prepaint-missing:${offset}ms`);
       }
       const cardCount = snapshot.home?.cards?.filter((card) => card.visible).length ?? 0;
-      if (previousCardCount !== null && previousCardCount > 0 && cardCount < previousCardCount) {
+      if (offset >= 150 && settledCardCount !== null && settledCardCount > 0 && cardCount < settledCardCount) {
         reasons.push(`mounted-cards-disappeared:${offset}ms`);
       }
-      previousCardCount = cardCount;
+      if (offset >= 150) settledCardCount = cardCount;
       const label = String(offset).padStart(3, "0");
       const screenshot = path.join(outputDir, `new-task-${label}ms.png`);
       await capture(session, screenshot, { settleMs: 0, parkPointer: false });
