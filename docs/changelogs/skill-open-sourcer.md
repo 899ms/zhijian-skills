@@ -1,5 +1,9 @@
 # skill-open-sourcer Changelog
 
+## 2.4.1 — 2026-07-27
+
+- Exclude generated `dist`, `coverage`, and `reports` directories from isolated-install payload manifests, matching the canonical release manifest and preventing local test artifacts from causing false remote mismatches.
+
 ## 2.4.0 — 2026-07-27
 
 - Bind every release plan to the live `origin/main` SHA and fail verification when the remote changes before publication.

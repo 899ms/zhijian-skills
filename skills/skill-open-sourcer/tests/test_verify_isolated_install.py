@@ -98,6 +98,18 @@ class IsolatedInstallVerifierTests(unittest.TestCase):
         self.assertEqual(payload["phase"], "compare")
         self.assertEqual(payload["file_count"], 3)
 
+    def test_generated_directories_are_excluded_from_the_payload_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = self.make_repo(root)
+            generated = repo / "skills" / "demo-skill" / "dist" / "qa"
+            generated.mkdir(parents=True)
+            (generated / "report.md").write_text("generated\n", encoding="utf-8")
+            result = self.run_verifier(repo, self.make_cli(root, "pass"))
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["file_count"], 3)
+
     def test_install_failure_cannot_be_masked_by_later_checks(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
