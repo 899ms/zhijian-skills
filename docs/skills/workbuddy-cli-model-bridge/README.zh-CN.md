@@ -34,6 +34,8 @@ npx skills add zjp1997720/zhijian-skills \
 - 发现健康的手工版或 LaunchAgent 部署时继续复用，不强制迁移。
 - 使用 CLIProxyAPI 原生的 Codex、xAI 和 AntiGravity OAuth 流程。
 - 注册前实测文本、流式输出、工具、图片和推理控制。
+- 按精确模型 ID 写入上下文与输出上限；Provider 可声明自己的 JSON/TOML 模型目录，精确本地路由值优先于带来源的清单规格。
+- 上下文或输出上限未知、证据来源无效、接口拒绝所声明输出上限时，阻止注册该模型，避免 WorkBuddy 静默采用错误默认值。
 - 图片探测使用 256×192 的红色方块与蓝色圆形组合；极小图片造成的歧义，或接口只接受图片参数但没有正确识别内容，都不算验证通过。
 - 备份并原子合并 WorkBuddy 模型，保留用户手工条目。
 - 通过机器本地 Provider 注册表扩展其他 CLI，不修改公共 Skill。
@@ -107,7 +109,7 @@ python3 skills/workbuddy-cli-model-bridge/scripts/bridge.py \
   validate-provider skills/workbuddy-cli-model-bridge/providers/codex.json
 ```
 
-测试使用隔离临时 Home 和模拟 OpenAI-compatible 服务，覆盖 Provider 安全、密钥脱敏、模型选择、手工配置保护、能力降级、原子写入、备份和重复同步幂等性。
+测试使用隔离临时 Home 和模拟 OpenAI-compatible 服务，覆盖 Provider 安全、密钥脱敏、JSON/TOML 目录、模型选择、精确 token 上限、路由目录优先级、缺失上限阻断、输出上限拒绝、手工配置保护、能力降级、原子写入、备份和重复同步幂等性。
 
 ## 上游资料
 
@@ -118,4 +120,4 @@ python3 skills/workbuddy-cli-model-bridge/scripts/bridge.py \
 
 ## 许可证
 
-[MIT](../../../skills/workbuddy-cli-model-bridge/LICENSE)
+[MIT](https://github.com/zjp1997720/zhijian-skills/blob/main/skills/workbuddy-cli-model-bridge/LICENSE)

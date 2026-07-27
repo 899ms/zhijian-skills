@@ -34,6 +34,8 @@ The install payload also supports Claude Code and generic Agents-compatible Harn
 - Keeps a healthy existing manual or LaunchAgent deployment in place.
 - Delegates authentication to CLIProxyAPI's native Codex, xAI, and Antigravity OAuth flows.
 - Probes text, streaming, tools, images, and reasoning controls before enabling WorkBuddy capability flags.
+- Writes context and output limits by exact model ID; each Provider can declare JSON/TOML catalogs whose exact route metadata overrides sourced manifest values.
+- Blocks registration when either limit is unknown, its evidence is invalid, or the route rejects the declared output limit, preventing a silent WorkBuddy fallback.
 - Uses a 256×192 composition with a red square and blue circle for the image probe, so tiny-image ambiguity and merely accepting a multimodal request do not count as verification.
 - Backs up and atomically merges models into WorkBuddy while preserving manual entries.
 - Loads additional machine-local Provider manifests without modifying the public Skill.
@@ -107,7 +109,7 @@ python3 skills/workbuddy-cli-model-bridge/scripts/bridge.py \
   validate-provider skills/workbuddy-cli-model-bridge/providers/codex.json
 ```
 
-The tests use isolated temporary homes and a fake OpenAI-compatible server. They verify manifest safety, key redaction, model selection, manual-entry preservation, capability downgrade, atomic mode, backups, and idempotent repeated sync.
+The tests use isolated temporary homes and a fake OpenAI-compatible server. They verify manifest safety, key redaction, JSON/TOML catalogs, model selection, exact token limits, route-catalog precedence, missing-limit blocking, output-limit rejection, manual-entry preservation, capability downgrade, atomic mode, backups, and idempotent repeated sync.
 
 ## Upstream references
 
@@ -118,4 +120,4 @@ The tests use isolated temporary homes and a fake OpenAI-compatible server. They
 
 ## License
 
-[MIT](../../../skills/workbuddy-cli-model-bridge/LICENSE)
+[MIT](https://github.com/zjp1997720/zhijian-skills/blob/main/skills/workbuddy-cli-model-bridge/LICENSE)
