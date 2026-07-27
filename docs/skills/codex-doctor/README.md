@@ -38,7 +38,8 @@ The scanner uses only the Python standard library.
 ## What It Does
 
 - Combines Codex's built-in runtime report with deterministic, read-only workspace checks.
-- Audits the effective `AGENTS.md` chain, context-size pressure, exact duplication, Skills, MCP, hooks, config, Git state, and repository-root hygiene.
+- Audits the effective `AGENTS.md` chain, context-size pressure, exact duplication, Skills, MCP, hooks, config, thread-provider history scope, Git state, and repository-root hygiene.
+- Flags cases where the active provider represents only a small minority of indexed thread history, a common cause of apparently missing Desktop conversations.
 - Separates machine-verifiable findings from semantic cleanup candidates, then requires finding-level approval before any repair.
 
 It does not execute hooks, expose secret values, delete rules, disable extensions, update Codex, change permissions, or repair files automatically.
@@ -62,6 +63,8 @@ Use $codex-doctor to run a complete health check. Diagnose only and do not chang
 Use $codex-doctor to find why Codex keeps ignoring this project's AGENTS.md.
 
 Use $codex-doctor to audit broken or low-value Skills, MCP servers, and hooks. Show evidence before proposing changes.
+
+Use $codex-doctor to diagnose why historical conversations disappeared after changing model providers. Diagnose only.
 ```
 
 The bundled scanner can also be run directly:
@@ -97,7 +100,7 @@ python3 -m unittest discover -s tests -v
 python3 scripts/scan_workspace.py --cwd /path/to/project --compact-json
 ```
 
-The test suite covers instruction scope and truncation, redaction, MCP and hook validation, Git hygiene, compact-report integrity, and repair-safety assumptions.
+The test suite covers instruction scope and truncation, redaction, MCP and hook validation, provider-history scope drift, Git hygiene, compact-report integrity, and repair-safety assumptions.
 
 ## License
 

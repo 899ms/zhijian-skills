@@ -1,8 +1,8 @@
-# 耐久项目模式
+# 耐久 App Thread 模式
 
 ## 进入条件
 
-满足任一条件时使用：预计超过 30 分钟；有 4 个以上正式交付物；涉及外部/生产/账户/成本审批；需要跨任务恢复；用户明确要求 Agents Team、项目管理或持续执行。
+满足任一条件时优先使用 `app_thread`：预计超过 30 分钟；有 4 个以上正式交付物；涉及外部/生产/账户/成本审批；需要跨任务恢复、worktree 或独立任务历史；用户明确要求 Agents Team、项目管理或持续执行。
 
 ## 状态目录
 
@@ -18,7 +18,7 @@ agent_team/
   handoffs/
 ```
 
-`state.json` 至少记录：根任务目标、模式、策略版本、并发/creation attempt 计数、每个 RoutePlan 的有序候选链、Provider allowlist、健康证据，以及遵守 [审计 schema](audit-schema.json) 的 Worker 记录。每个 Worker 使用唯一 `task_id`；正式 id、pending id、`control_state` 和最新官方观察分开记录。未返回正式 thread id 的创建尝试也必须保留。
+`state.json` 至少记录：根任务目标、模式、策略版本、并发/worker attempt 计数、每个 RoutePlan 的有序候选链、Provider allowlist、健康证据，以及遵守 [Thread 审计 schema](audit-schema.json) 的 Worker 记录。每个 Worker 使用唯一 `task_id`；正式 id、pending id、`control_state` 和最新官方观察分开记录。未返回正式 thread id 的创建尝试也必须保留。
 
 `task-board.md` 展示待办、执行中、待集成、完成、阻塞。`packets/` 保存正式任务包，`handoffs/` 保存可恢复的交接摘要。
 

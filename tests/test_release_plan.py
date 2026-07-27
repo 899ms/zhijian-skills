@@ -14,6 +14,9 @@ SCRIPT = ROOT / "skills/skill-open-sourcer/scripts/release_portfolio.py"
 
 
 class ReleasePlanTests(unittest.TestCase):
+    def command_env(self, **extra: str) -> dict[str, str]:
+        return dict(os.environ, ZHIJIAN_ALLOW_TEST_REMOTE="1", **extra)
+
     def git(self, repo: Path, *args: str) -> str:
         result = subprocess.run(
             ["git", *args], cwd=repo, text=True, capture_output=True, check=True
@@ -69,8 +72,25 @@ class ReleasePlanTests(unittest.TestCase):
         self.git(root, "config", "user.email", "test@example.com")
         self.git(root, "add", ".")
         self.git(root, "commit", "-m", "baseline")
+        remote = root.parent / "remote.git"
+        subprocess.run(
+            ["git", "init", "--bare", str(remote)],
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+        self.git(root, "remote", "add", "origin", str(remote))
+        self.git(root, "push", "-u", "origin", "main")
+        subprocess.run(
+            ["git", "--git-dir", str(remote), "symbolic-ref", "HEAD", "refs/heads/main"],
+            text=True,
+            capture_output=True,
+            check=True,
+        )
 
-    def plan(self, repo: Path, path: Path) -> subprocess.CompletedProcess[str]:
+    def plan(
+        self, repo: Path, path: Path, *, source_checkout: Path | None = None
+    ) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [
                 sys.executable,
@@ -78,6 +98,8 @@ class ReleasePlanTests(unittest.TestCase):
                 "plan",
                 "--repo",
                 str(repo),
+                "--source-checkout",
+                str(source_checkout or repo),
                 "--all",
                 "--dry-run",
                 "--plan-out",
@@ -86,6 +108,7 @@ class ReleasePlanTests(unittest.TestCase):
             text=True,
             capture_output=True,
             check=False,
+            env=self.command_env(),
         )
 
     def test_plan_is_deterministic_and_frozen(self) -> None:
@@ -124,9 +147,75 @@ class ReleasePlanTests(unittest.TestCase):
                 text=True,
                 capture_output=True,
                 check=False,
+                env=self.command_env(),
             )
             self.assertEqual(verify.returncode, 2)
             self.assertIn("plan.stale", verify.stderr)
+
+    def test_verify_rejects_remote_drift_without_local_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            repo.mkdir()
+            self.make_repo(repo)
+            plan_path = Path(tmp) / "plan.json"
+            self.assertEqual(self.plan(repo, plan_path).returncode, 0)
+
+            peer = Path(tmp) / "peer"
+            subprocess.run(
+                ["git", "clone", str(Path(tmp) / "remote.git"), str(peer)],
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+            self.git(peer, "config", "user.name", "Peer")
+            self.git(peer, "config", "user.email", "peer@example.com")
+            (peer / "REMOTE.md").write_text("remote drift\n", encoding="utf-8")
+            self.git(peer, "add", "REMOTE.md")
+            self.git(peer, "commit", "-m", "remote drift")
+            self.git(peer, "push", "origin", "main")
+
+            verify = subprocess.run(
+                [sys.executable, str(SCRIPT), "verify", "--plan", str(plan_path)],
+                text=True,
+                capture_output=True,
+                check=False,
+                env=self.command_env(),
+            )
+            self.assertEqual(verify.returncode, 2)
+            self.assertIn("plan.remote_changed", verify.stderr)
+
+    def test_temporary_clone_plan_freezes_source_checkout_commits(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "source"
+            source.mkdir()
+            self.make_repo(source)
+            integration = Path(tmp) / "integration"
+            subprocess.run(
+                ["git", "clone", str(Path(tmp) / "remote.git"), str(integration)],
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+            plan_path = Path(tmp) / "plan.json"
+            planned = self.plan(integration, plan_path, source_checkout=source)
+            self.assertEqual(planned.returncode, 0, planned.stderr)
+            marker = source / ".git" / "zhijian-needs-sync.json"
+            hook = source / ".git" / "hooks" / "pre-commit"
+            self.assertTrue(marker.is_file())
+            self.assertTrue(hook.is_file())
+            self.assertTrue(os.access(hook, os.X_OK))
+
+            (source / "blocked.txt").write_text("blocked\n", encoding="utf-8")
+            self.git(source, "add", "blocked.txt")
+            blocked = subprocess.run(
+                ["git", "commit", "-m", "must not commit"],
+                cwd=source,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertNotEqual(blocked.returncode, 0)
+            self.assertIn("needs-sync", blocked.stderr)
 
     def test_each_skill_gets_a_distinct_detached_candidate_commit(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -171,7 +260,8 @@ class ReleasePlanTests(unittest.TestCase):
             self.make_repo(repo)
             plan_path = Path(tmp) / "plan.json"
             self.assertEqual(self.plan(repo, plan_path).returncode, 0)
-            env = dict(os.environ, XDG_STATE_HOME=str(Path(tmp) / "state"))
+            env = self.command_env(XDG_STATE_HOME=str(Path(tmp) / "state"))
+            remote_sha = self.git(repo, "rev-parse", "origin/main")
             command = [
                 sys.executable,
                 str(SCRIPT),
@@ -182,6 +272,8 @@ class ReleasePlanTests(unittest.TestCase):
                 "demo",
                 "--step",
                 "canonical-pushed",
+                "--remote-sha",
+                remote_sha,
             ]
             first = subprocess.run(command, text=True, capture_output=True, env=env, check=False)
             second = subprocess.run(command, text=True, capture_output=True, env=env, check=False)

@@ -84,6 +84,8 @@ The sync command:
 - fetches the live `/v1/models` list
 - selects recommended chat/agent models from Provider manifests
 - probes text, SSE streaming, tools, images, and reasoning controls where declared
+- resolves token limits by exact model ID, using Provider-declared catalogs before sourced manifest metadata
+- refuses to register a model with an unknown input/output limit or a rejected output-limit probe
 - skips models whose text or streaming probes fail
 - downgrades optional capability flags when their probes fail
 - backs up and atomically updates `~/.workbuddy/models.json`
@@ -111,6 +113,7 @@ Report:
 - capability probe results
 - conflicts, skipped models, and preserved stale entries
 - backup paths and any remaining user action
+- effective input/output token limits and their non-secret metadata source
 
 Never include API keys, OAuth URLs containing one-time codes, token file contents, or raw request bodies.
 
@@ -175,6 +178,7 @@ Completion requires:
 - CLIProxyAPI is reachable on loopback with the dedicated client key
 - each registered model passed text and streaming probes
 - every enabled optional capability passed its probe
+- every registered model has sourced input/output limits and passed the bounded output-limit probe
 - WorkBuddy loaded the resulting model list
 - repeated sync is idempotent
 - backups and rollback paths are reported

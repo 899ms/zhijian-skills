@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -64,6 +65,15 @@ class ReleaseSelectionTests(unittest.TestCase):
         self.git(repo, "config", "user.email", "test@example.com")
         self.git(repo, "add", ".")
         self.git(repo, "commit", "-m", "baseline")
+        remote = repo.parent / "remote.git"
+        subprocess.run(
+            ["git", "init", "--bare", str(remote)],
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+        self.git(repo, "remote", "add", "origin", str(remote))
+        self.git(repo, "push", "-u", "origin", "main")
 
     def run_plan(self, repo: Path, plan_path: Path, *selector: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
@@ -73,6 +83,8 @@ class ReleaseSelectionTests(unittest.TestCase):
                 "plan",
                 "--repo",
                 str(repo),
+                "--source-checkout",
+                str(repo),
                 *selector,
                 "--dry-run",
                 "--plan-out",
@@ -81,6 +93,7 @@ class ReleaseSelectionTests(unittest.TestCase):
             text=True,
             capture_output=True,
             check=False,
+            env=dict(os.environ, ZHIJIAN_ALLOW_TEST_REMOTE="1"),
         )
 
     def test_skill_selector_plans_only_the_named_skill(self) -> None:

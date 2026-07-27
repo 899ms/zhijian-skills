@@ -4,11 +4,11 @@
   <img src="./assets/readme/hero.svg" width="100%" alt="A lead Codex task routes bounded background work to explicit models">
 </p>
 
-<p align="center"><strong>Give Codex a bounded team of model-routed background tasks while one lead keeps control of planning, integration, and verification.</strong></p>
+<p align="center"><strong>Route bounded work to exact-model native subagents or durable App threads while one lead owns integration and verification.</strong></p>
 
 <p align="center"><a href="./README.zh-CN.md">简体中文</a> · <a href="https://github.com/zjp1997720/zhijian-skills/tree/main/skills/codex-model-routing-team">Canonical source</a></p>
 
-Use it for complex parallel work when one lead Agent should plan and integrate while bounded background tasks run on explicitly chosen models.
+Use it for complex parallel work when one lead Agent should plan and integrate while bounded Workers run on explicitly chosen models and reasoning levels.
 
 ## Install
 
@@ -39,7 +39,7 @@ npx skills ls -g -a codex
 find ~/.agents/skills/codex-model-routing-team -maxdepth 2 -type f | sort
 ```
 
-The file list must include `SKILL.md`, `references/model-registry.json`, `references/audit-schema.json`, `references/routing-policy.md`, `references/provider-policy.md`, `references/recovery-policy.md`, `references/task-packet.md`, `references/thread-lifecycle.md`, `references/thread-supervision-protocol.md`, `scripts/model_preflight.py`, `scripts/validate_route_plan.py`, and `scripts/validate_team_ledger.py`. If only `SKILL.md` appears, remove that incomplete installation and install the current release again.
+The file list must include `SKILL.md`, `references/model-registry.json`, `references/audit-schema.json`, `references/native-audit-schema.json`, `references/surface-selection-policy.md`, `references/native-subagent-lifecycle.md`, `references/routing-policy.md`, `references/provider-policy.md`, `references/recovery-policy.md`, `references/task-packet.md`, `references/thread-lifecycle.md`, `references/thread-supervision-protocol.md`, `scripts/route_policy.py`, `scripts/model_preflight.py`, `scripts/validate_route_plan.py`, and `scripts/validate_team_ledger.py`. If only `SKILL.md` appears, remove that incomplete installation and install the current release again.
 
 ## Activate it
 
@@ -54,10 +54,11 @@ To let Codex activate the Skill automatically for suitable complex work, add the
 ```markdown
 ## Codex background model-routing authorization
 
-- The user authorizes Codex to use `$codex-model-routing-team` automatically for complex, parallelizable tasks, create independent background tasks, and assign a model and reasoning level to each task. Before dispatch, briefly state the number of tasks, model, reasoning level, and responsibility. No additional confirmation is required.
+- The user authorizes Codex to use `$codex-model-routing-team` automatically for complex, parallelizable tasks and select either an exact-model native subagent or an independent Codex App thread. Before dispatch, briefly state the Worker count, surface, model, reasoning level, and responsibility. No additional confirmation is required.
 - The lead agent keeps its current model and owns planning, file ownership, integration, verification, and final delivery.
-- Run at most 6 background tasks concurrently and make at most 8 creation attempts for one root task; failures, non-materialized calls, and fallbacks count. Background tasks must not create more background tasks or subagents.
-- Background tasks must not use Ultra. Terra is excluded from automatic routing by default. If Codex App background-task tools are unavailable, complete the work locally and do not use MultiAgentV2 `spawn_agent` as a substitute for model routing.
+- Prefer native subagents for short, bounded work integrated into the parent task. Use App threads for durable, recoverable, worktree, or audit-heavy work.
+- Run at most 6 Workers concurrently and make at most 8 Worker attempts for one root task; failures, non-materialized calls, and fallbacks count. Workers must not create more Workers or subagents.
+- Workers must not use Ultra. Terra is opt-in and excluded from automatic routing. Every native route must be confirmed by the live spawn schema for its exact model and reasoning effort; unavailable combinations follow only a predeclared fallback or return to the lead agent.
 - Do not auto-dispatch simple questions, status checks, small single-file edits, strongly sequential work, publishing, sending, payment, deletion, account, or production operations.
 ```
 
@@ -65,32 +66,36 @@ This is user-configured Codex instruction, not a hidden OpenAI system prompt. Ex
 
 ## Why this exists
 
-Codex's native MultiAgentV2 surface does not expose per-worker model or reasoning controls. Native subagents therefore inherit the session model, which can make parallel work unexpectedly expensive.
+Current Codex native subagent spawn schemas can expose per-worker `model` and reasoning controls. Support remains runtime- and surface-specific: one exact model may be accepted while another is rejected, and requested or accepted identity is not the same as an observed runtime identity.
 
-This Skill uses Codex App background tasks instead. The lead agent plans the work, assigns non-overlapping ownership, verifies results, and integrates the final deliverable. Each background task receives an explicit available model and reasoning level.
+This Skill turns that capability into a controlled router. It uses native subagents for bounded parent-integrated work and Codex App threads for durable or worktree tasks, with the same Provider gates, fallback plan, attempt budget, and lead-agent verification.
 
 ## What it does
 
 - Routes only complex, genuinely parallel work such as multi-source research, multi-section content, large Skills or decks, and independent engineering workstreams.
-- Keeps Luna and Sol as stable baselines, and conditionally routes agentic coding, terminal work, and heterogeneous review to Grok 4.5 after runtime/provider preflight.
+- Uses native Sol low/medium/high as scout/worker/smart-worker profiles; keeps Luna and Sol App threads as durable baselines; conditionally routes Grok 4.5 after runtime/provider preflight.
+- Keeps `gpt-5.6-terra` opt-in and first-candidate-only. An unknown-model response fails that exact native route and never silently inherits the parent model.
 - Retains explicit Gemini 3.6 Flash route templates while blocking the current third-party Antigravity login path; an official API/Vertex path needs a separate registry entry.
-- Limits fan-out to three new tasks per wave, six concurrent tasks, and eight creation attempts per root request.
+- Limits fan-out to three new Workers per wave, six concurrent Workers, and eight Worker attempts per root request across both surfaces.
 - Uses the first business task for each model/reasoning/tool signature as its final health probe, separating HTTP, thread materialization, model data, and delivery quality.
 - Separates formal `threadId`, queued `pendingWorktreeId`, transport timeout, and ambiguous state; a unique task id recovers queued work, while `UNKNOWN` blocks follow-up, archival, fallback, and duplicate creation.
 - Treats the latest official Thread/turn read as current truth and uses a minimal ledger validator for attempt, materialization, DATA_READY, and archive invariants.
 - Uses `task_intent` and `mutation_authority` to keep inspection and verification Workers from expanding their write scope.
-- Freezes fallback before dispatch, allows at most two Worker threads per subtask, and permits one quality follow-up in the original thread.
-- Acts as a Thread Orchestrator for upstream workflows such as Deep Research while preserving their stages, artifacts, and quality gates.
+- Freezes fallback before dispatch, allows at most two Worker attempts per subtask, and permits one quality follow-up on the original Worker.
+- Uses one Worker slot for a one-candidate plan and two only when a fallback candidate is declared.
+- Acts as a dual-surface Orchestrator for upstream workflows such as Deep Research while preserving their stages, artifacts, and quality gates.
 - Keeps publishing, payments, deletion, account changes, and production mutations in the lead task.
 
 ## How it works
 
-1. The lead agent decides whether parallel execution is worth the coordination cost and freezes a task profile, provider allowlist, and ordered candidate chain.
-2. It checks the registry, live runtime, reasoning level, and provider policy; when configured, it runs a nonce-based semantic probe outside App thread slots.
-3. Every creation has a unique task id. A direct formal id is read immediately; a queued worktree is resolved through `list_threads` and stable official observations.
-4. The first business task for each exact route must pass materialization and model-data gates before later tasks using that route are released.
-5. The lead rebuilds state from official reads, verifies artifacts, and classifies failures; it never guesses through `UNKNOWN` by creating a replacement.
-6. It archives adopted completed tasks one at a time after the archive gate passes.
+1. The lead freezes a task profile, Provider allowlist, execution surface, and ordered candidate chain.
+2. It validates the registry and Provider policy, then confirms every native `model/reasoning_effort` against the live spawn schema.
+3. Native V1 uses `fork_context=false`; V2 uses `fork_turns="none"`. App threads keep unique task ids and recover queued worktrees through official reads.
+4. Requested, platform-accepted, and observed runtime model identity remain separate. Missing runtime identity stays `unknown`.
+5. Failures advance only through the predeclared chain, including cross-surface fallbacks. A single-candidate failure returns to the lead agent.
+6. Adopted native Workers are closed; adopted App threads pass the completion and archival gates.
+
+`max_worker_threads` equals the candidate-chain length. A single candidate with lead-agent takeover uses `1`; a declared fallback chain uses `2`.
 
 When an upstream Skill already owns decomposition, this Skill accepts its stages and task budget. It controls model routing, task lifecycle, and safety caps without rewriting the upstream workflow. Any task with a workspace output path is project-bound; only chat-only work may be projectless.
 
@@ -107,16 +112,17 @@ Use $codex-model-routing-team to prepare a training deck with separate research,
 ```
 
 ```text
-Use $codex-model-routing-team as the Thread Orchestrator for $deep-research. Preserve its verifier and reviewer stages.
+Use $codex-model-routing-team as the routing Orchestrator for $deep-research. Preserve its verifier and reviewer stages.
 ```
 
 ## Requirements and boundaries
 
-- Codex App with background-task tools for project discovery, task creation, task listing, task reading, follow-up messages, and archiving.
+- Codex with a native subagent spawn surface that can confirm exact model/reasoning combinations, Codex App thread tools, or both. If one declared surface is unavailable, only a predeclared fallback may use the other.
 - Access to the models and reasoning levels selected by the lead agent.
+- `gpt-5.6-sol / medium` is limited to explicit or evidence-backed RoutePlans; default profiles retain their high-or-stronger minimum.
 - Provider terms, credential paths, and data boundaries must allow each cross-provider route. A working consumer subscription does not by itself authorize a third-party proxy.
-- Background task creation must be verifiable. The Skill stops delegation when a task does not materialize.
-- This does not change MultiAgentV2 or make native subagents support per-agent model selection.
+- Worker creation must be verifiable. Native model acceptance and observed identity are recorded separately; App Thread materialization remains mandatory.
+- Terra remains opt-in because live availability can differ from policy declaration. Ultra remains forbidden.
 
 ## Repository layout
 
@@ -139,7 +145,7 @@ The agent workflow lives in [SKILL.md](../../../skills/codex-model-routing-team/
 
 ## Validation
 
-The workflow covers Luna, Sol, conditional Grok 4.5 routes, and provider blocking for explicit Gemini requests, including registry/runtime checks, semantic nonces, RoutePlan validation, queued-worktree recovery, authoritative state reconciliation, ledger validation, and serial archival. The release is also tested through an isolated `npx skills` installation to confirm that supporting files are copied.
+The workflow covers native Sol routing, opt-in Terra rejection/fallback, Luna/Sol App threads, conditional Grok 4.5, and provider blocking for explicit Gemini requests. Validation includes surface-aware preflight, RoutePlan checks, native close gates, queued-worktree recovery, mixed ledgers, and isolated `npx skills` installation.
 
 ## License
 

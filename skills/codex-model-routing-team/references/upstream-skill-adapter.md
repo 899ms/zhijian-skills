@@ -1,6 +1,6 @@
 # 上游 Skill 适配协议
 
-当 Deep Research、课程生产、PPT 或其他 Skill 已经定义工作流时，本 Skill 作为 Thread Orchestrator 执行。
+当 Deep Research、课程生产、PPT 或其他 Skill 已经定义工作流时，本 Skill 作为双 Surface 路由 Orchestrator 执行。
 
 ## 决策边界
 
@@ -14,11 +14,11 @@
 
 本 Skill 拥有：
 
-- Worker `model` 与 `thinking`
+- Worker Surface、`model` 与 `thinking`
 - RoutePlan、Provider allowlist、模型预检与 deterministic fallback
-- project / projectless 目标选择
-- Thread 创建、实体化、读取、追问与归档
-- 并发 6、creation attempts 8、reserved slots 与升级次数
+- 原生 Subagent 的 fresh-context spawn、等待、follow-up 与关闭
+- App Thread 的 project / projectless 选择、创建、实体化、读取、追问与归档
+- 跨 Surface 并发 6、worker attempts 8、reserved slots 与升级次数
 - 单写者和禁止下级派遣等安全边界
 
 遇到冲突时，上游业务流程优先，路由安全上限保持强制。预算不足时收敛 Worker 数量并报告，禁止跳过上游验证阶段。
@@ -30,12 +30,12 @@
 3. 计算当前阶段 Worker、后续阶段和重试的 reserved slots。
 4. 输出派遣通知，列明当前 Worker 与保留额度。
 5. 把上游任务转换成 `references/task-packet.md`，保留原始验收标准。
-6. 有工作区输出时绑定匹配 project local。
-7. 按 `references/thread-lifecycle.md` 与 `references/thread-supervision-protocol.md` 创建、解析 pending setup、验证和读取 Thread。
+6. 短时、边界清晰、父任务内集成的阶段优先原生 Subagent；持久恢复、worktree、独立历史或严格 Thread 审计优先 App Thread。
+7. 原生候选按 `references/native-subagent-lifecycle.md` 执行；App Thread 有工作区输出时绑定匹配 project local，并按 `references/thread-lifecycle.md` 与 `references/thread-supervision-protocol.md` 执行。
 8. 主 Agent 验证输出文件并更新上游账本。
-9. 只有上游阶段完成且结果采纳后才归档。
+9. 只有上游阶段完成且结果采纳后，才关闭原生 Worker 或归档满足收尾门的 App Thread。
 
-上游 run summary 的 Worker 记录遵守 [审计 schema](audit-schema.json)。每次创建使用唯一 task id；每次调用 `create_thread` 前写 creation/subtask attempt；返回正式 id 或 pending id 后写入对应字段；排队恢复、实体化、DATA_READY、验收和归档分别更新控制状态。`model` 继续作为 `requested_model` 的兼容别名。`read_thread` 视图不保证返回模型字段，禁止依赖事后反查恢复路由信息。
+上游 run summary 的 Worker 记录按 Surface 分别遵守 [原生审计 schema](native-audit-schema.json) 或 [Thread 审计 schema](audit-schema.json)。每次创建使用唯一 task id 并递增 worker/subtask attempt；每次调用 `create_thread` 前另外写兼容字段 creation attempt，返回正式 id 或 pending id 后写入对应字段。`model` 继续作为 `requested_model` 的兼容别名。平台视图不保证返回模型字段，禁止依赖事后反查恢复路由信息。
 
 ## Deep Research 预设
 
@@ -43,8 +43,8 @@
 researcher_count + 1 verifier + 1 reviewer + retry_reserve <= 8
 ```
 
-- researcher：默认 2–4 个，Luna X High；机械抽取可用 Luna High。公开技术研究可在 Provider 门通过后使用 Grok Medium。当前 Gemini Antigravity 第三方登录条款 blocked；只有新增合规的正式 API registry entry 后才能使用 Gemini。
-- verifier：1 个，Luna X High，在 draft 存在后创建。
+- researcher：默认 2–4 个；短时扫描可用 Native Scout/Worker，需要独立耐久产物时用 Luna X High App Thread。公开技术研究可在 Provider 门通过后使用 Grok Medium。
+- verifier：1 个，可用 Native Smart Worker；需要独立耐久记录时用 Luna X High App Thread，在 draft 存在后创建。
 - reviewer：1 个，Sol High，在 cited 存在并通过检查后创建；需要异构工程复核时可按 RoutePlan 使用 Grok High。
 - FATAL 复审：最多一次 Sol X High，使用 retry reserve。
 - 所有任务绑定包含 `01_项目/调研` 的 vault project。
@@ -56,9 +56,11 @@ researcher_count + 1 verifier + 1 reviewer + retry_reserve <= 8
 
 ```json
 {
-  "creation_attempt": 1,
+  "worker_attempt": 1,
   "subtask_attempt": 1,
   "task_id": "deepresearch-topic-t1-a1",
+  "surface": "app_thread",
+  "creation_attempt": 1,
   "thread_id": null,
   "pending_worktree_id": null,
   "control_state": "PLANNED",

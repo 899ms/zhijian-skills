@@ -11,6 +11,8 @@ Collect read-only evidence:
 - official repository and documentation
 - documented login/status command
 - documented model IDs and protocols
+- authoritative input/output token limits and their source URLs
+- any dedicated, non-credential JSON/TOML model catalog maintained by the CLI
 - whether CLIProxyAPI already exposes a native login flag or plugin
 
 Use primary sources for technical claims. Do not treat a blog post, tweet, model name, or another user's config as sufficient evidence.
@@ -48,7 +50,7 @@ Write one JSON file under:
 $HOME/.config/workbuddy-cli-model-bridge/providers.d/<provider-id>.json
 ```
 
-Follow [provider-schema.md](provider-schema.md). Keep credentials and personal account identifiers out of the manifest.
+Follow [provider-schema.md](provider-schema.md). Keep credentials and personal account identifiers out of the manifest. Declare exact `limits_by_model` values with evidence URLs. If the CLI exposes a dedicated model catalog, declare it through `model_catalogs`; never point the bridge at an auth, token, session, or account file. The bridge refuses to register models whose input or output limit remains unknown.
 
 Validate it before authorization or sync:
 
@@ -70,6 +72,8 @@ WorkBuddy-compatible request
 ```
 
 Keep capability claims conservative. If a model accepts an image but silently drops it, image input is not verified. If a tool request returns prose instead of `tool_calls`, tool use is not verified.
+
+Token verification is two-layered: authoritative metadata or an exact local catalog establishes the input limit, and a bounded live request confirms that the route accepts the declared output limit. Do not generate a maximum-length response merely to test the limit.
 
 ## 6. Promote only reusable knowledge
 

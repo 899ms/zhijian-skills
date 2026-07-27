@@ -24,6 +24,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import tomllib
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -317,6 +318,34 @@ def validate_provider(provider: Any, *, source: str = "provider") -> list[str]:
         prefixes = cliproxy.get("auth_file_prefixes", [])
         if not isinstance(prefixes, list) or any(not isinstance(prefix, str) or not prefix for prefix in prefixes):
             errors.append(f"{source}: cliproxy.auth_file_prefixes must be an array of strings")
+    model_catalogs = provider.get("model_catalogs", [])
+    if not isinstance(model_catalogs, list):
+        errors.append(f"{source}: model_catalogs must be an array")
+    else:
+        for index, catalog in enumerate(model_catalogs):
+            catalog_prefix = f"{source}: model_catalogs[{index}]"
+            if not isinstance(catalog, dict):
+                errors.append(f"{catalog_prefix} must be an object")
+                continue
+            unknown_catalog = set(catalog) - {"path", "format", "id_fields", "input_fields", "output_fields"}
+            if unknown_catalog:
+                errors.append(f"{catalog_prefix} has unknown keys: {sorted(unknown_catalog)}")
+            path_value = catalog.get("path")
+            if (
+                not isinstance(path_value, str)
+                or not path_value
+                or Path(path_value).is_absolute()
+                or ".." in Path(path_value).parts
+            ):
+                errors.append(f"{catalog_prefix}.path must be a relative path without traversal")
+            elif re.search(r"(?:^|[._/-])(auth|token|credential|session|account|secret)(?:[._/-]|$)", path_value.lower()):
+                errors.append(f"{catalog_prefix}.path must point to a non-credential model catalog")
+            if catalog.get("format", "json") not in {"json", "toml"}:
+                errors.append(f"{catalog_prefix}.format must be json or toml")
+            for field_key in ("id_fields", "input_fields", "output_fields"):
+                fields = catalog.get(field_key, [])
+                if not isinstance(fields, list) or any(not isinstance(item, str) or not item for item in fields):
+                    errors.append(f"{catalog_prefix}.{field_key} must be a string array")
     models = provider.get("models")
     if not isinstance(models, list) or not models:
         errors.append(f"{source}: models must be a non-empty array")
@@ -360,8 +389,6 @@ def validate_provider(provider: Any, *, source: str = "provider") -> list[str]:
                     "useCustomProtocol",
                     "onlyReasoning",
                     "reasoning",
-                    "maxInputTokens",
-                    "maxOutputTokens",
                 }
                 unknown = set(workbuddy) - allowed
                 if unknown:
@@ -375,13 +402,43 @@ def validate_provider(provider: Any, *, source: str = "provider") -> list[str]:
                 ):
                     if flag_key in workbuddy and not isinstance(workbuddy[flag_key], bool):
                         errors.append(f"{prefix}.workbuddy.{flag_key} must be boolean")
-                for limit_key in ("maxInputTokens", "maxOutputTokens"):
-                    if limit_key in workbuddy and (
-                        not isinstance(workbuddy[limit_key], int) or isinstance(workbuddy[limit_key], bool) or workbuddy[limit_key] <= 0
-                    ):
-                        errors.append(f"{prefix}.workbuddy.{limit_key} must be a positive integer")
                 if "reasoning" in workbuddy and not isinstance(workbuddy["reasoning"], dict):
                     errors.append(f"{prefix}.workbuddy.reasoning must be an object")
+            limits_by_model = model.get("limits_by_model", {})
+            if not isinstance(limits_by_model, dict):
+                errors.append(f"{prefix}.limits_by_model must be an object")
+            else:
+                for model_id, limits in limits_by_model.items():
+                    limit_prefix = f"{prefix}.limits_by_model[{model_id!r}]"
+                    if not isinstance(model_id, str) or not model_id:
+                        errors.append(f"{limit_prefix} must use a non-empty model ID")
+                        continue
+                    if not isinstance(limits, dict):
+                        errors.append(f"{limit_prefix} must be an object")
+                        continue
+                    unknown_limits = set(limits) - {"maxInputTokens", "maxOutputTokens", "sources"}
+                    if unknown_limits:
+                        errors.append(f"{limit_prefix} has unknown keys: {sorted(unknown_limits)}")
+                    for limit_key, value in limits.items():
+                        if limit_key in {"maxInputTokens", "maxOutputTokens"} and (
+                            not isinstance(value, int) or isinstance(value, bool) or value <= 0
+                        ):
+                            errors.append(f"{limit_prefix}.{limit_key} must be a positive integer")
+                    limit_sources = limits.get("sources", {})
+                    if not isinstance(limit_sources, dict):
+                        errors.append(f"{limit_prefix}.sources must be an object")
+                    else:
+                        unknown_sources = set(limit_sources) - {"maxInputTokens", "maxOutputTokens"}
+                        if unknown_sources:
+                            errors.append(f"{limit_prefix}.sources has unknown keys: {sorted(unknown_sources)}")
+                        for source_key, source_url in limit_sources.items():
+                            if not isinstance(source_url, str) or not source_url.startswith("https://"):
+                                errors.append(f"{limit_prefix}.sources.{source_key} must be an https URL")
+                            if source_key not in limits:
+                                errors.append(f"{limit_prefix}.sources.{source_key} has no matching limit")
+                        for limit_key in ("maxInputTokens", "maxOutputTokens"):
+                            if limit_key in limits and limit_key not in limit_sources:
+                                errors.append(f"{limit_prefix}.sources.{limit_key} is required")
     return errors
 
 
@@ -627,6 +684,22 @@ def probe_model(endpoint: str, api_key: str, model: str, workbuddy: dict[str, An
         message_exists,
     )
     results["text"] = {"ok": ok, "error": error}
+    if "maxOutputTokens" in workbuddy:
+        limit_ok, limit_error = probe_json(
+            endpoint,
+            api_key,
+            {
+                **base,
+                "max_tokens": workbuddy["maxOutputTokens"],
+                "messages": [{"role": "user", "content": "Reply with OK."}],
+            },
+            message_exists,
+        )
+        results["output_limit"] = {
+            "ok": limit_ok,
+            "error": limit_error,
+            "requested": workbuddy["maxOutputTokens"],
+        }
     stream_ok, stream_error = probe_stream(endpoint, api_key, model)
     results["stream"] = {"ok": stream_ok, "error": stream_error}
     if workbuddy.get("supportsToolCall"):
@@ -720,6 +793,103 @@ def select_recommended_models(
             elif not recommendation.get("optional", False):
                 missing.append({"provider": provider["id"], "recommendation": recommendation["key"]})
     return selected, missing
+
+
+def find_exact_model_metadata(
+    payload: Any, model_id: str, id_fields: tuple[str, ...]
+) -> dict[str, Any] | None:
+    """Find exact route metadata without fuzzy matching model names."""
+    if isinstance(payload, dict):
+        if any(payload.get(field) == model_id for field in id_fields):
+            return payload
+        for key, value in payload.items():
+            if key == model_id and isinstance(value, dict):
+                return value
+            match = find_exact_model_metadata(value, model_id, id_fields)
+            if match is not None:
+                return match
+    elif isinstance(payload, list):
+        for value in payload:
+            match = find_exact_model_metadata(value, model_id, id_fields)
+            if match is not None:
+                return match
+    return None
+
+
+def first_positive_integer(metadata: dict[str, Any], fields: Iterable[str]) -> int | None:
+    for field in fields:
+        value = metadata.get(field)
+        if isinstance(value, int) and not isinstance(value, bool) and value > 0:
+            return value
+    return None
+
+
+def load_model_catalog(path: Path, catalog_format: str) -> Any:
+    if catalog_format == "toml":
+        try:
+            return tomllib.loads(path.read_text(encoding="utf-8"))
+        except (OSError, tomllib.TOMLDecodeError) as exc:
+            raise BridgeError("invalid_model_catalog", "Model catalog could not be parsed") from exc
+    return load_json(path)
+
+
+def route_model_limits(
+    home: Path, provider: dict[str, Any], model_id: str
+) -> tuple[dict[str, int], dict[str, str]]:
+    """Return exact route limits from Provider-declared, non-credential catalogs."""
+    resolved_limits: dict[str, int] = {}
+    resolved_sources: dict[str, str] = {}
+    for catalog in provider.get("model_catalogs", []):
+        relative = Path(catalog["path"])
+        path = home / relative
+        if not path.is_file():
+            continue
+        try:
+            metadata = find_exact_model_metadata(
+                load_model_catalog(path, catalog.get("format", "json")),
+                model_id,
+                tuple(catalog.get("id_fields") or ("slug", "id", "model")),
+            )
+        except (BridgeError, OSError, ValueError):
+            continue
+        if not metadata:
+            continue
+        context = first_positive_integer(
+            metadata,
+            catalog.get("input_fields") or ("max_context_window", "context_window", "input_token_limit"),
+        )
+        output = first_positive_integer(
+            metadata,
+            catalog.get("output_fields") or ("max_output_tokens", "max_completion_tokens", "output_token_limit"),
+        )
+        if context is not None and "maxInputTokens" not in resolved_limits:
+            resolved_limits["maxInputTokens"] = context
+            resolved_sources["maxInputTokens"] = f"local_route_catalog:{relative.name}"
+        if output is not None and "maxOutputTokens" not in resolved_limits:
+            resolved_limits["maxOutputTokens"] = output
+            resolved_sources["maxOutputTokens"] = f"local_route_catalog:{relative.name}"
+        if len(resolved_limits) == 2:
+            break
+    return resolved_limits, resolved_sources
+
+
+def resolved_workbuddy_settings(
+    provider: dict[str, Any], recommendation: dict[str, Any], model_id: str, home: Path
+) -> tuple[dict[str, Any], dict[str, str]]:
+    """Resolve capabilities plus exact model limits with local-route precedence."""
+    settings = dict(recommendation["workbuddy"])
+    sources: dict[str, str] = {}
+    exact_limits = recommendation.get("limits_by_model", {}).get(model_id, {})
+    declared_sources = exact_limits.get("sources", {})
+    for key in ("maxInputTokens", "maxOutputTokens"):
+        if key in exact_limits:
+            settings[key] = exact_limits[key]
+            sources[key] = declared_sources.get(key, "provider_manifest_exact_model")
+    route_limits, route_sources = route_model_limits(home, provider, model_id)
+    for key, value in route_limits.items():
+        settings[key] = value
+        sources[key] = route_sources[key]
+    return settings, sources
 
 
 def workbuddy_entry(model_id: str, endpoint: str, api_key: str, settings: dict[str, Any]) -> dict[str, Any]:
@@ -1048,15 +1218,28 @@ def cmd_sync(args: argparse.Namespace) -> int:
         raise BridgeError("no_recommended_models", "No recommended models are available", details={"missing": missing})
     incoming: list[tuple[str, dict[str, Any]]] = []
     probes: dict[str, Any] = {}
+    token_limits: dict[str, Any] = {}
     skipped: list[dict[str, str]] = []
     for provider, recommendation, available_model in selected:
         model_id = available_model["id"]
-        settings = dict(recommendation["workbuddy"])
+        settings, limit_sources = resolved_workbuddy_settings(provider, recommendation, model_id, home)
+        token_limits[model_id] = {
+            key: {"value": settings[key], "source": limit_sources.get(key)}
+            for key in ("maxInputTokens", "maxOutputTokens")
+            if key in settings
+        }
+        missing_limits = [key for key in ("maxInputTokens", "maxOutputTokens") if key not in settings]
+        if missing_limits:
+            skipped.append({"model": model_id, "reason": "token_limits_unverified"})
+            continue
         if not args.skip_probes:
             result = probe_model(endpoint, client_key, model_id, settings)
             probes[model_id] = result
             if not result["text"]["ok"] or not result["stream"]["ok"]:
                 skipped.append({"model": model_id, "reason": "text_or_stream_probe_failed"})
+                continue
+            if not result.get("output_limit", {}).get("ok", False):
+                skipped.append({"model": model_id, "reason": "output_limit_probe_failed"})
                 continue
             if "tools" in result and not result["tools"]["ok"]:
                 settings["supportsToolCall"] = False
@@ -1068,7 +1251,11 @@ def cmd_sync(args: argparse.Namespace) -> int:
                 settings["onlyReasoning"] = False
         incoming.append((provider["id"], workbuddy_entry(model_id, endpoint, client_key, settings)))
     if not incoming:
-        raise BridgeError("all_probes_failed", "All recommended models failed required probes", details={"probes": probes})
+        raise BridgeError(
+            "all_probes_failed",
+            "All recommended models failed required probes or verified token-limit requirements",
+            details={"probes": probes, "skipped": skipped, "token_limits": token_limits},
+        )
     workbuddy_path = home_path(args.workbuddy, home)
     if not workbuddy_path.is_file():
         raise BridgeError("workbuddy_uninitialized", "Open WorkBuddy once before syncing models", details={"path": str(workbuddy_path)})
@@ -1115,6 +1302,7 @@ def cmd_sync(args: argparse.Namespace) -> int:
             "missing_recommendations": missing,
             "skipped": skipped,
             "probes": probes,
+            "token_limits": token_limits,
             "backup": str(backup) if backup else None,
             "permissions_hardened": permissions_hardened,
             "secrets_redacted": True,

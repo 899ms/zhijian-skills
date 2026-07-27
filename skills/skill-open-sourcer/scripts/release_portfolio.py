@@ -18,6 +18,14 @@ from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
+from git_sync_guard import (  # noqa: E402
+    SyncGuardError,
+    ensure_checkout_ready,
+    mark_needs_sync,
+    remote_head,
+    verify_canonical_origin,
+)
+
 SENSITIVE_ENV_FRAGMENTS = (
     "TOKEN",
     "PASSWORD",
@@ -194,17 +202,23 @@ def record_changed(repo: Path, record: dict[str, Any]) -> tuple[bool, str]:
 def build_release_plan(
     repo: Path,
     *,
+    source_checkout: Path,
     selected: set[str] | None = None,
     excluded: set[str] | None = None,
 ) -> dict[str, Any]:
     repo = repo.resolve()
+    source_checkout = source_checkout.resolve()
     selected = selected or set()
     excluded = excluded or set()
     if selected and excluded:
         raise ReleaseError("plan.selector_conflict: --exclude cannot be used with --skill")
+    verify_canonical_origin(repo)
+    verify_canonical_origin(source_checkout)
+    ensure_checkout_ready(repo)
     if not worktree_is_clean(repo):
         raise ReleaseError("plan.dirty: commit or stash canonical changes before planning")
     head = repository_head(repo)
+    base_remote_sha = remote_head(repo)
     identity = executor_identity(repo)
     records = sorted(load_registry(repo), key=lambda item: item["name"])
     active_names = {record["name"] for record in records}
@@ -242,7 +256,11 @@ def build_release_plan(
     seed = {
         "schema_version": "1.0.0",
         "repository": str(repo),
+        "source_checkout": str(source_checkout),
         "base_commit": head,
+        "base_remote_sha": base_remote_sha,
+        "remote": "origin",
+        "remote_branch": "main",
         "executor_identity": identity,
         "releases": releases,
     }
@@ -257,15 +275,26 @@ def build_release_plan(
             version=release["version"],
         )
     plan = dict(seed, plan_id=plan_id, releases=releases)
+    if source_checkout != repo:
+        mark_needs_sync(
+            source_checkout,
+            status="release-in-progress",
+            base_remote_sha=base_remote_sha,
+            integration_repo=repo,
+            plan_id=plan_id,
+        )
     for release in releases:
         git(repo, "update-ref", release["candidate_ref"], release["candidate_commit"])
     return plan
 
 
-def verify_plan(plan: dict[str, Any]) -> None:
+def verify_plan(plan: dict[str, Any], *, check_remote: bool = True) -> None:
     repo = Path(plan["repository"]).resolve()
+    ensure_checkout_ready(repo)
     if repository_head(repo) != plan["base_commit"] or not worktree_is_clean(repo):
         raise ReleaseError("plan.stale: canonical source changed after Dry Run")
+    if check_remote and remote_head(repo) != plan.get("base_remote_sha"):
+        raise ReleaseError("plan.remote_changed: origin/main changed after planning")
     if executor_identity(repo) != plan["executor_identity"]:
         raise ReleaseError("plan.stale: execution identity changed after Dry Run")
     records = {item["name"]: item for item in load_registry(repo)}
@@ -292,6 +321,27 @@ def verify_plan(plan: dict[str, Any]) -> None:
         base_tree = git(repo, "rev-parse", f"{plan['base_commit']}^{{tree}}").stdout.strip()
         if parent != plan["base_commit"] or candidate_tree != base_tree:
             raise ReleaseError(f"plan.stale: candidate commit changed for {release['skill']}")
+
+
+def verify_remote_release(plan: dict[str, Any], expected_remote_sha: str) -> str:
+    repo = Path(plan["repository"]).resolve()
+    actual = remote_head(repo)
+    if actual != expected_remote_sha:
+        raise ReleaseError(
+            f"release.remote_mismatch: expected {expected_remote_sha}, observed {actual}"
+        )
+    git(repo, "fetch", "--no-tags", "origin", actual)
+    ancestor = git(
+        repo,
+        "merge-base",
+        "--is-ancestor",
+        plan["base_commit"],
+        actual,
+        check=False,
+    )
+    if ancestor.returncode != 0:
+        raise ReleaseError("release.source_missing: remote main does not contain the planned source")
+    return actual
 
 
 def cleanup_candidates(plan: dict[str, Any]) -> list[str]:
@@ -359,6 +409,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     plan.add_argument("--dry-run", action="store_true", required=True)
     plan.add_argument(
+        "--source-checkout",
+        required=True,
+        help="original canonical checkout; use the same path as --repo unless a clean integration clone is publishing",
+    )
+    plan.add_argument(
         "--exclude",
         action="append",
         default=[],
@@ -371,6 +426,10 @@ def build_parser() -> argparse.ArgumentParser:
     record.add_argument("--plan", required=True)
     record.add_argument("--skill", required=True)
     record.add_argument("--step", required=True)
+    record.add_argument(
+        "--remote-sha",
+        help="required for canonical-pushed; must equal the live origin/main SHA",
+    )
     cleanup = subparsers.add_parser("cleanup")
     cleanup.add_argument("--plan", required=True)
     return parser
@@ -386,6 +445,7 @@ def main() -> int:
         if args.command == "plan":
             plan = build_release_plan(
                 Path(args.repo),
+                source_checkout=Path(args.source_checkout),
                 selected=set(args.skill),
                 excluded=set(args.exclude),
             )
@@ -399,12 +459,35 @@ def main() -> int:
             print("Release plan is current and executable.")
         elif args.command == "record-step":
             plan = read_plan(args.plan)
-            verify_plan(plan)
+            if args.step == "canonical-pushed":
+                if not args.remote_sha:
+                    raise ReleaseError("release.remote_sha_required: canonical-pushed needs --remote-sha")
+                verify_plan(plan, check_remote=False)
+                actual_remote = verify_remote_release(plan, args.remote_sha)
+                source_checkout = Path(plan["source_checkout"]).resolve()
+                repository = Path(plan["repository"]).resolve()
+                if source_checkout != repository:
+                    mark_needs_sync(
+                        source_checkout,
+                        status="needs-sync",
+                        base_remote_sha=plan["base_remote_sha"],
+                        integration_repo=repository,
+                        plan_id=plan["plan_id"],
+                        observed_remote_head=actual_remote,
+                    )
+            else:
+                verify_plan(plan)
             print(json.dumps(update_ledger(plan, args.skill, args.step), ensure_ascii=False, sort_keys=True))
         else:
             removed = cleanup_candidates(read_plan(args.plan))
             print(json.dumps({"removed": removed}, ensure_ascii=False, sort_keys=True))
-    except (ReleaseError, OSError, subprocess.CalledProcessError, json.JSONDecodeError) as exc:
+    except (
+        ReleaseError,
+        SyncGuardError,
+        OSError,
+        subprocess.CalledProcessError,
+        json.JSONDecodeError,
+    ) as exc:
         print(str(exc), file=sys.stderr)
         return 2
     return 0

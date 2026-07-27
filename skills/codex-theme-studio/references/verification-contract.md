@@ -13,7 +13,7 @@ Run `injector.mjs --check-payload --theme-dir <dir>` for every prepared theme. A
 - injected version, stylesheet, main surface, sidebar, and composer exist
 - no horizontal document overflow
 - every detected workspace tab has a visible, interactive title
-- exactly four native home cards remain visible when the known home hook exists
+- every native home card remains visible when the known home hook exists; the count may vary by Codex version and context
 - every card remains a focusable button and is not clipped
 
 ## Strict visual contract
@@ -30,7 +30,7 @@ Run `injector.mjs --check-payload --theme-dir <dir>` for every prepared theme. A
 
 ## Route transition contract
 
-From an existing task, `--sample-new-task <dir>` clicks the real New Task control and samples 0, 50, 150, and 500 ms. It records screenshots and JSON. The first composited frame must use the active theme background, mounted cards may not disappear, and the home route must be observed.
+From an existing task, `--sample-new-task <dir>` clicks the real New Task control and samples 0, 50, 150, and 500 ms. It records screenshots and JSON. The first composited frame must use the active theme background, cards present after the 150 ms native-settling boundary may not disappear, and the home route must be observed.
 
 ## Required evidence
 

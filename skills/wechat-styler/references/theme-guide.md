@@ -23,21 +23,23 @@
 基于 DESIGN.md 品牌系统，暖纸感 × 顾问可信度。
 
 - 纸感背景 `#F5F4ED`，深暖陶行动色 `#B85235`，墨蓝结构色 `#1B365D`
-- 非代码文字统一使用思源宋体 VF：标题和 UI 使用 500 字重，正文使用 400 字重；代码使用 SF Mono
+- 四层字体分工：标题使用仓耳今楷，正文使用思源宋体 VF，元信息/UI 使用思源黑体，代码使用 SF Mono
 - H2 左侧暖陶竖线，H3 墨蓝色，引用块使用信任蓝卡片
+- 当前样式锁：`editorial-weighted-2026-07`，完整版本对照与移动端基线见 `zhijian-theme-baseline.md`
 
 ```yaml
 font_family_cn: 'Source Han Serif SC VF','Source Han Serif SC','Noto Serif CJK SC','Songti SC',STSong,SimSun,Georgia,serif
 font_family_en: 'Source Han Serif SC VF','Source Han Serif SC',Georgia,serif
 font_size: 15
+body_weight: 450
 line_height: 1.68
 accent_color: '#B85235'
 accent_secondary: '#1B365D'
 background_color: '#F5F4ED'
 surface_color: '#FAF9F5'
 text_color: '#141413'
-heading_font: 'Source Han Serif SC VF','Source Han Serif SC','Noto Serif CJK SC','Songti SC',STSong,SimSun,Georgia,serif
-ui_font: 'Source Han Serif SC VF','Source Han Serif SC','Noto Serif CJK SC','Songti SC',STSong,SimSun,Georgia,serif
+heading_font: 'TsangerJinKai02','Source Han Serif SC VF','Source Han Serif SC','Noto Serif CJK SC','Songti SC',STSong,SimSun,Georgia,serif
+ui_font: 'Source Han Sans CN','Source Han Sans SC','Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif
 code_font: 'SF Mono','JetBrains Mono',Menlo,Consolas,'Source Han Serif SC VF','Source Han Serif SC',monospace
 code_bg: '#30302E'
 code_color: '#F5F4ED'

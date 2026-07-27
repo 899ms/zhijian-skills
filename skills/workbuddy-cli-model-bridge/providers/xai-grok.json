@@ -16,6 +16,32 @@
       "key": "grok-primary",
       "candidates": ["grok-4.5", "grok-4.5-build", "grok-4.5-build-local", "grok-4.3"],
       "patterns": ["^grok-[0-9.]+$"],
+      "limits_by_model": {
+        "grok-4.5": {
+          "maxInputTokens": 500000,
+          "maxOutputTokens": 8192,
+          "sources": {
+            "maxInputTokens": "https://docs.x.ai/developers/models/grok-4.5",
+            "maxOutputTokens": "https://docs.x.ai/build/settings"
+          }
+        },
+        "grok-4.5-build": {
+          "maxInputTokens": 500000,
+          "maxOutputTokens": 8192,
+          "sources": {
+            "maxInputTokens": "https://docs.x.ai/developers/models/grok-4.5",
+            "maxOutputTokens": "https://docs.x.ai/build/settings"
+          }
+        },
+        "grok-4.5-build-local": {
+          "maxInputTokens": 500000,
+          "maxOutputTokens": 8192,
+          "sources": {
+            "maxInputTokens": "https://docs.x.ai/developers/models/grok-4.5",
+            "maxOutputTokens": "https://docs.x.ai/build/settings"
+          }
+        }
+      },
       "workbuddy": {
         "supportsToolCall": true,
         "supportsImages": true,

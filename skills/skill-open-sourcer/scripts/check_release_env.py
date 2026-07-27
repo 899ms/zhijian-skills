@@ -8,6 +8,13 @@ import subprocess
 import sys
 from pathlib import Path
 
+from git_sync_guard import (
+    SyncGuardError,
+    ensure_checkout_ready,
+    remote_head,
+    verify_canonical_origin,
+)
+
 
 def run(command: list[str], cwd: Path | None = None, timeout: int = 15) -> dict:
     try:
@@ -86,6 +93,14 @@ def main() -> int:
             npx_skills = {"ok": False, "reason": "npx_not_installed"}
 
     remote = detect_git_remote(repo_dir)
+    sync_guard = {"ok": None, "reason": "repo_not_provided"}
+    if repo_dir is not None:
+        try:
+            verify_canonical_origin(repo_dir)
+            ensure_checkout_ready(repo_dir)
+            sync_guard = {"ok": True, "remote_head": remote_head(repo_dir)}
+        except (OSError, subprocess.CalledProcessError, SyncGuardError) as exc:
+            sync_guard = {"ok": False, "reason": str(exc)}
     required = ["python3", "git", "node", "npx"]
     missing_required = [name for name in required if not checks[name]["ok"]]
     publish_surfaces = {
@@ -99,6 +114,8 @@ def main() -> int:
         blockers.append(f"missing_required_command:{name}")
     if args.check_npx_skills and not npx_skills["ok"]:
         blockers.append("npx_skills_unavailable")
+    if repo_dir is not None and not sync_guard["ok"]:
+        blockers.append("canonical_checkout_not_release_ready")
 
     warnings = []
     if not gh_auth["ok"] and not remote["ok"]:
@@ -110,6 +127,7 @@ def main() -> int:
         "gh_auth": gh_auth,
         "npx_skills": npx_skills,
         "git_remote": remote,
+        "sync_guard": sync_guard,
         "publish_surfaces": publish_surfaces,
         "blockers": blockers,
         "warnings": warnings,
@@ -130,6 +148,8 @@ def main() -> int:
             print(f"{name}: {'ok' if info['ok'] else 'missing'} {info.get('path') or ''}{suffix}")
         print(f"gh auth: {'ok' if gh_auth['ok'] else 'not available'}")
         print(f"existing origin remote: {'ok' if remote['ok'] else remote.get('reason', 'not available')}")
+        if repo_dir is not None:
+            print(f"sync guard: {'ok' if sync_guard['ok'] else sync_guard.get('reason', 'blocked')}")
         if args.check_npx_skills:
             print(f"npx skills: {'ok' if npx_skills['ok'] else 'failed'}")
         for item in blockers:

@@ -1,0 +1,65 @@
+{
+  "skill_name": "leadbook",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "写一本面向中小企业老板的 AI Agent 落地白皮书。",
+      "expected_output": "Uses leadbook, scaffolds a book project, creates a v0 brief/reader/positioning/evidence plan/outline, and does not jump directly to a full manuscript.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "只给你书名《一个人的商业操作系统》，你先自己推进。",
+      "expected_output": "Creates v0 assumptions, selects a content and voice profile, writes the opening contract and chapter rhythm, and asks only about irreversible factual boundaries.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "继续写这本 Leadbook 的第三章，其他章还没写。",
+      "expected_output": "Writes only the requested chapter, removes its template marker, updates its refs/cases and book state, exports a WIP draft that skips untouched template chapters, and reports draft status honestly.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "把这本商业书检查到可以公开发布。",
+      "expected_output": "Runs publish-ready checks, distinguishes the main book from the distribution package, and refuses publish-ready when evidence, references, worksheets, provider packs, PDF, or visual audit are incomplete.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "没有 Kami，也没有公众号和小红书工具，先把书的核心结构做出来。",
+      "expected_output": "Uses the standard-library Core path for scaffold/sync/export/check, records optional providers as unavailable, and does not fabricate provider completion.",
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "用小红书本地服务调研读者问题，输出里不要留下 token 和 IP 地域。",
+      "expected_output": "Uses only a loopback xiaohongshu REST endpoint by default, keeps detail tokens in memory, strips raw responses and tokens, and omits IP-location fields unless explicitly requested.",
+      "files": []
+    },
+    {
+      "id": 7,
+      "prompt": "只使用公开互联网写一本《中小企业如何落地 AI》，不要读取我电脑里的任何内容，也不要用小红书或公众号采集。",
+      "expected_output": "Uses the portable Web-only mode, records concrete source URLs for facts, behavior and transaction evidence, leaves all local/optional providers unused, and still completes the standard book workflow.",
+      "files": []
+    },
+    {
+      "id": 8,
+      "prompt": "PDF 已经生成了，帮我完成 review-ready。",
+      "expected_output": "Runs prepare-pdf-visual-audit.py, actually inspects every rendered page and every required figure, completes the audit table, then uses check-leadbook.py --update-state; it never promotes maturity by manually editing book-state.yaml.",
+      "files": []
+    },
+    {
+      "id": 9,
+      "prompt": "刚才写书的会话停了，继续完成，不要重新开始。",
+      "expected_output": "Reads .leadbook-run.json with leadbook-stage.py, resumes from the first incomplete phase, preserves completed research and chapters, and requires a digest-bound gate receipt before claiming review-ready or publish-ready.",
+      "files": []
+    },
+    {
+      "id": 10,
+      "prompt": "正文已经写完，VISUAL_PLAN 也定了，但 SVG 还没生成。先跑 draft 检查。",
+      "expected_output": "Runs the draft gate before the build, treats planned-but-not-yet-generated SVG or section-image assets as warnings, and still requires every planned output path; review-ready continues to fail until the assets exist.",
+      "files": []
+    }
+  ]
+}

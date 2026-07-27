@@ -7,6 +7,8 @@
 - “并行检查三个模块的回归，再由主 Agent 修复和验收。”
 - “用 Deep Research 调研四个子主题，研究文件写入 vault，最后串行做引用核查和对抗审查。”
 - “把复杂编码 Worker 优先交给 Grok 4.5，失败时由 Sol 接管。”
+- “让两个 Sol 原生 Subagent 分别检查实现和测试，结果回到父任务集成。”
+- “把耐久调研放到 App Thread；原生精确组合不可用时按预声明链切换 Surface。”
 - “明确使用 Gemini 3.6 Flash 做多模态扫描，并检查当前接入路径能否合规派遣。”
 
 ## 不应触发
@@ -24,6 +26,24 @@
 Prompt：使用 Grok 4.5 实现复杂模块，再让另一个模型独立审查，最后由主 Agent 集成。
 
 应出现：`DEEP_AGENTIC_CODE`；Grok High → Sol High 的固定候选链；不同 provider 的审查；单写者；6/8 上限；主 Agent 最终验收。
+
+### Native exact-model happy path
+
+Prompt：并行派两个 Sol Worker，一个 low 做 scout，一个 medium 做实现，完成后回到主任务集成。
+
+应出现：两个 `native_subagent` 候选；live spawn schema 分别确认 `gpt-5.6-sol / low` 与 `gpt-5.6-sol / medium`；V1 传 `fork_context=false` 或 V2 传 `fork_turns="none"`；requested/platform/observed identity 分开记录；采纳后关闭 agent。
+
+### Native model rejection
+
+Prompt：用户明确要求 Terra low 原生 Worker，但当前 V2 spawn 返回 `Unknown model gpt-5.6-terra`。
+
+应出现：该精确 `native_subagent/gpt-5.6-terra/low` 组合立即失败；不得静默继承父模型；只进入预声明的 Sol 或 App Thread fallback。若 RoutePlan 没有下一候选则由主 Agent 接管。
+
+### Surface selection
+
+Prompt：一个 5 分钟只读代码检查和一个需要独立 worktree、跨会话恢复的实现任务并行执行。
+
+应出现：只读检查选择 `native_subagent`；实现任务选择 `app_thread`；两者共享 6 并发、8 attempts 总上限和单写者规则。
 
 ### Ambiguous
 
@@ -69,17 +89,17 @@ Prompt：一个 `task_intent=inspect` Worker 想顺手修改源文件，mutation
 
 ## 运行断言
 
-- 派遣前显示 Worker 数量、精确模型、thinking、职责、有序 fallback 和 reserved slots。
+- 派遣前显示 Worker 数量、Surface、精确模型、thinking、职责、有序 fallback 和 reserved slots。
 - registry 决定策略允许范围；live runtime 只验证当前 host 接受性。
 - Gemini Antigravity 未被用户明确点名时不进入自动候选或 fallback；当前第三方登录 terms blocked 时，即使明确点名也不创建。
 - Grok 只在 runtime/provider 门通过后自动使用。
-- 每个新 `host/model/thinking/tool-signature` 的首个真实业务 Worker 独立通过 CONTROL_READY/DATA_READY；一个模型的健康不外推到另一个模型。
+- 每个新 `host/surface/model/thinking/tool-signature` 的首个真实业务 Worker 独立通过对应生命周期健康门；一个组合的健康不外推到另一个组合。
 - 所有提示词含唯一 task id、task intent、mutation authority、完整任务包与禁止下级委派。
 - `threadId`、`pendingWorktreeId`、超时和未知返回形状分别处理；排队 worktree 的身份/cwd 需要两次稳定官方观察。
 - 最新官方 Thread/turn 观察是当前状态真相；旧 status/event 文本只能诊断。
 - `UNKNOWN` 不 follow-up、不归档、不 fallback、不重复创建。
-- 同时运行不超过 6，creation attempts 不超过 8，任何 Worker 都不使用 Ultra。
-- 每个子任务最多两个 Worker Thread；完整输出最多同 Thread 追问一次。
+- 同时运行不超过 6，worker attempts 不超过 8，任何 Worker 都不使用 Ultra。
+- 每个子任务最多两个 Worker attempt；完整输出最多在原 Worker follow-up 一次。
 - fallback 在派遣前固定，不随机选模、不形成循环、不静默降低 thinking 或扩大 Provider allowlist。
 - 上游 Skill 模式保留上游 Scale、阶段门和输出路径；路由层不重复拆分任务。
 - 有工作区输出路径时使用 project local，不因“通用调研”切换到 projectless。
@@ -87,12 +107,14 @@ Prompt：一个 `task_intent=inspect` Worker 想顺手修改源文件，mutation
 - verifier 完成并产生 cited 文件后才能创建 reviewer。
 - 写入范围互斥；同一文件保持单写者。
 - 主 Agent 读取结果、按错误分类恢复、整合并验证。
-- 只对 completed/idle 的正式 Thread 逐个归档；pending/歧义记录只按 task id 走官方恢复，禁止直接追问或归档。
-- 最终报告包含 requested/platform/observed model、Provider 门、预检、尝试、fallback、采纳与归档。
+- 原生采纳结果必须关闭 agent；只对 completed/idle 的正式 Thread 逐个归档；pending/歧义记录只按 task id 走官方恢复。
+- 最终报告包含 Surface、requested/platform/observed model、Provider 门、预检、尝试、fallback、采纳与关闭/归档。
 
 ## 失败回退
 
 - Grok High unsupported：精确组合立即熔断，进入预声明 Sol High；不再试 Grok Medium。
+- Terra 未明确点名：静态门排除；Terra 出现在 fallback 位置时 RoutePlan 拒绝。
+- Terra 原生返回 unknown model：只熔断该 Surface 的精确组合；按预声明链进入 Sol 或 App Thread，禁止静默继承。
 - Gemini 未明确点名：静态门排除，不运行 canary，不创建 Thread。
 - 合规 Gemini API 路径首次语义 nonce 不匹配：原组合复测一次；第二次通过则保留 transient 记录并继续，连续两次失败才熔断。当前 blocked Antigravity 路径不运行 canary。
 - 429 带 `Retry-After`：写入负向 TTL，当前子任务进入下一候选，同批任务跳过该组合。
@@ -100,4 +122,4 @@ Prompt：一个 `task_intent=inspect` Worker 想顺手修改源文件，mutation
 - MCP 初始化失败：按 workspace/tool signature 处理，不连续更换模型。
 - 创建超时且没有正式 ID：按唯一 task id 有界查询；唯一稳定匹配可恢复，零/多匹配进入 `UNKNOWN`；不切换 project/projectless 重撞，不修改数据库。
 - 输出质量不足：原 Thread 追问一次；仍失败才创建第二 Worker，之后由主 Agent 接管。
-- App 工具缺失、项目无法匹配、权限不足、Provider 数据边界不允许或所有权冲突：主 Agent 本地执行或明确报告限制；不使用 `spawn_agent` 回退。
+- 原生工具缺失、App 工具缺失、精确模型未确认、项目无法匹配、权限不足、Provider 数据边界不允许或所有权冲突：只走预声明 Surface fallback；没有可用候选时由主 Agent 本地执行或明确报告限制。

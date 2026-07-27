@@ -1,7 +1,7 @@
 interface:
   display_name: "Codex 模型路由团队"
-  short_description: "为复杂任务路由带 Provider 门和 fallback 的后台 Codex Worker"
-  default_prompt: "使用 $codex-model-routing-team 判断这个任务是否值得并行，固定 Provider 数据边界和候选链，并在需要时组织受控的后台模型团队完成它。"
+  short_description: "为复杂任务路由原生 Subagent 或耐久 App Thread"
+  default_prompt: "使用 $codex-model-routing-team 判断这个任务是否值得并行，固定 Surface、精确模型、推理强度、Provider 数据边界和候选链，并组织受控的模型团队完成它。"
 compatibility:
   canonical_format: "agent-skills"
   adapter_targets:
@@ -17,4 +17,4 @@ compatibility:
     remote_inline_execution: "forbid"
     remote_metadata_policy: "deny"
   degradation:
-    openai: "If Codex App thread tools or explicit user authorization are unavailable, execute locally without delegation. Never fall back to MultiAgentV2 spawn_agent."
+    openai: "Use native subagents only when the live spawn schema confirms the exact model and reasoning effort. Use Codex App threads for durable or worktree tasks. If neither declared surface is available, execute locally without delegation."

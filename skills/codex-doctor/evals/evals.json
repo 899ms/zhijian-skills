@@ -33,6 +33,17 @@
         "Hooks are not executed to benchmark latency",
         "No Skill, MCP, plugin, or hook is disabled or deleted without explicit target approval"
       ]
+    },
+    {
+      "id": 4,
+      "prompt": "我切换了第三方模型 Provider 之后，Codex Desktop 里以前的历史会话都不见了。先帮我诊断数据是不是还在，不要直接改配置或数据库。",
+      "expected_output": "Uses the built-in thread inventory to compare the default provider with indexed provider counts, reports a provider-scope mismatch when thresholds are met, distinguishes hidden history from deleted rollout data, and proposes only a backed-up finding-level repair.",
+      "files": [],
+      "assertions": [
+        "Reports the default provider, dominant history provider, counts, and shares without exposing credentials",
+        "Does not claim rollout data was deleted when indexed history still exists",
+        "Does not modify config, provider metadata, or the state database without finding-level approval"
+      ]
     }
   ]
 }

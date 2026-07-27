@@ -1,5 +1,11 @@
 # codex-doctor Changelog
 
+## 1.1.0 — 2026-07-27
+
+- Detect when the active model provider represents only a small minority of indexed Codex thread history, which can hide prior Desktop conversations without deleting rollout data.
+- Keep the finding conservative and read-only: require at least 20 indexed threads, an 80% dominant historical provider, and a default-provider share of 20% or less.
+- Add bounded checks for instruction-chain limits, explicit protected-root policies, generated output, effective project MCP overrides, and sensitive untracked filenames without treating advisory evidence as confirmed exposure.
+
 ## 1.0.2 — 2026-07-17
 
 - Publish and install exclusively through `zjp1997720/zhijian-skills`.

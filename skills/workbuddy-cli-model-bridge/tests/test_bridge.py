@@ -34,6 +34,7 @@ class FakeProxyHandler(BaseHTTPRequestHandler):
     ]
     fail_images = False
     fail_required = False
+    fail_output_limit = False
     requests: list[dict] = []
 
     def log_message(self, *_args):
@@ -59,6 +60,9 @@ class FakeProxyHandler(BaseHTTPRequestHandler):
         self.requests.append(payload)
         if self.fail_required:
             self.send_json({"error": {"message": "required route failed"}}, 502)
+            return
+        if self.fail_output_limit and payload.get("max_tokens", 0) > 32:
+            self.send_json({"error": {"message": "output limit rejected"}}, 400)
             return
         if payload.get("stream"):
             body = b'data: {"choices":[{"delta":{"content":"OK"}}]}\n\ndata: [DONE]\n\n'
@@ -114,6 +118,7 @@ class BridgeTests(unittest.TestCase):
     def setUp(self):
         FakeProxyHandler.fail_images = False
         FakeProxyHandler.fail_required = False
+        FakeProxyHandler.fail_output_limit = False
         FakeProxyHandler.requests = []
 
     def make_home(self) -> tuple[tempfile.TemporaryDirectory[str], Path]:
@@ -167,6 +172,29 @@ class BridgeTests(unittest.TestCase):
         errors = BRIDGE.validate_provider(provider)
         self.assertTrue(any("auth_hints" in error for error in errors))
 
+    def test_manifest_rejects_invalid_exact_model_limits(self):
+        provider = json.loads((Path(__file__).parents[1] / "providers/codex.json").read_text(encoding="utf-8"))
+        provider["models"][0]["limits_by_model"] = {"gpt-5.6-sol": {"maxInputTokens": 0}}
+        errors = BRIDGE.validate_provider(provider)
+        self.assertTrue(any("maxInputTokens" in error for error in errors))
+
+    def test_manifest_rejects_shared_token_limits(self):
+        provider = json.loads((Path(__file__).parents[1] / "providers/codex.json").read_text(encoding="utf-8"))
+        provider["models"][0]["workbuddy"]["maxInputTokens"] = 123000
+        errors = BRIDGE.validate_provider(provider)
+        self.assertTrue(any("unknown keys" in error and "maxInputTokens" in error for error in errors))
+
+    def test_manifest_rejects_unsafe_catalog_path_and_non_https_source(self):
+        provider = json.loads((Path(__file__).parents[1] / "providers/codex.json").read_text(encoding="utf-8"))
+        provider["model_catalogs"][0]["path"] = "../auth.json"
+        provider["models"][0]["limits_by_model"]["gpt-5.6-sol"]["sources"]["maxInputTokens"] = "file:///tmp/spec"
+        errors = BRIDGE.validate_provider(provider)
+        self.assertTrue(any("without traversal" in error for error in errors))
+        self.assertTrue(any("https URL" in error for error in errors))
+        provider["model_catalogs"][0]["path"] = ".example/auth.json"
+        errors = BRIDGE.validate_provider(provider)
+        self.assertTrue(any("non-credential model catalog" in error for error in errors))
+
     def test_yaml_key_merge_preserves_existing_keys(self):
         source = 'host: "127.0.0.1"\napi-keys:\n  - "existing"\ndebug: false\n'
         merged, changed = BRIDGE.ensure_yaml_list_value(source, "api-keys", "new-key")
@@ -218,6 +246,110 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual("gpt-5.6-sol", selected[0][2]["id"])
         self.assertEqual([], missing)
 
+    def test_route_catalog_context_overrides_official_exact_model_fallback(self):
+        temp, home = self.make_home()
+        self.addCleanup(temp.cleanup)
+        catalog = home / ".codex/cliproxyapi-catalog.json"
+        catalog.parent.mkdir()
+        catalog.write_text(
+            json.dumps({"models": [{"slug": "gpt-5.6-sol", "context_window": 372000}]}),
+            encoding="utf-8",
+        )
+        provider = json.loads((Path(__file__).parents[1] / "providers/codex.json").read_text(encoding="utf-8"))
+        settings, sources = BRIDGE.resolved_workbuddy_settings(provider, provider["models"][0], "gpt-5.6-sol", home)
+        self.assertEqual(372000, settings["maxInputTokens"])
+        self.assertEqual(128000, settings["maxOutputTokens"])
+        self.assertEqual("local_route_catalog:cliproxyapi-catalog.json", sources["maxInputTokens"])
+
+    def test_exact_limits_do_not_bleed_into_older_fallback(self):
+        temp, home = self.make_home()
+        self.addCleanup(temp.cleanup)
+        provider = json.loads((Path(__file__).parents[1] / "providers/codex.json").read_text(encoding="utf-8"))
+        settings, sources = BRIDGE.resolved_workbuddy_settings(provider, provider["models"][0], "gpt-5.5", home)
+        self.assertNotIn("maxInputTokens", settings)
+        self.assertNotIn("maxOutputTokens", settings)
+        self.assertEqual({}, sources)
+
+    def test_malformed_route_catalog_is_ignored(self):
+        temp, home = self.make_home()
+        self.addCleanup(temp.cleanup)
+        catalog = home / ".codex/cliproxyapi-catalog.json"
+        catalog.parent.mkdir()
+        catalog.write_text("{not-json", encoding="utf-8")
+        provider = json.loads((Path(__file__).parents[1] / "providers/codex.json").read_text(encoding="utf-8"))
+        settings, sources = BRIDGE.resolved_workbuddy_settings(provider, provider["models"][0], "gpt-5.6-sol", home)
+        self.assertEqual(1050000, settings["maxInputTokens"])
+        self.assertEqual(
+            "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
+            sources["maxInputTokens"],
+        )
+
+    def test_provider_declared_toml_catalog_is_generic(self):
+        temp, home = self.make_home()
+        self.addCleanup(temp.cleanup)
+        catalog = home / ".example/models.toml"
+        catalog.parent.mkdir()
+        catalog.write_text(
+            '[model."example-3"]\nmodel = "example-3"\ncontext_window = 333000\nmax_completion_tokens = 12000\n',
+            encoding="utf-8",
+        )
+        provider = {
+            "model_catalogs": [
+                {
+                    "path": ".example/models.toml",
+                    "format": "toml",
+                    "id_fields": ["model"],
+                    "input_fields": ["context_window"],
+                    "output_fields": ["max_completion_tokens"],
+                }
+            ]
+        }
+        recommendation = {"workbuddy": {"supportsToolCall": False}}
+        settings, sources = BRIDGE.resolved_workbuddy_settings(provider, recommendation, "example-3", home)
+        self.assertEqual(333000, settings["maxInputTokens"])
+        self.assertEqual(12000, settings["maxOutputTokens"])
+        self.assertEqual("local_route_catalog:models.toml", sources["maxOutputTokens"])
+
+    def test_provider_catalogs_fill_missing_fields_in_priority_order(self):
+        temp, home = self.make_home()
+        self.addCleanup(temp.cleanup)
+        catalog_dir = home / ".example"
+        catalog_dir.mkdir()
+        (catalog_dir / "route.json").write_text(
+            json.dumps({"models": [{"id": "example-3", "context": 444000}]}),
+            encoding="utf-8",
+        )
+        (catalog_dir / "fallback.json").write_text(
+            json.dumps({"models": [{"id": "example-3", "context": 999000, "output": 16000}]}),
+            encoding="utf-8",
+        )
+        provider = {
+            "model_catalogs": [
+                {"path": ".example/route.json", "input_fields": ["context"]},
+                {"path": ".example/fallback.json", "input_fields": ["context"], "output_fields": ["output"]},
+            ]
+        }
+        limits, sources = BRIDGE.route_model_limits(home, provider, "example-3")
+        self.assertEqual(444000, limits["maxInputTokens"])
+        self.assertEqual(16000, limits["maxOutputTokens"])
+        self.assertEqual("local_route_catalog:route.json", sources["maxInputTokens"])
+        self.assertEqual("local_route_catalog:fallback.json", sources["maxOutputTokens"])
+
+    def test_bundled_grok_and_gemini_have_exact_limits(self):
+        temp, home = self.make_home()
+        self.addCleanup(temp.cleanup)
+        providers = BRIDGE.load_providers(home)
+        cases = (
+            ("xai-grok", "grok-4.5-build-local", 500000, 8192),
+            ("antigravity", "gemini-3.6-flash", 1048576, 65536),
+        )
+        for provider_id, model_id, expected_input, expected_output in cases:
+            with self.subTest(model=model_id):
+                provider = providers[provider_id]
+                settings, _ = BRIDGE.resolved_workbuddy_settings(provider, provider["models"][0], model_id, home)
+                self.assertEqual(expected_input, settings["maxInputTokens"])
+                self.assertEqual(expected_output, settings["maxOutputTokens"])
+
     def test_merge_preserves_manual_collision_and_stale_managed_entry(self):
         existing = [
             {"id": "manual-model", "name": "manual-model"},
@@ -263,6 +395,8 @@ class BridgeTests(unittest.TestCase):
             self.assertEqual("manual-secret", models[0]["apiKey"])
             self.assertTrue(models[1]["supportsImages"])
             self.assertTrue(models[1]["supportsToolCall"])
+            self.assertEqual(1050000, models[1]["maxInputTokens"])
+            self.assertEqual(128000, models[1]["maxOutputTokens"])
             self.assertNotIn("bridge-secret-value-0123456789", first_output.getvalue())
             self.assertEqual(0o600, stat.S_IMODE((home / ".workbuddy/models.json").stat().st_mode))
             backups_before = list((home / ".workbuddy").glob("models.json.backup-*"))
@@ -318,6 +452,45 @@ class BridgeTests(unittest.TestCase):
                 BRIDGE.cmd_sync(self.sync_args(home, proxy_url))
         self.assertEqual(original, workbuddy.read_text(encoding="utf-8"))
         self.assertEqual([], list(workbuddy.parent.glob("models.json.backup-*")))
+
+    def test_unverified_token_limits_block_registration(self):
+        temp, home = self.make_home()
+        self.addCleanup(temp.cleanup)
+        BRIDGE.save_json(
+            BRIDGE.state_paths(home)["secret"],
+            {"schema_version": 1, "proxy_api_key": "bridge-secret-value-0123456789"},
+        )
+        provider = json.loads((Path(__file__).parents[1] / "providers/codex.json").read_text(encoding="utf-8"))
+        provider.pop("model_catalogs", None)
+        for recommendation in provider["models"]:
+            recommendation.pop("limits_by_model", None)
+        with self.fake_proxy() as proxy_url, mock.patch.object(
+            BRIDGE, "load_providers", return_value={"codex": provider}
+        ):
+            with self.assertRaises(BRIDGE.BridgeError) as raised:
+                BRIDGE.cmd_sync(self.sync_args(home, proxy_url))
+        self.assertEqual("all_probes_failed", raised.exception.code)
+        self.assertTrue(
+            all(item["reason"] == "token_limits_unverified" for item in raised.exception.details["skipped"])
+        )
+        self.assertEqual([], json.loads((home / ".workbuddy/models.json").read_text(encoding="utf-8")))
+
+    def test_rejected_output_limit_blocks_registration(self):
+        temp, home = self.make_home()
+        self.addCleanup(temp.cleanup)
+        BRIDGE.save_json(
+            BRIDGE.state_paths(home)["secret"],
+            {"schema_version": 1, "proxy_api_key": "bridge-secret-value-0123456789"},
+        )
+        FakeProxyHandler.fail_output_limit = True
+        with self.fake_proxy() as proxy_url:
+            with self.assertRaises(BRIDGE.BridgeError) as raised:
+                BRIDGE.cmd_sync(self.sync_args(home, proxy_url))
+        self.assertEqual("all_probes_failed", raised.exception.code)
+        self.assertTrue(
+            all(item["reason"] == "output_limit_probe_failed" for item in raised.exception.details["skipped"])
+        )
+        self.assertEqual([], json.loads((home / ".workbuddy/models.json").read_text(encoding="utf-8")))
 
     def test_bootstrap_dry_run_plans_clean_home_without_writing(self):
         temp, home = self.make_home()

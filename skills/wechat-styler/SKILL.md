@@ -243,7 +243,7 @@ node scripts/inject-to-wechat.mjs article_wechat.html \
 
 ### 字号建议
 
-`zhijian` 默认正文为 15px / 1.68 行高。大鹏已确认 15px 在手机端阅读更舒服。字号只控制显示尺度，不能替代内容层的段落修复。建议：
+`zhijian` 当前视觉基线为 `editorial-weighted-2026-07`：H2/H3 使用仓耳今楷优先栈，正文使用思源宋体 VF 15px / 450 / 1.68，图注和元信息使用思源黑体 13px。大鹏已确认 15px 在手机端阅读更舒服；450 字重补回纸面阅读的稳定感。字号只控制显示尺度，不能替代内容层的段落修复。建议：
 
 - **公众号长文/信息密度高的文章**：保持默认 15px，同时先通过段落密度硬门
 - **叙事文章、年长读者或希望更舒展**：可使用 17px
@@ -277,6 +277,7 @@ node scripts/inject-to-wechat.mjs article_wechat.html \
 | `references/svg-animation-design.md` | 5 模板设计原则、技术约束、11 条踩坑清单 |
 | `references/wechat-compatibility.md` | 公众号兼容硬规则（ERROR/WARN 详情） |
 | `references/opencli-injection.md` | OpenCLI 注入流程、浏览器能力边界、前置条件与故障恢复 |
+| `references/zhijian-theme-baseline.md` | Zhijian 主题版本对照、样式锁与移动端视觉基线 |
 
 ---
 

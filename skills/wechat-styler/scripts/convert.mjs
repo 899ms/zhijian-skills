@@ -248,7 +248,7 @@ const presetDefaults = {
     top_label: 'NOTE'
   },
   'zhijian-warm-paper': {
-    type_scale: { h1: 28, h2: 22, h3: 19, body: 16, caption: 12, code: 14 },
+    type_scale: { h1: 28, h2: 22, h3: 18, body: 15, caption: 13, code: 14 },
     rhythm: {
       body_line_height: 1.68,
       heading_line_height: 1.22,
@@ -450,6 +450,7 @@ function createBaseRenderer(theme) {
   const renderer = new marked.Renderer();
   const scale = theme.type_scale;
   const rhythm = theme.rhythm;
+  const bodyWeight = theme.body_weight || 400;
 
   renderer.paragraph = (text) => {
     if (text.trim().startsWith('<section style="text-align:center')) {
@@ -457,7 +458,7 @@ function createBaseRenderer(theme) {
     }
     const indent = rhythm.paragraph_indent || 0;
     const indentStyle = indent > 0 ? `text-indent:${indent}em;` : '';
-    return `<p style="font-family:${theme.font_family_cn};font-size:${scale.body}px;font-weight:400;color:${theme.text_color};line-height:${rhythm.body_line_height};letter-spacing:0.008em;text-align:justify;margin:0 0 ${rhythm.paragraph_margin}px;padding:0;${indentStyle}word-break:break-word;background-color:${theme.background_color};">${bgSpan(theme, text)}</p>\n`;
+    return `<p style="font-family:${theme.font_family_cn};font-size:${scale.body}px;font-weight:${bodyWeight};color:${theme.text_color};line-height:${rhythm.body_line_height};letter-spacing:0.008em;text-align:justify;margin:0 0 ${rhythm.paragraph_margin}px;padding:0;${indentStyle}word-break:break-word;background-color:${theme.background_color};">${bgSpan(theme, text)}</p>\n`;
   };
 
   renderer.strong = (text) => {
@@ -870,7 +871,9 @@ function createZhijianWarmPaperRenderer(theme) {
   const renderer = createBaseRenderer(theme);
   const scale = theme.type_scale;
   const rhythm = theme.rhythm;
+  const bodyWeight = theme.body_weight || 400;
   const trustBlue = theme.trust_blue || theme.accent_secondary || '#1B365D';
+  const primaryText = theme.primary_text || '#A04A2E';
 
   renderer.heading = (text, level) => {
     const headingFont = `font-family:${theme.heading_font};word-break:break-word;background-color:${theme.background_color};`;
@@ -881,13 +884,13 @@ function createZhijianWarmPaperRenderer(theme) {
       return `<h2 style="${headingFont}font-size:${scale.h2}px;font-weight:500;color:${theme.text_color};line-height:1.28;margin:30px 0 14px;padding:0 0 0 12px;border-left:4px solid ${theme.accent_color};border-radius:2px;">${bgSpan(theme, text)}</h2>\n`;
     }
     if (level === 3) {
-      return `<h3 style="${headingFont}font-size:${scale.h3}px;font-weight:500;color:${trustBlue};line-height:1.32;margin:24px 0 10px;padding:0;">${bgSpan(theme, text)}</h3>\n`;
+      return `<h3 style="${headingFont}font-size:${scale.h3}px;font-weight:600;color:${trustBlue};line-height:1.32;margin:24px 0 10px;padding:0;">${bgSpan(theme, text)}</h3>\n`;
     }
     return `<h${level} style="${headingFont}font-size:${scale.body}px;font-weight:500;color:${theme.secondary_color};line-height:1.35;margin:18px 0 8px;padding:0;">${bgSpan(theme, text)}</h${level}>\n`;
   };
 
   renderer.strong = (text) => {
-    return `<strong style="color:${theme.text_color};font-weight:600;background-color:${theme.background_color};">${bgSpan(theme, text)}</strong>`;
+    return `<strong style="color:${primaryText};font-weight:600;background-color:${theme.background_color};">${bgSpan(theme, text)}</strong>`;
   };
 
   renderer.blockquote = (quote) => {
@@ -918,11 +921,11 @@ function createZhijianWarmPaperRenderer(theme) {
   renderer.list = (body, ordered) => {
     const tag = ordered ? 'ol' : 'ul';
     const listStyle = ordered ? 'list-style-type:decimal;' : 'list-style-type:disc;';
-    return `<${tag} style="font-family:${theme.font_family_cn};font-size:${scale.body}px;color:${theme.text_color};line-height:${rhythm.body_line_height};margin:0 0 ${rhythm.paragraph_margin}px;padding-left:24px;${listStyle}background-color:${theme.background_color};">\n${body}</${tag}>\n`;
+    return `<${tag} style="font-family:${theme.font_family_cn};font-size:${scale.body}px;font-weight:${bodyWeight};color:${theme.text_color};line-height:${rhythm.body_line_height};margin:0 0 ${rhythm.paragraph_margin}px;padding-left:24px;${listStyle}background-color:${theme.background_color};">\n${body}</${tag}>\n`;
   };
 
   renderer.listitem = (text) => {
-    return `<li style="font-family:${theme.font_family_cn};font-size:${scale.body}px;color:${theme.text_color};line-height:${rhythm.body_line_height};text-align:justify;margin:0 0 ${rhythm.list_item_margin}px;word-break:break-word;background-color:${theme.background_color};">${bgSpan(theme, processTaskListItem(text, theme))}</li>\n`;
+    return `<li style="font-family:${theme.font_family_cn};font-size:${scale.body}px;font-weight:${bodyWeight};color:${theme.text_color};line-height:${rhythm.body_line_height};text-align:justify;margin:0 0 ${rhythm.list_item_margin}px;word-break:break-word;background-color:${theme.background_color};">${bgSpan(theme, processTaskListItem(text, theme))}</li>\n`;
   };
 
   renderer.image = (href, title, text) => {

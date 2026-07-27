@@ -48,6 +48,7 @@ npx skills add zjp1997720/zhijian-skills \
 | 知识系统 | [`enterprise-clone-builder`](docs/skills/enterprise-clone-builder/README.zh-CN.md) | 从企业证据构建结构化数字分身仓库 | [文档](docs/skills/enterprise-clone-builder/README.zh-CN.md) |
 | 模型推理 | [`gpt56-sol-pro-consult`](docs/skills/gpt56-sol-pro-consult/README.zh-CN.md) | 通过 Codex Chrome 获得有文件依据、完成模型核验的 GPT 5.6 Sol Pro 二次判断 | [文档](docs/skills/gpt56-sol-pro-consult/README.zh-CN.md) |
 | 信息设计 | [`html-express`](docs/skills/html-express/README.zh-CN.md) | 把高密度材料做成自包含 HTML 报告 | [文档](docs/skills/html-express/README.zh-CN.md) |
+| 长篇写作 | [`leadbook`](docs/skills/leadbook/README.zh-CN.md) | 生产有证据、有状态和可审计质量门的中文商业书与白皮书 | [文档](docs/skills/leadbook/README.zh-CN.md) |
 | 工作流编排 | [`light-plan-and-work`](docs/skills/light-plan-and-work/README.zh-CN.md) | 用短计划完成边界清楚的任务，只在重条件出现时升级 | [文档](docs/skills/light-plan-and-work/README.zh-CN.md) |
 | 发布治理 | [`skill-open-sourcer`](docs/skills/skill-open-sourcer/README.zh-CN.md) | 审计、打包、文档化、验证并发布 Agent Skill | [文档](docs/skills/skill-open-sourcer/README.zh-CN.md) |
 | 内容调研 | [`wechat-article-search`](docs/skills/wechat-article-search/README.zh-CN.md) | 把公众号关键词搜索结果输出为结构化 JSON | [文档](docs/skills/wechat-article-search/README.zh-CN.md) |

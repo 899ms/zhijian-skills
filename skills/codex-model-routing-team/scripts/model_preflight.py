@@ -16,6 +16,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from route_policy import supported_thinking
+
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_REGISTRY = SKILL_ROOT / "references" / "model-registry.json"
@@ -200,9 +202,19 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--model", required=True)
     parser.add_argument("--thinking", required=True)
+    parser.add_argument(
+        "--surface",
+        choices=("native_subagent", "app_thread"),
+        default="app_thread",
+        help="Execution surface; omitted legacy calls default to app_thread.",
+    )
     parser.add_argument("--registry", type=Path, default=DEFAULT_REGISTRY)
     parser.add_argument("--catalog", type=Path)
     parser.add_argument("--runtime-confirmed", action="store_true")
+    parser.add_argument(
+        "--host",
+        help="Stable host identifier required for native live-spawn evidence.",
+    )
     parser.add_argument(
         "--provider-status",
         choices=("allowed", "manual_review", "blocked", "unknown"),
@@ -223,8 +235,10 @@ def main() -> int:
         "checked_at": datetime.now(timezone.utc).isoformat(),
         "model": args.model,
         "thinking": args.thinking,
+        "surface": args.surface,
         "registry_eligible": False,
         "runtime_status": "unknown",
+        "runtime_evidence": None,
         "provider_status": args.provider_status,
         "data_allowed": args.data_allowed,
         "route_status": "fail",
@@ -251,7 +265,7 @@ def main() -> int:
         return 2
 
     forbidden = set(registry.get("policy", {}).get("forbidden_thinking", []))
-    registry_thinking = set(entry.get("thinking", []))
+    registry_thinking = supported_thinking(entry, args.surface)
     if args.thinking in forbidden:
         result["errors"].append("thinking is forbidden by registry policy")
     elif args.thinking not in registry_thinking:
@@ -262,11 +276,19 @@ def main() -> int:
         "automatic": bool(entry.get("automatic")),
         "provider": entry.get("provider"),
         "terms_default": entry.get("terms_default", "unknown"),
+        "surface": args.surface,
         "thinking_supported": args.thinking in registry_thinking,
     }
 
     if entry.get("terms_default") == "blocked":
         result["errors"].append("registry provider policy is blocked and cannot be overridden")
+
+    if (
+        args.surface == "native_subagent"
+        and args.runtime_confirmed
+        and (not isinstance(args.host, str) or not args.host.strip())
+    ):
+        result["errors"].append("native runtime confirmation requires --host")
 
     manual_ready = True
     if entry.get("status") == "manual_only":
@@ -275,6 +297,10 @@ def main() -> int:
             result["warnings"].append("manual-only model requires an explicit user request")
         if not args.risk_acknowledged:
             result["warnings"].append("manual-only model requires separate risk acknowledgement")
+    elif entry.get("status") == "opt_in":
+        manual_ready = args.explicit_user_request
+        if not args.explicit_user_request:
+            result["warnings"].append("opt-in model requires an explicit user request")
     elif not entry.get("automatic"):
         result["errors"].append("model is disabled for automatic routing")
 
@@ -303,6 +329,16 @@ def main() -> int:
 
     if args.runtime_confirmed and not result["errors"]:
         result["runtime_status"] = "pass"
+        if args.surface == "native_subagent":
+            result["runtime_evidence"] = {
+                "kind": "live_spawn_schema",
+                "surface": args.surface,
+                "model": args.model,
+                "thinking": args.thinking,
+                "accepted": True,
+                "host": args.host,
+                "checked_at": result["checked_at"],
+            }
     elif catalog_declared:
         result["runtime_status"] = "declared"
 
@@ -327,7 +363,12 @@ def main() -> int:
             )
             result["checks"]["semantic_probe"] = probe
             if probe.get("status") == "pass":
-                result["runtime_status"] = "pass"
+                if args.surface == "app_thread":
+                    result["runtime_status"] = "pass"
+                elif not args.runtime_confirmed:
+                    result["warnings"].append(
+                        "Responses semantic probe does not confirm native spawn support"
+                    )
             else:
                 result["runtime_status"] = "fail"
                 result["errors"].append("semantic probe failed")
@@ -346,7 +387,11 @@ def main() -> int:
         result["route_status"] = "fail"
         exit_code = 2
     else:
-        result["route_status"] = "manual_review" if entry.get("status") == "manual_only" else "unknown"
+        result["route_status"] = (
+            "manual_review"
+            if entry.get("status") in {"manual_only", "opt_in"}
+            else "unknown"
+        )
         exit_code = 3
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return exit_code

@@ -31,15 +31,17 @@ Then invoke `$skill-open-sourcer` with a local `SKILL.md` or Skill directory.
 - Imports the complete payload into `skills/<name>/` and creates bilingual docs, Changelog, Registry metadata, and catalog entries.
 - Locks an eight-field release story, chooses a clean-doc or proof-led presentation tier, and rejects generic Hero templates shared across unrelated Skills.
 - Validates the Skill, full Portfolio, declared tests, README structure and assets, local discovery, and isolated copy installation.
+- Runs isolated installation through one fail-fast verifier that checks install exit status, materialization, and byte-for-byte SHA-256 manifests without allowing a later shell command to mask failure.
 - Audits shared Portfolio README links against an explicit canonical repository boundary.
 - Uses top-level CLI help and list-only discovery so a help probe cannot trigger an unintended installation.
 - Plans one Skill with `--skill <name>` by default, so unrelated pending releases cannot enter the candidate set; `--all` remains available for an intentional Portfolio wave.
-- Pushes only the canonical Portfolio and creates only `<skill>/v<version>` Tags.
+- Records and re-checks the live remote SHA, blocks stale source checkouts with a `needs-sync` pre-commit guard, and publishes through a short-lived branch plus PR.
+- Merges only into the canonical Portfolio and creates only `<skill>/v<version>` Tags.
 - Produces the canonical install command and launch copy.
 
 ## How It Works
 
-The Skill treats open-sourcing as a governed import into one Portfolio. A direct `SKILL.md` input identifies what to import; it never selects a new-repository mode. README design begins with audience, repeated problem, value, proof, first action, safety boundary, native material, and presentation tier. Proof-led Heroes then receive a unique composition derived from that Skill's real mechanism or output. Publishing fails closed when the canonical remote, source ownership, security scan, package completeness, README evidence, or installation proof is missing.
+The Skill treats open-sourcing as a governed import into one Portfolio. A direct `SKILL.md` input identifies what to import; it never selects a new-repository mode. README design begins with audience, repeated problem, value, proof, first action, safety boundary, native material, and presentation tier. Proof-led Heroes then receive a unique composition derived from that Skill's real mechanism or output. `verify_isolated_install.py` installs one Skill in copy mode inside temporary HOME/workspace roots and compares the installed payload against the canonical source. The release plan binds the source to a live remote SHA; temporary integration clones freeze their original checkout until it is synchronized. Publishing fails closed when the canonical remote, source ownership, security scan, package completeness, README evidence, installation proof, or remote-history continuity is missing.
 
 ## Example Requests
 

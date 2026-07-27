@@ -1,6 +1,6 @@
-# 后台任务生命周期
+# App Thread 生命周期
 
-本文件负责创建前预检、运行读取和故障/归档入口。Thread 控制状态、排队恢复、稳定观察、断点续跑与收尾门统一遵守 [Thread 监督协议](thread-supervision-protocol.md)。
+本文件只负责 `app_thread` Surface 的创建前预检、运行读取和故障/归档入口。原生路径见 [原生 Subagent 生命周期](native-subagent-lifecycle.md)。Thread 控制状态、排队恢复、稳定观察、断点续跑与收尾门统一遵守 [Thread 监督协议](thread-supervision-protocol.md)。
 
 ## 创建前检查
 
@@ -18,6 +18,7 @@ Skill 包提供无依赖静态检查器：
 
 ```bash
 python3 scripts/model_preflight.py \
+  --surface app_thread \
   --model xai/grok-4.5 \
   --thinking high \
   --catalog "${CODEX_HOME:-$HOME/.codex}/cliproxyapi-catalog.json" \
@@ -26,7 +27,7 @@ python3 scripts/model_preflight.py \
   --data-allowed
 ```
 
-`--runtime-confirmed` 只能在主 Agent 已从当前 host 的 live 工具元数据确认精确组合后传入。缺少 live/provider/data 任一证据时，脚本返回 `unknown` 或 `manual_review`，不会把 registry/catalog 局部检查误报为最终可路由。
+`--runtime-confirmed` 只能在主 Agent 已从当前 host 的 live 工具元数据确认精确组合后传入。原生 Surface 会输出绑定 host/model/thinking/checked_at 的 `runtime_evidence`，供 RoutePlan 使用；Responses 语义 probe 不能替代原生 spawn schema 证据。缺少 live/provider/data 任一证据时，脚本返回 `unknown` 或 `manual_review`。
 
 本地 catalog 只作诊断；registry 决定策略允许范围，live runtime 决定当前 host 是否接受组合。Gemini Antigravity 当前 terms blocked，显式点名也不能覆盖 Provider 门。
 
@@ -36,6 +37,7 @@ python3 scripts/model_preflight.py \
 
 ```bash
 python3 scripts/model_preflight.py \
+  --surface app_thread \
   --model xai/grok-4.5 \
   --thinking high \
   --provider-status allowed \
@@ -60,7 +62,7 @@ python3 scripts/validate_route_plan.py /path/to/route-plan.json
 
 ## 创建与实体化
 
-1. 调用 `create_thread` 前递增 root creation attempt 与 subtask attempt，写入 `thread_id: null`、`pending_worktree_id: null`、`control_state: PLANNED` 的完整审计记录。
+1. 调用 `create_thread` 前递增 root worker attempt、兼容字段 creation attempt 与 subtask attempt，写入 `surface: app_thread`、`thread_id: null`、`pending_worktree_id: null`、`control_state: PLANNED` 的完整审计记录。
 2. 调用开始时更新为 `CREATION_PENDING`，显式传入任务包、模型、thinking 和目标环境。
 3. 返回 `threadId`、`pendingWorktreeId`、超时或未知形状时，严格按 `thread-supervision-protocol.md` 分类和恢复。
 4. `pendingWorktreeId` 不是正式 Thread id；只有唯一 task id 查询、正式读取和稳定观察通过后才进入 `CONTROL_READY`。

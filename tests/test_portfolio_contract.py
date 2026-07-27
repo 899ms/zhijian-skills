@@ -15,6 +15,7 @@ EXPECTED_SKILLS = {
     "enterprise-clone-builder",
     "gpt56-sol-pro-consult",
     "html-express",
+    "leadbook",
     "light-plan-and-work",
     "skill-open-sourcer",
     "wechat-article-search",

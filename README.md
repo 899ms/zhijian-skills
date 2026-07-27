@@ -48,6 +48,7 @@ npx skills add zjp1997720/zhijian-skills \
 | Knowledge systems | [`enterprise-clone-builder`](docs/skills/enterprise-clone-builder/README.md) | Build a structured enterprise digital-twin repository from evidence | [Docs](docs/skills/enterprise-clone-builder/README.md) |
 | Model reasoning | [`gpt56-sol-pro-consult`](docs/skills/gpt56-sol-pro-consult/README.md) | Get a file-grounded, model-verified GPT 5.6 Sol Pro second opinion through Codex Chrome | [Docs](docs/skills/gpt56-sol-pro-consult/README.md) |
 | Information design | [`html-express`](docs/skills/html-express/README.md) | Turn dense material into a clear, self-contained HTML report | [Docs](docs/skills/html-express/README.md) |
+| Long-form writing | [`leadbook`](docs/skills/leadbook/README.md) | Produce evidence-backed Chinese business books and white papers with auditable quality gates | [Docs](docs/skills/leadbook/README.md) |
 | Workflow orchestration | [`light-plan-and-work`](docs/skills/light-plan-and-work/README.md) | Plan bounded work briefly, execute immediately, and escalate only on heavy conditions | [Docs](docs/skills/light-plan-and-work/README.md) |
 | Release governance | [`skill-open-sourcer`](docs/skills/skill-open-sourcer/README.md) | Audit, package, document, verify, and publish Agent Skills | [Docs](docs/skills/skill-open-sourcer/README.md) |
 | Content research | [`wechat-article-search`](docs/skills/wechat-article-search/README.md) | Discover WeChat public-account articles as structured JSON | [Docs](docs/skills/wechat-article-search/README.md) |
