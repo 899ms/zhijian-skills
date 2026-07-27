@@ -11,6 +11,13 @@ description: 在 Codex 中为复杂、可并行的知识工作或编程任务路
 
 简单问答、状态查询、单文件小改、强顺序任务，以及发布、付款、删除、账户或生产操作不得自动派遣。外部或不可逆动作只能由主 Agent 在用户授权范围内执行，Worker 只准备材料。
 
+## 执行档位
+
+- `native-light`：默认用于 2–3 个 OpenAI 原生 Worker。要求任务边界清晰、结果回到父任务集成、不需要恢复/worktree/独立历史/高风险审批，也没有跨 Provider 或运行时 fallback。RoutePlan 与 ledger 可以只存在于当前上下文并通过 stdin 校验，不创建 `agent_team/` 或其他协调文件。
+- `governed`：用于 App Thread、跨 Provider、fallback、恢复、worktree、独立历史、高风险审批、上游耐久账本或严格审计。保留完整策略加载、持久 RoutePlan、监督和恢复协议。
+
+两档共享全部模型、Provider、权限、并发、attempt、fresh-context、身份和关闭/归档安全门。轻量档只减少无关策略加载与落盘，不减少主 Agent 验收。
+
 ## 上游 Skill 模式
 
 当 Deep Research、PPT、课程生产或其他上游 Skill 已经定义任务拆分、阶段顺序、文件路径和验收标准时，读取 [上游 Skill 适配协议](references/upstream-skill-adapter.md)。上游 Skill 保持业务流程主权；本 Skill 只负责模型与 Surface 路由、Provider 门、并发额度、生命周期和审计。
@@ -20,17 +27,17 @@ description: 在 Codex 中为复杂、可并行的知识工作或编程任务路
 ## 执行流程
 
 1. 检查当前指令中是否存在用户对后台任务和模型路由的明确授权。全局 `AGENTS.md` 的长期授权有效；没有授权就留在主任务内完成。
-2. 读取 [模型注册表](references/model-registry.json)、[路由策略](references/routing-policy.md)、[Provider 策略](references/provider-policy.md) 和 [Surface 选择策略](references/surface-selection-policy.md)。先固定任务画像、数据边界、Surface、有序候选链和最低 `thinking`，再创建任何 Worker。
-3. 独立任务由本 Skill判断并行收益；上游 Skill 模式采用上游 Scale 和任务包，只施加安全上限。预计超过 30 分钟、正式交付物达到 4 个、需要恢复、worktree 或高风险审批时，读取 [耐久模式](references/durable-mode.md) 并优先选择 `app_thread`。
-4. 为每个子任务生成 concrete RoutePlan。每个候选显式写 `surface`、`model`、`thinking`；旧计划省略 `surface` 时兼容解释为 `app_thread`。原生候选必须附带 10 分钟内生成、绑定 host/Surface/model/thinking 的 `runtime_evidence`，证明 live spawn schema 接受该精确组合。运行 `scripts/validate_route_plan.py` 后才能派遣。
+2. 始终读取 [模型注册表](references/model-registry.json) 和 [Provider 策略](references/provider-policy.md)，先固定数据边界、精确模型和最低 `thinking`。只有 Surface/画像不明确、存在非 OpenAI 候选或 fallback 时再读取 [路由策略](references/routing-policy.md) 与 [Surface 选择策略](references/surface-selection-policy.md)。
+3. 独立任务由本 Skill 判断并行收益；上游 Skill 模式采用上游 Scale 和任务包，只施加安全上限。需要恢复、worktree、独立历史、高风险审批或用户明确要求 Thread 时，读取 [耐久模式](references/durable-mode.md) 并使用 `governed`。预计超过 30 分钟或正式交付物达到 4 个只是升级信号，需同时存在持久化或独立审计需求才进入耐久模式。
+4. 为每个子任务生成 concrete RoutePlan。每个候选显式写 `surface`、`model`、`thinking`；旧计划省略 `surface` 时兼容解释为 `app_thread`。原生候选必须附带 10 分钟内生成、绑定 host/Surface/model/thinking 的 `runtime_evidence`。`native-light` 可用 `python3 scripts/validate_route_plan.py -` 从 stdin 校验并在任务结束后丢弃；`governed` 保留文件型计划。
 5. 派遣前显示一条简短通知：Worker 数、Surface、精确模型、推理强度、职责、预声明 fallback，以及为后续阶段和重试预留的累计额度。Gemini Antigravity 路径必须说明 manual-only 状态和账号风险。
-6. 读取 [任务包模板](references/task-packet.md)，为每个 Worker 写唯一 `task_id`、权限导向的 `task_intent / mutation_authority` 和独立可执行提示词。提示词必须包含“禁止创建任何后台任务、线程或子 Agent”。
-7. `native_subagent` 读取 [原生 Subagent 生命周期](references/native-subagent-lifecycle.md)。V1 使用 `fork_context=false`，V2 使用 `fork_turns="none"`；live spawn 参数必须显式传入 `model` 与 `reasoning_effort`，禁止静默继承父 Agent。调用开始前消耗 root `worker_attempt` 和 subtask attempt，并按 [原生审计 schema](references/native-audit-schema.json) 建立记录。
+6. 读取 [任务包模板](references/task-packet.md)，为每个 Worker 写唯一 `task_id`、权限导向的 `task_intent / mutation_authority` 和独立可执行提示词。提示词必须包含“禁止创建任何后台任务、线程或子 Agent”。`native-light` 任务包保留在上下文，不为审计重复落盘。
+7. `native_subagent` 读取 [原生 Subagent 生命周期](references/native-subagent-lifecycle.md)。V1 使用 `fork_context=false`，V2 使用 `fork_turns="none"`；live spawn 参数必须显式传入 `model` 与 `reasoning_effort`，禁止静默继承父 Agent。调用开始前消耗 root `worker_attempt` 和 subtask attempt，并按 [原生审计 schema](references/native-audit-schema.json) 建立记录；`native-light` 记录可保留在内存 ledger。
 8. `app_thread` 按 [Thread 生命周期](references/thread-lifecycle.md) 和 [监督协议](references/thread-supervision-protocol.md) 执行。用 `codex_app__list_projects` 定位项目；每次调用 `create_thread` 前消耗 root `worker_attempt`、兼容字段 `creation_attempt` 和 subtask attempt，并按 [Thread 审计 schema](references/audit-schema.json) 建立记录。
 9. 跨 Surface 运行并发最多 6 个，单个根任务累计最多 8 次 `worker_attempt`；未实体化、超时歧义、原生 spawn 失败和 fallback 都计数。每波最多新增 3 个 Worker。创建前扣除上游后续阶段和恢复的 reserved slots；同一文件同一时刻只允许一个写入者。
-10. 按 [恢复策略](references/recovery-policy.md) 分类失败。完整输出质量不足时，原生 Worker 最多一次 follow-up，App Thread 最多在原 Thread 追问一次；仍失败才沿预声明候选链进入下一项。每个子任务最多两个 Worker attempt，禁止随机选模、循环回退、静默降级 `thinking` 或运行时扩大 Provider。
+10. 出现失败、声明 fallback 或进入 `governed` 时读取 [恢复策略](references/recovery-policy.md) 分类失败。完整输出质量不足时，原生 Worker 最多一次 follow-up，App Thread 最多在原 Thread 追问一次；仍失败才沿预声明候选链进入下一项。每个子任务最多两个 Worker attempt，禁止随机选模、循环回退、静默降级 `thinking` 或运行时扩大 Provider。
 11. 主 Agent 亲自核对事实、运行验证、处理冲突并整合最终交付。采纳的原生 Worker 必须 `CLOSED`；采纳的 App Thread 必须完成输出核验并通过归档门。失败、争议、待审和 `UNKNOWN` Thread 保留。
-12. 用 `scripts/validate_team_ledger.py` 验证混合 Surface ledger。平台只确认请求被接受但未回显实际运行模型时，`observed_runtime_model` 保持 `unknown`；不得把 requested/accepted 冒充 observed。最终汇报 Surface 与模型分布、预检、重试、升级、采纳、关闭/归档和未解决风险。
+12. 用 `scripts/validate_team_ledger.py` 验证 ledger；`native-light` 可从 stdin 校验后丢弃，`governed` 保留可恢复账本。平台只确认请求被接受但未回显实际运行模型时，`observed_runtime_model` 保持 `unknown`；不得把 requested/accepted 冒充 observed。最终汇报 Surface 与模型分布、预检、重试、升级、采纳、关闭/归档和未解决风险。
 
 ## 硬性边界
 

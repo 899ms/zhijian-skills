@@ -31,7 +31,13 @@ Prompt：使用 Grok 4.5 实现复杂模块，再让另一个模型独立审查�
 
 Prompt：并行派两个 Sol Worker，一个 low 做 scout，一个 medium 做实现，完成后回到主任务集成。
 
-应出现：两个 `native_subagent` 候选；live spawn schema 分别确认 `gpt-5.6-sol / low` 与 `gpt-5.6-sol / medium`；V1 传 `fork_context=false` 或 V2 传 `fork_turns="none"`；requested/platform/observed identity 分开记录；采纳后关闭 agent。
+应出现：`native-light` 与两个 `native_subagent` 候选；live spawn schema 分别确认 `gpt-5.6-sol / low` 与 `gpt-5.6-sol / medium`；RoutePlan/ledger 可从 stdin 校验且不创建 `agent_team/`；V1 传 `fork_context=false` 或 V2 传 `fork_turns="none"`；requested/platform/observed identity 分开记录；采纳后关闭 agent。
+
+### Four short outputs stay lightweight
+
+Prompt：四个互斥的小文件预计十分钟完成，交给三个 OpenAI 原生 Worker，结果回到父任务集成，不需要恢复或独立历史。
+
+应出现：选择 `native-light`；交付物数量本身不触发 App Thread；不创建持久协调文件；Provider、精确模型、6/8、单写者、fresh-context、身份和关闭门保持不变。
 
 ### Native model rejection
 
@@ -90,6 +96,7 @@ Prompt：一个 `task_intent=inspect` Worker 想顺手修改源文件，mutation
 ## 运行断言
 
 - 派遣前显示 Worker 数量、Surface、精确模型、thinking、职责、有序 fallback 和 reserved slots。
+- `native-light` 只加载当前路径需要的策略，RoutePlan 与 ledger 可从 stdin 校验且不创建 `agent_team/`；`governed` 保留完整持久状态。
 - registry 决定策略允许范围；live runtime 只验证当前 host 接受性。
 - Gemini Antigravity 未被用户明确点名时不进入自动候选或 fallback；当前第三方登录 terms blocked 时，即使明确点名也不创建。
 - Grok 只在 runtime/provider 门通过后自动使用。

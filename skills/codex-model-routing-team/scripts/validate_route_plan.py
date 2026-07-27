@@ -20,11 +20,17 @@ def load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def load_input(source: str) -> Any:
+    if source == "-":
+        return json.load(sys.stdin)
+    return load_json(Path(source))
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Validate a concrete RoutePlan against model, thinking, provider, and retry policies."
     )
-    parser.add_argument("plan", type=Path)
+    parser.add_argument("plan", help="RoutePlan JSON path, or - to read JSON from stdin")
     parser.add_argument("--registry", type=Path, default=DEFAULT_REGISTRY)
     return parser.parse_args()
 
@@ -80,7 +86,7 @@ def main() -> int:
         "candidates": [],
     }
     try:
-        plan = load_json(args.plan)
+        plan = load_input(args.plan)
         registry = load_json(args.registry)
     except (OSError, json.JSONDecodeError) as exc:
         result["errors"].append(f"JSON load failed: {exc}")

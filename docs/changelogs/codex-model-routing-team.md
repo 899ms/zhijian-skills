@@ -12,6 +12,9 @@
 
 ## Unreleased
 
+- Add a `native-light` profile for bounded OpenAI native Workers: load only relevant policies, keep coordination state in memory, and avoid `agent_team/` files.
+- Keep recovery, worktree, independent history, high-risk approval, cross-Provider, and fallback work on the fully governed path; duration and file count are now signals rather than standalone App Thread triggers.
+- Accept RoutePlan and ledger JSON from stdin while preserving existing file-path validation and all model, Provider, attempt, identity, and lifecycle gates.
 - Replace the two-model hardcoded policy with a registry-driven four-model policy covering Luna, Sol, conditional Grok 4.5, and a provider-blocked Antigravity Gemini entry that preserves a future official-route template.
 - Add provider/data-boundary gates, deterministic candidate chains, scoped circuit breakers, and a two-Worker recovery ceiling.
 - Add dependency-free model and RoutePlan validators for registry/runtime evidence, optional semantic nonces, ordered fallbacks, Provider allowlists, and minimum thinking.

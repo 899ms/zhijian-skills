@@ -70,6 +70,8 @@ Current Codex native subagent spawn schemas can expose per-worker `model` and re
 
 This Skill turns that capability into a controlled router. It uses native subagents for bounded parent-integrated work and Codex App threads for durable or worktree tasks, with the same Provider gates, fallback plan, attempt budget, and lead-agent verification.
 
+Ordinary groups of two or three OpenAI native Workers use `native-light`: load only the policies needed by that route, validate RoutePlans and ledgers through stdin, and avoid creating `agent_team/`. Recovery, worktrees, independent history, high-risk approval, cross-Provider routes, and fallbacks use the full `governed` path. Both profiles keep the same safety gates.
+
 ## What it does
 
 - Routes only complex, genuinely parallel work such as multi-source research, multi-section content, large Skills or decks, and independent engineering workstreams.
@@ -90,10 +92,18 @@ This Skill turns that capability into a controlled router. It uses native subage
 
 1. The lead freezes a task profile, Provider allowlist, execution surface, and ordered candidate chain.
 2. It validates the registry and Provider policy, then confirms every native `model/reasoning_effort` against the live spawn schema.
-3. Native V1 uses `fork_context=false`; V2 uses `fork_turns="none"`. App threads keep unique task ids and recover queued worktrees through official reads.
-4. Requested, platform-accepted, and observed runtime model identity remain separate. Missing runtime identity stays `unknown`.
-5. Failures advance only through the predeclared chain, including cross-surface fallbacks. A single-candidate failure returns to the lead agent.
-6. Adopted native Workers are closed; adopted App threads pass the completion and archival gates.
+3. Bounded OpenAI native work uses `native-light`; durable, cross-Provider, fallback, or high-risk work uses `governed`.
+4. Native V1 uses `fork_context=false`; V2 uses `fork_turns="none"`. App threads keep unique task ids and recover queued worktrees through official reads.
+5. Requested, platform-accepted, and observed runtime model identity remain separate. Missing runtime identity stays `unknown`.
+6. Failures advance only through the predeclared chain, including cross-surface fallbacks. A single-candidate failure returns to the lead agent.
+7. Adopted native Workers are closed; adopted App threads pass the completion and archival gates.
+
+The lightweight path can validate in-memory JSON without leaving coordination files:
+
+```bash
+printf '%s' "$ROUTE_PLAN_JSON" | python3 scripts/validate_route_plan.py -
+printf '%s' "$TEAM_LEDGER_JSON" | python3 scripts/validate_team_ledger.py -
+```
 
 `max_worker_threads` equals the candidate-chain length. A single candidate with lead-agent takeover uses `1`; a declared fallback chain uses `2`.
 

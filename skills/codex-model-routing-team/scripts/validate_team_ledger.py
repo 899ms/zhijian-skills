@@ -20,11 +20,17 @@ def load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def load_input(source: str) -> Any:
+    if source == "-":
+        return json.load(sys.stdin)
+    return load_json(Path(source))
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Validate deterministic invariants in a Codex model-routing team ledger."
     )
-    parser.add_argument("ledger", type=Path)
+    parser.add_argument("ledger", help="ledger JSON path, or - to read JSON from stdin")
     parser.add_argument("--schema", type=Path, default=DEFAULT_SCHEMA)
     parser.add_argument("--native-schema", type=Path, default=DEFAULT_NATIVE_SCHEMA)
     return parser.parse_args()
@@ -66,7 +72,7 @@ def main() -> int:
         "warnings": [],
     }
     try:
-        payload = load_json(args.ledger)
+        payload = load_input(args.ledger)
         root, records = records_from(payload)
     except (OSError, json.JSONDecodeError, ValueError) as exc:
         result["errors"].append(f"JSON load failed: {exc}")

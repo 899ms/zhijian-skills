@@ -70,6 +70,8 @@ find ~/.agents/skills/codex-model-routing-team -maxdepth 2 -type f | sort
 
 这个 Skill 把新能力变成受控双路径路由器：边界清晰、回到父任务集成的工作用原生 Subagent；需要持久恢复、独立任务历史或 worktree 的工作用 Codex App Thread。两条路径共享 Provider 门、fallback 计划、次数预算和主 Agent 验收。
 
+普通 2–3 个 OpenAI 原生 Worker 默认走 `native-light`：只加载当前路径需要的策略，RoutePlan 和 ledger 可通过 stdin 校验并留在上下文，不创建 `agent_team/`。涉及恢复、worktree、独立历史、高风险审批、跨 Provider 或 fallback 时进入完整 `governed` 路径。两档共享同一套安全门。
+
 ## 主要能力
 
 - 只路由真正复杂且可并行的任务，例如多来源调研、多章节内容、复杂 Skill 或 PPT、跨模块开发和独立验证。
@@ -90,10 +92,18 @@ find ~/.agents/skills/codex-model-routing-team -maxdepth 2 -type f | sort
 
 1. 主 Agent 固定任务画像、Provider allowlist、执行 Surface 和有序候选链。
 2. 校验 registry 与 Provider 门；每个原生 `model/reasoning_effort` 精确组合还要通过 live spawn schema。
-3. 原生 V1 使用 `fork_context=false`，V2 使用 `fork_turns="none"`；App Thread 使用唯一 task id 和官方读取恢复排队 worktree。
-4. requested、platform accepted 与 observed runtime model 分开记录；平台未回显时 observed 保持 `unknown`。
-5. 失败只沿预声明链前进，包括跨 Surface fallback；单候选失败后由主 Agent 接管。
-6. 已采纳的原生 Worker 必须关闭；App Thread 必须通过完成与归档门。
+3. 边界清晰的 OpenAI 原生任务使用 `native-light`；耐久、跨 Provider、fallback 或高风险任务使用 `governed`。
+4. 原生 V1 使用 `fork_context=false`，V2 使用 `fork_turns="none"`；App Thread 使用唯一 task id 和官方读取恢复排队 worktree。
+5. requested、platform accepted 与 observed runtime model 分开记录；平台未回显时 observed 保持 `unknown`。
+6. 失败只沿预声明链前进，包括跨 Surface fallback；单候选失败后由主 Agent 接管。
+7. 已采纳的原生 Worker 必须关闭；App Thread 必须通过完成与归档门。
+
+轻量路径可以直接从 stdin 校验，不留下临时协调文件：
+
+```bash
+printf '%s' "$ROUTE_PLAN_JSON" | python3 scripts/validate_route_plan.py -
+printf '%s' "$TEAM_LEDGER_JSON" | python3 scripts/validate_team_ledger.py -
+```
 
 `max_worker_threads` 必须等于候选链长度：单候选且失败后由主 Agent 接管时写 `1`；声明 fallback 候选时写 `2`。
 
