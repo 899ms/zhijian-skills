@@ -13,7 +13,15 @@ from pathlib import Path
 from typing import Any
 
 
-EXCLUDED_PARTS = {".git", ".agents", "node_modules", "__pycache__"}
+EXCLUDED_PARTS = {
+    ".git",
+    ".agents",
+    "node_modules",
+    "__pycache__",
+    "coverage",
+    "dist",
+    "reports",
+}
 
 
 def digest(path: Path) -> str:
