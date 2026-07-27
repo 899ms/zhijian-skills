@@ -1,0 +1,87 @@
+title: "{{TITLE}}"
+subtitle: "{{SUBTITLE}}"
+content_profile: "{{CONTENT_PROFILE}}"
+voice_profile: "{{VOICE_PROFILE}}"
+voice_anchor: "{{VOICE_ANCHOR}}"
+author: "{{AUTHOR}}"
+created: "{{DATE}}"
+status: draft
+quality:
+  target: draft
+  review_ready: false
+  publish_ready: false
+  reference_page: false
+  worksheets_ready: false
+  distribution_pack_ready: false
+  final_report_state: draft
+completion_metrics:
+  evidence_coverage: 0.0  # 已映射证据 / 计划证据
+  visual_coverage: 0.0    # 已生成图 / 计划图
+  chapter_completion: 0.0 # 已完成章节 / 总章节
+  backend_language_clean: false  # 是否通过后台语言检测
+research:
+  source_map: false
+  authority_accounts: false
+  authority_accounts_selected: 0
+  xhs_pack: false
+  wxmp_pack: false
+  wxmp_rate_limited: false
+  wxmp_recency_window_days: 365
+  behavior_seed_plan: false
+  behavior_pack: false
+  behavior_signals: 0
+  transaction_pack: false
+  transaction_signals: 0
+  authority_sources: 0
+  claim_ledger_reviewed: false
+  local_context_used: false
+outputs:
+  markdown: false
+  references: false
+  visual_plan: false
+  kami_diagrams: false
+  imagegen_visuals: false
+  kami_html: false
+  kami_pdf: false
+  pdf_visual_audit: false
+chapters:
+  - id: chapter-01
+    title: "问题定义"
+    status: not-started
+    words: 0
+    refs: 0
+    cases: 0
+    reviewed: false
+    summary_updated: false
+  - id: chapter-02
+    title: "核心模型"
+    status: not-started
+    words: 0
+    refs: 0
+    cases: 0
+    reviewed: false
+    summary_updated: false
+  - id: chapter-03
+    title: "场景拆解"
+    status: not-started
+    words: 0
+    refs: 0
+    cases: 0
+    reviewed: false
+    summary_updated: false
+  - id: chapter-04
+    title: "行动路径"
+    status: not-started
+    words: 0
+    refs: 0
+    cases: 0
+    reviewed: false
+    summary_updated: false
+  - id: chapter-05
+    title: "自测与总结"
+    status: not-started
+    words: 0
+    refs: 0
+    cases: 0
+    reviewed: false
+    summary_updated: false

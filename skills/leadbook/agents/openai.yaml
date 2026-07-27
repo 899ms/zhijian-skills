@@ -1,0 +1,4 @@
+interface:
+  display_name: "Leadbook"
+  short_description: "把商业主题生产成有证据、可评审的中文短书与白皮书"
+  default_prompt: "Use $leadbook to turn this business topic into an evidence-backed Chinese short book."

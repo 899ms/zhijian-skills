@@ -1,0 +1,84 @@
+# 证据门槛定义
+
+每种 content_profile 的最小证据集要求。
+
+## methodology-book（方法论书）
+
+```yaml
+required_levels:
+  - L1-fact
+  - L5-discourse
+  - L6-owned
+optional_levels:
+  - L2-demand
+  - L3-behavior
+min_claims: 10
+min_cases: 5
+```
+
+**说明**：方法论书需要权威事实支撑、观点谱系对比、自有案例验证。
+
+## whitepaper（白皮书）
+
+```yaml
+required_levels:
+  - L1-fact
+  - L3-behavior
+  - L4-transaction
+optional_levels:
+  - L2-demand
+  - L5-discourse
+min_claims: 15
+min_cases: 8
+```
+
+**说明**：白皮书需要行业数据、市场行为信号、交易信号验证趋势判断。
+
+## playbook（操作手册）
+
+```yaml
+required_levels:
+  - L2-demand
+  - L5-discourse
+  - L6-owned
+optional_levels:
+  - L1-fact
+  - L3-behavior
+  - L4-transaction
+min_claims: 8
+min_cases: 10
+```
+
+**说明**：操作手册需要真实用户场景、对标做法、自有实践案例。
+
+## course-manual（课程手册）
+
+```yaml
+required_levels:
+  - L5-discourse
+  - L6-owned
+optional_levels:
+  - L1-fact
+  - L2-demand
+  - L3-behavior
+min_claims: 5
+min_cases: 8
+```
+
+**说明**：课程手册以教学为主，需要清晰案例和自有经验，事实要求较低。
+
+## research-analyst（研究报告）
+
+```yaml
+required_levels:
+  - L1-fact
+  - L3-behavior
+  - L4-transaction
+  - L5-discourse
+optional_levels:
+  - L2-demand
+min_claims: 20
+min_cases: 10
+```
+
+**说明**：研究报告需要高密度事实、行为信号、交易信号和观点对比。
