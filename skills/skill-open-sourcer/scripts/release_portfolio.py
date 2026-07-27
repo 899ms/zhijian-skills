@@ -323,6 +323,37 @@ def verify_plan(plan: dict[str, Any], *, check_remote: bool = True) -> None:
             raise ReleaseError(f"plan.stale: candidate commit changed for {release['skill']}")
 
 
+def verify_frozen_source(plan: dict[str, Any]) -> None:
+    """Verify immutable plan objects after a PR merge changes the checked-out HEAD."""
+    repo = Path(plan["repository"]).resolve()
+    ensure_checkout_ready(repo)
+    base = git(
+        repo,
+        "rev-parse",
+        "--verify",
+        f"{plan['base_commit']}^{{commit}}",
+        check=False,
+    ).stdout.strip()
+    if base != plan["base_commit"]:
+        raise ReleaseError("plan.stale: frozen source commit is unavailable")
+    base_tree = git(repo, "rev-parse", f"{base}^{{tree}}").stdout.strip()
+    for release in plan["releases"]:
+        candidate = git(
+            repo,
+            "rev-parse",
+            "--verify",
+            "--quiet",
+            release["candidate_ref"],
+            check=False,
+        ).stdout.strip()
+        if candidate != release["candidate_commit"]:
+            raise ReleaseError(f"plan.stale: candidate ref changed for {release['skill']}")
+        parent = git(repo, "rev-parse", f"{candidate}^1").stdout.strip()
+        candidate_tree = git(repo, "rev-parse", f"{candidate}^{{tree}}").stdout.strip()
+        if parent != base or candidate_tree != base_tree:
+            raise ReleaseError(f"plan.stale: candidate commit changed for {release['skill']}")
+
+
 def verify_remote_release(plan: dict[str, Any], expected_remote_sha: str) -> str:
     repo = Path(plan["repository"]).resolve()
     actual = remote_head(repo)
@@ -462,7 +493,7 @@ def main() -> int:
             if args.step == "canonical-pushed":
                 if not args.remote_sha:
                     raise ReleaseError("release.remote_sha_required: canonical-pushed needs --remote-sha")
-                verify_plan(plan, check_remote=False)
+                verify_frozen_source(plan)
                 actual_remote = verify_remote_release(plan, args.remote_sha)
                 source_checkout = Path(plan["source_checkout"]).resolve()
                 repository = Path(plan["repository"]).resolve()
