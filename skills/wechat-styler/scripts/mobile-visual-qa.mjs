@@ -79,6 +79,32 @@ async function inspect(page, options) {
       return Number.parseFloat(style.borderLeftWidth || '0') >= 3
         && style.borderLeftColor === 'rgb(184, 82, 53)';
     });
+    const h3s = [...root.querySelectorAll('h3')];
+    const bodyParagraph = [...root.querySelectorAll('p')].find((paragraph) => (
+      paragraph.style.textAlign === 'justify'
+      && !paragraph.closest('[data-wechat-block="quote"]')
+    ));
+    const h2Style = h2s[0] ? getComputedStyle(h2s[0]) : null;
+    const h3Style = h3s[0] ? getComputedStyle(h3s[0]) : null;
+    const bodyStyle = bodyParagraph ? getComputedStyle(bodyParagraph) : null;
+    const typography = {
+      h2: h2Style ? {
+        fontFamily: h2Style.fontFamily,
+        fontSize: h2Style.fontSize,
+        fontWeight: h2Style.fontWeight,
+      } : null,
+      h3: h3Style ? {
+        fontFamily: h3Style.fontFamily,
+        fontSize: h3Style.fontSize,
+        fontWeight: h3Style.fontWeight,
+      } : null,
+      body: bodyStyle ? {
+        fontFamily: bodyStyle.fontFamily,
+        fontSize: bodyStyle.fontSize,
+        fontWeight: bodyStyle.fontWeight,
+        lineHeight: bodyStyle.lineHeight,
+      } : null,
+    };
     const failures = [];
     if (document.documentElement.scrollWidth > window.innerWidth + 1) failures.push('document has horizontal overflow');
     if (root.scrollWidth > root.clientWidth + 1) failures.push('article root has horizontal overflow');
@@ -95,6 +121,19 @@ async function inspect(page, options) {
     if (expectZhijian && h2s.length > 0 && warmBarH2s.length !== h2s.length) {
       failures.push(`Zhijian warm-bar H2 count ${warmBarH2s.length}/${h2s.length}`);
     }
+    if (expectZhijian && h2Style && !h2Style.fontFamily.includes('TsangerJinKai02')) {
+      failures.push('Zhijian H2 does not declare the editorial heading font');
+    }
+    if (expectZhijian && h3Style && (h3Style.fontSize !== '18px' || h3Style.fontWeight !== '600')) {
+      failures.push(`Zhijian H3 expected 18px/600, got ${h3Style.fontSize}/${h3Style.fontWeight}`);
+    }
+    if (expectZhijian && bodyStyle && (
+      bodyStyle.fontSize !== '15px'
+      || bodyStyle.fontWeight !== '450'
+      || Math.abs(Number.parseFloat(bodyStyle.lineHeight) - 25.2) > 0.2
+    )) {
+      failures.push(`Zhijian body expected 15px/450/1.68, got ${bodyStyle.fontSize}/${bodyStyle.fontWeight}/${bodyStyle.lineHeight}`);
+    }
     return {
       viewport: { width: window.innerWidth, height: window.innerHeight },
       article: { scrollWidth: root.scrollWidth, clientWidth: root.clientWidth },
@@ -105,6 +144,7 @@ async function inspect(page, options) {
       quotes: quoteReports,
       h2Count: h2s.length,
       warmBarH2Count: warmBarH2s.length,
+      typography,
       failures,
     };
   }, {
