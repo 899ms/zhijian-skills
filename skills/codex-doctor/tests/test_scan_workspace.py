@@ -258,6 +258,64 @@ class ScanWorkspaceTests(unittest.TestCase):
         self.assertEqual(len([x for x in findings if x["domain"] == "built_in"]), 1)
         self.assertEqual(inventory["built_in_doctor"]["checks"]["network.websocket"]["status"], "ok")
 
+    def test_provider_history_scope_mismatch_is_reported(self) -> None:
+        payload = {
+            "schemaVersion": 1,
+            "checks": {
+                "state.rollout_db_parity": {
+                    "status": "ok",
+                    "summary": "rollout files and state DB agree",
+                    "details": {
+                        "default model provider": "openai",
+                        "rollout DB model providers": "custom=1540, openai=7",
+                    },
+                }
+            },
+        }
+        completed = mock.Mock(returncode=0, stdout=json.dumps(payload), stderr="")
+        findings = []
+        inventory = {}
+        with mock.patch.object(MODULE.shutil, "which", return_value="/usr/bin/codex"), mock.patch.object(MODULE, "run", return_value=completed):
+            MODULE.built_in_doctor(Path.cwd(), findings, inventory, False)
+        hit = next(x for x in findings if "default_provider_history_scope_mismatch" in x["id"])
+        self.assertEqual(hit["domain"], "threads")
+        self.assertEqual(hit["severity"], "S2")
+        self.assertEqual(hit["confidence"], "high")
+        self.assertEqual(hit["evidence"]["dominant_history_provider"], "custom")
+        self.assertEqual(hit["evidence"]["default_provider_threads"], 7)
+        self.assertEqual(hit["evidence"]["total_indexed_threads"], 1547)
+        self.assertFalse(any(x["domain"] == "built_in" for x in findings))
+
+    def test_provider_history_scope_match_is_not_reported(self) -> None:
+        findings = []
+        MODULE.scan_provider_history_scope(
+            {
+                "state.rollout_db_parity": {
+                    "details": {
+                        "default model provider": "custom",
+                        "rollout DB model providers": "custom=1540, openai=7",
+                    }
+                }
+            },
+            findings,
+        )
+        self.assertFalse(any("default_provider_history_scope_mismatch" in x["id"] for x in findings))
+
+    def test_provider_history_scope_ignores_small_samples(self) -> None:
+        findings = []
+        MODULE.scan_provider_history_scope(
+            {
+                "state.rollout_db_parity": {
+                    "details": {
+                        "default model provider": "openai",
+                        "rollout DB model providers": {"custom": 9, "openai": 1},
+                    }
+                }
+            },
+            findings,
+        )
+        self.assertEqual(findings, [])
+
     def test_compact_report_preserves_findings_and_check_rows(self) -> None:
         report = {
             "schemaVersion": 1,

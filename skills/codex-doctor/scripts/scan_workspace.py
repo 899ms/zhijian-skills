@@ -51,6 +51,9 @@ SUSPICIOUS_ROOT_DIRS = {
 }
 PROTECTED_ROOT_DIRS = {".agents", ".claude", ".codex", ".git", ".workbuddy", ".web-clipper"}
 KNOWN_GENERATED_ROOT_PATHS = {".codex/visualizations"}
+MIN_PROVIDER_HISTORY_THREADS = 20
+DOMINANT_PROVIDER_SHARE_THRESHOLD = 0.80
+MAX_DEFAULT_PROVIDER_SHARE_THRESHOLD = 0.20
 
 
 def run(cmd: list[str], cwd: Path, timeout: int = 30) -> subprocess.CompletedProcess[str]:
@@ -965,6 +968,95 @@ def scan_git_root(root: Path | None, findings: list[dict[str, Any]], inventory: 
         )
 
 
+def parse_provider_counts(value: Any) -> dict[str, int]:
+    """Parse the redacted provider inventory emitted by `codex doctor --json`."""
+    raw_items: list[tuple[Any, Any]] = []
+    if isinstance(value, dict):
+        raw_items = list(value.items())
+    elif isinstance(value, str):
+        for part in value.split(","):
+            match = re.fullmatch(r"\s*([^=,]+?)\s*=\s*(\d+)\s*", part)
+            if match:
+                raw_items.append((match.group(1), match.group(2)))
+
+    counts: dict[str, int] = {}
+    for raw_provider, raw_count in raw_items:
+        provider = str(raw_provider).strip()
+        if not provider:
+            continue
+        try:
+            count = int(raw_count)
+        except (TypeError, ValueError):
+            continue
+        if count < 0:
+            continue
+        counts[provider] = counts.get(provider, 0) + count
+    return counts
+
+
+def scan_provider_history_scope(
+    checks: dict[str, Any], findings: list[dict[str, Any]]
+) -> None:
+    """Flag a default provider that represents only a small minority of indexed history."""
+    parity = checks.get("state.rollout_db_parity")
+    if not isinstance(parity, dict):
+        return
+    details = parity.get("details")
+    if not isinstance(details, dict):
+        return
+
+    default_provider = details.get("default model provider") or details.get("default_model_provider")
+    if not isinstance(default_provider, str) or not default_provider.strip():
+        return
+    default_provider = default_provider.strip()
+    raw_counts = details.get("rollout DB model providers")
+    if raw_counts is None:
+        raw_counts = details.get("rollout_db_model_providers")
+    counts = parse_provider_counts(raw_counts)
+    total = sum(counts.values())
+    if total < MIN_PROVIDER_HISTORY_THREADS or not counts:
+        return
+
+    dominant_provider, dominant_count = max(counts.items(), key=lambda item: (item[1], item[0]))
+    default_count = counts.get(default_provider, 0)
+    dominant_share = dominant_count / total
+    default_share = default_count / total
+    if (
+        dominant_provider == default_provider
+        or dominant_share < DOMINANT_PROVIDER_SHARE_THRESHOLD
+        or default_share > MAX_DEFAULT_PROVIDER_SHARE_THRESHOLD
+    ):
+        return
+
+    add_finding(
+        findings,
+        domain="threads",
+        severity="S2",
+        confidence="high",
+        code="default_provider_history_scope_mismatch",
+        source="codex doctor --json:state.rollout_db_parity",
+        summary="The default model provider represents only a small minority of indexed thread history",
+        evidence={
+            "default_provider": default_provider,
+            "default_provider_threads": default_count,
+            "default_provider_share": round(default_share, 4),
+            "dominant_history_provider": dominant_provider,
+            "dominant_history_threads": dominant_count,
+            "dominant_history_share": round(dominant_share, 4),
+            "provider_counts": dict(sorted(counts.items())),
+            "total_indexed_threads": total,
+            "thresholds": {
+                "minimum_threads": MIN_PROVIDER_HISTORY_THREADS,
+                "minimum_dominant_share": DOMINANT_PROVIDER_SHARE_THRESHOLD,
+                "maximum_default_share": MAX_DEFAULT_PROVIDER_SHARE_THRESHOLD,
+            },
+        },
+        impact="Codex Desktop may filter history to the active provider, hiding most indexed threads without deleting rollout data.",
+        recommendation="Verify the provider change is intentional. If history disappeared, restore the intended top-level model_provider or perform a backed-up, parity-checked provider metadata migration; do not delete or rebuild rollout files.",
+        fixability="manual_review",
+    )
+
+
 def built_in_doctor(cwd: Path, findings: list[dict[str, Any]], inventory: dict[str, Any], skip: bool) -> None:
     if skip:
         inventory["built_in_doctor"] = {"status": "skipped", "reason": "--skip-built-in"}
@@ -1038,6 +1130,7 @@ def built_in_doctor(cwd: Path, findings: list[dict[str, Any]], inventory: dict[s
                 recommendation=str(check.get("remediation") or "Inspect this check independently; preserve environment-specific sub-checks."),
                 fixability="built_in_guidance",
             )
+        scan_provider_history_scope(checks, findings)
 
 
 def build_report(cwd: Path, skip_builtin: bool) -> dict[str, Any]:

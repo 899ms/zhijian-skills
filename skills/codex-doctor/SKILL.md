@@ -1,13 +1,13 @@
 ---
 name: codex-doctor
-description: Audit Codex installation health and workspace context quality by combining the built-in `codex doctor` report with read-only checks for AGENTS.md scope, instruction bloat or duplication, Skills, MCP, hooks, config, Git state, and repository-root hygiene. Use whenever the user asks for `/doctor`, `/checkup`, Codex health checks, context cleanup, AGENTS.md cleanup, unused or broken Skills/MCP/hooks, slow or polluted context, or asks why Codex is ignoring rules. Default to diagnosis only; never edit, disable, delete, trust, install, update, authenticate, move, or clean anything without a separately approved finding-level diff.
+description: Audit Codex installation health and workspace context quality by combining the built-in `codex doctor` report with read-only checks for AGENTS.md scope, instruction bloat or duplication, Skills, MCP, hooks, config, thread-provider history scope, Git state, and repository-root hygiene. Use whenever the user asks for `/doctor`, `/checkup`, Codex health checks, context cleanup, AGENTS.md cleanup, unused or broken Skills/MCP/hooks, missing history after provider changes, slow or polluted context, or asks why Codex is ignoring rules. Default to diagnosis only; never edit, disable, delete, trust, install, update, authenticate, move, or clean anything without a separately approved finding-level diff.
 ---
 
 # Codex Doctor
 
 Run a two-layer health check:
 
-1. Reuse Codex's stable built-in `codex doctor --json` for installation, config, auth, runtime, Git environment, terminal, app-server, update, and thread-inventory checks.
+1. Reuse Codex's stable built-in `codex doctor --json` for installation, config, auth, runtime, Git environment, terminal, app-server, update, and thread-inventory checks. Derive one narrow provider-scope warning when the default provider represents only a small minority of indexed history.
 2. Run the bundled read-only scanner for workspace context governance that the built-in command does not cover.
 
 The scanner gathers deterministic evidence. You make the semantic judgment. This separation matters because a script can prove that text repeats, but it cannot safely decide that a business fact, safety boundary, brand voice, or directory rule is disposable.

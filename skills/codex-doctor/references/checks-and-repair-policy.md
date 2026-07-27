@@ -7,6 +7,7 @@ The stable built-in `codex doctor` owns runtime diagnostics. This Skill extends 
 | Domain | Deterministic evidence | Semantic judgment | Automatic repair |
 |---|---|---|---|
 | Built-in health | `codex doctor --json` | preserve independent sub-checks | none |
+| Thread provider scope | built-in default provider and indexed provider counts | whether a provider change was intentional | none |
 | AGENTS effective chain | global and root-to-CWD discovery, byte limit | whether a rule belongs at this scope | none |
 | Exact duplication | normalized blocks outside frontmatter | intentional reinforcement vs waste | none |
 | Inferable content | heading and section candidates | whether code discovery is cheaper and reliable | none |
@@ -71,3 +72,4 @@ Severity never grants permission. S0/S1 findings often require more caution beca
 - deterministic classification of “Claude/Codex can infer this from the repo”
 - full parity between CLI, desktop, IDE, cloud, and managed-policy effective configuration
 - long-term stability of every field in `codex doctor --json`; parse by `schemaVersion` and tolerate unknown fields
+- proof that a provider-scope mismatch is unintended; the scanner can prove the distribution and visibility risk, not user intent

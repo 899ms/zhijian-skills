@@ -38,7 +38,8 @@ Claude Code 在 [v2.1.205](https://github.com/anthropics/claude-code/releases/ta
 ## 它能做什么
 
 - 合并 Codex 原生运行时诊断与确定性的工作区只读扫描。
-- 检查有效 `AGENTS.md` 链、上下文体积、精确重复、Skills、MCP、hooks、配置、Git 状态和仓库根目录卫生。
+- 检查有效 `AGENTS.md` 链、上下文体积、精确重复、Skills、MCP、hooks、配置、线程 Provider 历史作用域、Git 状态和仓库根目录卫生。
+- 当活动 Provider 只覆盖少量已索引历史线程时给出提示，这类错位会让 Codex Desktop 看起来像是丢失了旧会话。
 - 把“机器可以证明的问题”和“需要模型理解语义的裁剪候选”分开，再对每一项修复单独授权。
 
 它不会执行 hooks、暴露密钥值、自动删规则、停用扩展、更新 Codex、修改权限或直接修复文件。
@@ -62,6 +63,8 @@ Codex Doctor 采用四层结构：
 使用 $codex-doctor 检查 Codex 为什么总是忽略当前项目的 AGENTS.md。
 
 使用 $codex-doctor 审计失效或低价值的 Skills、MCP 和 hooks，先给证据，再提修改方案。
+
+使用 $codex-doctor 诊断切换模型 Provider 后历史会话为什么消失。只诊断，不修改配置。
 ```
 
 也可以直接运行内置扫描器：
@@ -97,7 +100,7 @@ python3 -m unittest discover -s tests -v
 python3 scripts/scan_workspace.py --cwd /path/to/project --compact-json
 ```
 
-当前测试覆盖指令作用域与截断、敏感值脱敏、MCP 与 hook 校验、Git 卫生、紧凑报告完整性和修复安全假设。
+当前测试覆盖指令作用域与截断、敏感值脱敏、MCP 与 hook 校验、Provider 历史作用域漂移、Git 卫生、紧凑报告完整性和修复安全假设。
 
 ## 许可证
 
