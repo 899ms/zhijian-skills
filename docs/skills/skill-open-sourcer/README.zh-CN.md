@@ -31,15 +31,17 @@ npx skills add zjp1997720/zhijian-skills \
 - 把完整载荷导入 `skills/<name>/`，同步建立中英文文档、Changelog、Registry 和总目录入口。
 - 锁定八字段发布故事，选择 `clean-doc` 或 `proof-led` 呈现层级，并拒绝跨 Skill 复用的通用 Hero 模板。
 - 验证 Skill、整个 Portfolio、声明测试、README 结构与资产、本地发现和隔离复制安装。
+- 用单一 fail-fast 校验器执行隔离安装，同时检查安装退出码、实体化和逐文件 SHA-256，后续 Shell 命令不能掩盖前一步失败。
 - 以显式的统一仓库根目录作为 README 共享链接的审计边界。
 - 使用顶层 CLI 帮助和只读列表发现，避免帮助探测误触真实安装。
 - 默认用 `--skill <name>` 只规划一个 Skill，避免把其他待发布改动带入候选集；只有明确执行 Portfolio 发布波次时才使用 `--all`。
-- 只推送统一仓库，只创建 `<skill>/v<version>` Tag。
+- 记录并复查实时远端 SHA，用 `needs-sync` 和 pre-commit 守卫阻断旧基线 checkout，并通过短生命周期分支与 PR 发布。
+- 只合并到统一仓库，只创建 `<skill>/v<version>` Tag。
 - 输出统一安装命令和发布文案。
 
 ## 原理
 
-这个 Skill 把“开源一个 Skill”定义为向统一 Portfolio 导入。直接提供 `SKILL.md` 只用于识别导入对象，不再触发新建仓库模式。README 会先锁定受众、重复问题、价值、证据、首次动作、安全边界、原生素材和呈现层级；采用 `proof-led` 时，再从 Skill 的真实机制或输出中推导独立构图。统一远端、代码归属、安全扫描、载荷完整性、README 证据或安装证明任何一项失败，发布都会停止。
+这个 Skill 把“开源一个 Skill”定义为向统一 Portfolio 导入。直接提供 `SKILL.md` 只用于识别导入对象，不再触发新建仓库模式。README 会先锁定受众、重复问题、价值、证据、首次动作、安全边界、原生素材和呈现层级；采用 `proof-led` 时，再从 Skill 的真实机制或输出中推导独立构图。`verify_isolated_install.py` 会在临时 HOME 与工作区中以 copy 模式安装单个 Skill，并与统一源码逐文件比较。发布计划绑定实时远端 SHA；临时集成 clone 会冻结原 checkout，直到它完成同步。统一远端、代码归属、安全扫描、载荷完整性、README 证据、安装证明或远端历史连续性任何一项失败，发布都会停止。
 
 ## 示例请求
 

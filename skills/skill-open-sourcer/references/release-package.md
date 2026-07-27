@@ -83,12 +83,14 @@ python3 skills/skill-open-sourcer/scripts/audit_release_readme.py \
 python3 -m unittest discover -s tests -v
 npx --no-install skills --help
 npx --no-install skills add . --list
+python3 skills/skill-open-sourcer/scripts/verify_isolated_install.py \
+  --repo . --skill <skill-name>
 ```
 
-Then install from the local Portfolio into an isolated HOME with copy mode and compare the complete installed tree. After pushing, repeat listing and installation from `zjp1997720/zhijian-skills`.
+`verify_isolated_install.py` creates an isolated HOME and workspace, installs with copy mode, and compares complete SHA-256 manifests. It returns non-zero for preflight, install, materialization, missing-file, extra-file, and changed-content failures. Run it as the verdict command; do not append a success-printing command that can mask its exit code. After pushing, repeat with `--install-source zjp1997720/zhijian-skills` to compare the remote installation against the canonical local payload.
 
 Never run `npx skills add <source> --help` to inspect CLI help. In `skills` CLI 1.5.x, the valid `<source>` may perform a real installation and write `.agents/` plus `skills-lock.json`. Use `npx --no-install skills --help` for help and `npx --no-install skills add . --list` for discovery.
 
 ## Publication boundary
 
-Push only canonical `main` and create only `<skill>/v<version>`. `gh repo create`, standalone remotes, per-Skill GitHub repositories, and compatibility mirrors are outside this workflow and forbidden by default.
+Publish only through a short-lived branch and PR into protected canonical `main`, then create only `<skill>/v<version>`. Record and re-check the live remote SHA before merge. When a temporary clone publishes, mark the original checkout `needs-sync` and block commits there until local and remote `main` exactly match. Direct pushes to `main`, `gh repo create`, standalone remotes, per-Skill GitHub repositories, and compatibility mirrors are outside this workflow and forbidden by default.

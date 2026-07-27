@@ -1,5 +1,17 @@
 # skill-open-sourcer Changelog
 
+## 2.4.0 — 2026-07-27
+
+- Bind every release plan to the live `origin/main` SHA and fail verification when the remote changes before publication.
+- Require the original checkout path when a temporary clean clone publishes; mark that checkout `needs-sync` and install a pre-commit guard against stale-base commits.
+- Replace direct `main` pushes with short-lived branches and PR merges, and verify that merged remote history contains the planned source before recording publication.
+
+## 2.3.0 — 2026-07-27
+
+- Add `verify_isolated_install.py` as the single fail-fast isolated copy-install verifier for local and remote release sources.
+- Compare canonical and installed payloads by SHA-256 manifest, rejecting install failures, non-materialization, missing files, extra files, and changed content with non-zero exit status.
+- Replace ad-hoc shell comparison guidance with one deterministic command whose result cannot be masked by a later success-printing command.
+
 ## 2.2.1 — 2026-07-26
 
 - Distinguish literal credential assignments from safe environment, config, and runtime reads.

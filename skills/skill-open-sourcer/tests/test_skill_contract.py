@@ -30,6 +30,29 @@ class SkillContractTests(unittest.TestCase):
             self.assertIn("mutually exclusive", text)
             self.assertIn("--exclude", text)
 
+    def test_isolated_install_uses_one_fail_fast_verifier(self) -> None:
+        skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        package = (ROOT / "references" / "release-package.md").read_text(encoding="utf-8")
+        for text in (skill, package):
+            self.assertIn("scripts/verify_isolated_install.py", text)
+            self.assertIn("--install-source", text)
+            self.assertIn("returns non-zero", text)
+
+    def test_release_contract_blocks_stale_source_checkouts(self) -> None:
+        skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        contract = (ROOT / "references" / "release-contract.md").read_text(
+            encoding="utf-8"
+        )
+        guard = (ROOT / "scripts" / "git_sync_guard.py").read_text(encoding="utf-8")
+        for text in (skill, contract):
+            self.assertIn("--source-checkout", text)
+            self.assertIn("needs-sync", text)
+            self.assertIn("short-lived branch", text)
+            self.assertIn("PR", text)
+        self.assertIn("base_remote_sha", guard)
+        self.assertIn("ls-remote", guard)
+        self.assertIn("pre-commit", guard)
+
 
 if __name__ == "__main__":
     unittest.main()

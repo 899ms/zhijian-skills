@@ -4,7 +4,8 @@
 
 This repository is the only editable source for the public Zhijian Skills portfolio.
 
-- Work directly on `main`; do not create long-lived branches.
+- Treat `main` as a protected integration branch. Start each task from the live `origin/main` SHA on a short-lived branch, push only that branch, and merge through a PR.
+- Before publishing, record and re-check the live remote SHA. A `.git/zhijian-needs-sync.json` marker blocks commits, pulls, and pushes until the checkout is clean and exactly synchronized to `origin/main`.
 - `skills/<name>/` is the install payload and must remain self-contained.
 - Human documentation lives in `docs/skills/<name>/`.
 - Per-Skill release notes live in `docs/changelogs/<name>.md`.
