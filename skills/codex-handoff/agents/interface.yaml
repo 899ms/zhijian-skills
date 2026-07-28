@@ -1,0 +1,20 @@
+interface:
+  display_name: "Codex Handoff"
+  short_description: "Roll a slow Codex task into a fresh task"
+  default_prompt: "Use $codex-handoff to carry only the essential state into a fresh Codex task and start the next action immediately."
+compatibility:
+  canonical_format: "agent-skills"
+  adapter_targets:
+    - "openai"
+  activation:
+    mode: "manual"
+    paths: []
+  execution:
+    context: "inline"
+    shell: "bash"
+  trust:
+    source_tier: "remote"
+    remote_inline_execution: "forbid"
+    remote_metadata_policy: "allow-metadata-only"
+  degradation:
+    openai: "requires-codex-app-thread-tools"

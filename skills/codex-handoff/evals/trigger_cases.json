@@ -1,0 +1,23 @@
+{
+  "recommended_threshold": 0.5,
+  "should_trigger": [
+    {"family": "explicit_skill", "text": "Use $codex-handoff to continue this work in a fresh task."},
+    {"family": "slow_thread", "text": "这个 Codex task 太长、加载太慢了，用 codex-handoff 换一个新 task 接着做。"},
+    {"family": "context_rollover", "text": "Roll this oversized Codex conversation into a fresh task with only the essential context."},
+    {"family": "focused_handoff", "text": "用 $codex-handoff 交接到新 task，下一步只完成发布验证。"},
+    {"family": "performance_reset", "text": "Current thread is processing too much history every turn. Start a clean Codex task and continue from a compact summary."}
+  ],
+  "should_not_trigger": [
+    {"family": "ordinary_continue", "text": "继续把刚才的代码改完。"},
+    {"family": "new_unrelated_task", "text": "Create a new task to brainstorm an unrelated product idea."},
+    {"family": "internal_delegate", "text": "派一个子代理并行检查这些测试。"},
+    {"family": "file_handoff", "text": "Write a durable handoff document that I can send to another machine."},
+    {"family": "git_environment_move", "text": "Move that other Codex task from its checkout into a worktree."}
+  ],
+  "near_neighbor": [
+    {"family": "full_history_fork", "text": "Fork this complete conversation into another task with all history intact."},
+    {"family": "resume_artifact", "text": "Resume from this handoff Markdown file and tell me what remains."},
+    {"family": "background_agent", "text": "Start an internal worker to implement one independent module while we keep working here."},
+    {"family": "archive_only", "text": "Archive this old Codex task because I am done with it."}
+  ]
+}

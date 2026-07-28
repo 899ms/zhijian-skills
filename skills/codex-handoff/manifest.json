@@ -1,0 +1,20 @@
+{
+  "name": "codex-handoff",
+  "version": "1.0.0",
+  "owner": "zjp1997720",
+  "updated_at": "2026-07-28",
+  "status": "active",
+  "maturity_tier": "production",
+  "lifecycle_stage": "production",
+  "context_budget_tier": "production",
+  "review_cadence": "monthly",
+  "skill_archetype": "workflow",
+  "target_platforms": [
+    "openai",
+    "codex"
+  ],
+  "factory_components": [
+    "evals",
+    "tests"
+  ]
+}

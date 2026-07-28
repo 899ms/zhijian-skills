@@ -26,6 +26,29 @@
       "harnesses": ["codex"]
     },
     {
+      "name": "codex-handoff",
+      "lifecycle": "active",
+      "version": "1.0.0",
+      "path": "skills/codex-handoff",
+      "documentation": "docs/skills/codex-handoff/README.md",
+      "documentation_zh": "docs/skills/codex-handoff/README.zh-CN.md",
+      "changelog": "docs/changelogs/codex-handoff.md",
+      "canonical_tag": "codex-handoff/v1.0.0",
+      "validation": {
+        "commands": [
+          "python3 -m unittest discover -s skills/codex-handoff/tests -v"
+        ],
+        "live_smoke": "Explicitly invoke $codex-handoff in Codex Desktop and verify that create_thread returns a fresh user-visible task without copied conversation history"
+      },
+      "capabilities": {
+        "network": "required",
+        "subprocess": "none",
+        "filesystem": "read",
+        "credentials": "none"
+      },
+      "harnesses": ["codex"]
+    },
+    {
       "name": "codex-model-routing-team",
       "lifecycle": "active",
       "version": "2.1.0",
