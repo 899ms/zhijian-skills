@@ -42,6 +42,7 @@ npx skills add zjp1997720/zhijian-skills \
 | 场景 | Skill | 直接得到什么 | 文档 |
 | --- | --- | --- | --- |
 | Codex 管理 | [`codex-doctor`](docs/skills/codex-doctor/README.zh-CN.md) | 只读诊断上下文、配置和工作区漂移 | [文档](docs/skills/codex-doctor/README.zh-CN.md) |
+| Codex 管理 | [`codex-handoff`](docs/skills/codex-handoff/README.zh-CN.md) | 把历史过大、响应变慢的 Codex task 换到一个紧凑的新 task 继续 | [文档](docs/skills/codex-handoff/README.zh-CN.md) |
 | Codex 管理 | [`codex-model-routing-team`](docs/skills/codex-model-routing-team/README.zh-CN.md) | 把后台任务分配给明确的模型和推理强度 | [文档](docs/skills/codex-model-routing-team/README.zh-CN.md) |
 | Codex 管理 | [`codex-skill-admin`](docs/skills/codex-skill-admin/README.zh-CN.md) | 审计、关闭、恢复并验证本地 Codex Skill | [文档](docs/skills/codex-skill-admin/README.zh-CN.md) |
 | Codex 体验 | [`codex-theme-studio`](docs/skills/codex-theme-studio/README.zh-CN.md) | 设计、注入、验证并恢复可逆的 Codex Desktop 主题 | [文档](docs/skills/codex-theme-studio/README.zh-CN.md) |

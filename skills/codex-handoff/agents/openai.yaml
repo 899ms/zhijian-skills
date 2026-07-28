@@ -1,0 +1,6 @@
+interface:
+  display_name: "Codex Handoff"
+  short_description: "Continue a slow Codex task in a fresh task"
+  default_prompt: "Use $codex-handoff to compress the current task into a compact continuity prompt and continue it in a fresh user-visible Codex task."
+policy:
+  allow_implicit_invocation: false

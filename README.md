@@ -42,6 +42,7 @@ npx skills add zjp1997720/zhijian-skills \
 | Area | Skill | Result | Documentation |
 | --- | --- | --- | --- |
 | Codex control | [`codex-doctor`](docs/skills/codex-doctor/README.md) | Diagnose context, configuration, and workspace drift without changing files | [Docs](docs/skills/codex-doctor/README.md) |
+| Codex control | [`codex-handoff`](docs/skills/codex-handoff/README.md) | Continue an oversized or slow Codex task in a fresh task with compact context | [Docs](docs/skills/codex-handoff/README.md) |
 | Codex control | [`codex-model-routing-team`](docs/skills/codex-model-routing-team/README.md) | Route bounded background tasks to explicit models and reasoning levels | [Docs](docs/skills/codex-model-routing-team/README.md) |
 | Codex control | [`codex-skill-admin`](docs/skills/codex-skill-admin/README.md) | Audit, disable, restore, and verify local Codex Skills | [Docs](docs/skills/codex-skill-admin/README.md) |
 | Codex experience | [`codex-theme-studio`](docs/skills/codex-theme-studio/README.md) | Design, apply, verify, and restore reversible Codex Desktop themes | [Docs](docs/skills/codex-theme-studio/README.md) |

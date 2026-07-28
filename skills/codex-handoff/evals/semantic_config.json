@@ -1,0 +1,42 @@
+{
+  "optimizer_hints": {
+    "capability": "Roll an oversized Codex task into a fresh user-visible task with compact continuity",
+    "inputs": ["slow Codex task", "oversized thread", "next-task focus", "过大的 Codex task", "下一阶段重点"],
+    "trigger_actions": ["$codex-handoff", "roll over into a fresh task", "continue in a new Codex task", "换一个新 task 接着做", "上下文换舱"],
+    "exclusions": ["ordinary continuation", "full-history fork", "internal subagent", "file handoff", "Git environment migration", "普通继续", "完整历史 fork", "内部子代理", "交接文件"],
+    "artifacts": ["compact continuity prompt", "fresh Codex task", "created-task directive", "紧凑交接 Prompt", "全新 Codex task"]
+  },
+  "fallback_positive_concepts": ["explicit_handoff", "slow_task_rollover"],
+  "positive_concepts": {
+    "explicit_handoff": {
+      "weight": 0.65,
+      "phrases": ["$codex-handoff", "codex-handoff", "use codex handoff", "用 codex-handoff", "hand off to a fresh task"]
+    },
+    "slow_task_rollover": {
+      "weight": 0.45,
+      "phrases": ["$codex-handoff", "use codex handoff", "oversized Codex conversation", "thread is slow", "task is getting slow", "processing too much history", "context rollover", "fresh task with only essential context", "clean Codex task", "compact summary", "task 太长", "加载太慢", "换一个新 task", "交接到新 task", "上下文换舱"]
+    }
+  },
+  "negative_concepts": {
+    "ordinary_continue": {
+      "weight": 0.8,
+      "exclusive": true,
+      "phrases": ["continue here", "ordinary continuation", "继续把刚才", "当前 task 继续"]
+    },
+    "full_history_fork": {
+      "weight": 0.75,
+      "exclusive": true,
+      "phrases": ["fork this complete conversation", "all history intact", "完整历史", "复制全部对话"]
+    },
+    "internal_delegation": {
+      "weight": 0.75,
+      "exclusive": true,
+      "phrases": ["internal worker", "spawn a subagent", "内部子代理", "派一个子代理"]
+    },
+    "artifact_or_git_handoff": {
+      "weight": 0.75,
+      "exclusive": true,
+      "phrases": ["handoff document", "resume from this handoff", "move that other Codex task", "Git checkout", "交接文件", "迁移其他 task"]
+    }
+  }
+}
