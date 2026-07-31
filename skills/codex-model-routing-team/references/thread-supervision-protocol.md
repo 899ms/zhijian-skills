@@ -25,7 +25,7 @@ Legacy：status 只作兼容摘要，不是当前状态真相
 
 当前状态只由最新成功的 `create_thread`、`list_threads` 和 `read_thread` 观察推导。Worker 文本、旧 ledger 摘要、事件日志、聊天记忆和 pending id 都不能覆盖较新的官方读取。
 
-`DATA_READY` 证明数据面已经开始响应，不证明模型身份、结果质量或任务完成。平台没有回显实际模型时，`observed_runtime_model` 保持 `unknown`。
+`DATA_READY` 证明数据面已经开始响应，不证明模型/速度身份、结果质量或任务完成。平台没有回显实际模型或速度时，`observed_runtime_model` 与 `observed_runtime_speed` 保持 `unknown`。
 
 ## 控制状态
 

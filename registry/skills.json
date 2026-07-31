@@ -61,7 +61,7 @@
         "commands": [
           "python3 -m unittest tests.skills.test_codex_model_routing_team -v"
         ],
-        "live_smoke": "Run one exact-model native subagent canary and one explicit-model Codex App thread canary; record requested, accepted, and observed model identity separately"
+        "live_smoke": "Run one Luna native Fast canary with service_tier=priority and one Sol Standard App thread canary; record requested, accepted, and observed model and speed identity separately"
       },
       "capabilities": {
         "network": "required",

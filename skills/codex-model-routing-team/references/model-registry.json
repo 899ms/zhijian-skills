@@ -1,12 +1,17 @@
 {
-  "schema_version": "2.0.0",
-  "updated_at": "2026-07-27",
+  "schema_version": "2.1.0",
+  "updated_at": "2026-07-31",
   "policy": {
     "runtime_metadata_role": "validate_only",
     "unknown_model_action": "reject",
     "unknown_thinking_action": "reject",
     "thinking_order": ["low", "medium", "high", "xhigh", "max"],
     "forbidden_thinking": ["ultra"],
+    "current_route_plan_schema_version": "2.1",
+    "speed_modes": ["standard", "fast"],
+    "default_speed": "standard",
+    "service_tier_by_speed": {"standard": null, "fast": "priority"},
+    "fast_routing_models": ["gpt-5.6-luna"],
     "default_disabled_models": [
       "gpt-5.5",
       "gpt-5.4",
@@ -54,7 +59,7 @@
         "native_subagent": ["low", "medium", "high", "xhigh", "max"],
         "app_thread": ["low", "medium", "high", "xhigh", "max"]
       },
-      "roles": ["opt_in_fast_worker", "opt_in_read_heavy", "opt_in_supporting_documents"],
+      "roles": ["opt_in_balanced_worker", "opt_in_read_heavy", "opt_in_supporting_documents"],
       "provider_policy": "openai_baseline",
       "terms_default": "allowed"
     },

@@ -39,6 +39,11 @@
     "fallback_reason",
     "archived"
   ],
+  "speed_audit_fields": [
+    "requested_speed",
+    "platform_accepted_speed",
+    "observed_runtime_speed"
+  ],
   "deep_research_budget": {
     "max_default_researchers": 4,
     "verifiers": 1,

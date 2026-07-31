@@ -14,6 +14,8 @@ DEFAULT_SCHEMA = SKILL_ROOT / "references" / "audit-schema.json"
 DEFAULT_NATIVE_SCHEMA = SKILL_ROOT / "references" / "native-audit-schema.json"
 MAX_CREATION_ATTEMPTS = 8
 MAX_IN_FLIGHT = 6
+CURRENT_ROUTE_PLAN_SCHEMA_VERSION = "2.1"
+SPEED_MODES = {"standard", "fast"}
 
 
 def load_json(path: Path) -> Any:
@@ -58,6 +60,75 @@ def valid_timestamp(value: Any) -> bool:
 
 def nonempty_string(value: Any) -> bool:
     return isinstance(value, str) and bool(value.strip())
+
+
+def validate_speed_identity(
+    record: dict[str, Any],
+    *,
+    prefix: str,
+    accepted_states: set[str],
+    errors: list[str],
+) -> None:
+    route_plan = record.get("route_plan")
+    route_plan_schema_version = (
+        route_plan.get("schema_version") if isinstance(route_plan, dict) else None
+    )
+    if (
+        route_plan_schema_version is not None
+        and route_plan_schema_version != CURRENT_ROUTE_PLAN_SCHEMA_VERSION
+    ):
+        errors.append(f"{prefix} uses an unsupported RoutePlan schema_version")
+    strict = (
+        isinstance(route_plan, dict)
+        and route_plan_schema_version == CURRENT_ROUTE_PLAN_SCHEMA_VERSION
+    )
+    fields = (
+        "requested_speed",
+        "platform_accepted_speed",
+        "observed_runtime_speed",
+    )
+    if not strict and not any(field in record for field in fields):
+        return
+    if strict:
+        missing = [field for field in fields if field not in record]
+        if missing:
+            errors.append(
+                f"{prefix} is missing speed audit fields: {', '.join(missing)}"
+            )
+
+    requested = record.get("requested_speed")
+    accepted = record.get("platform_accepted_speed")
+    observed = record.get("observed_runtime_speed")
+    if requested not in SPEED_MODES:
+        errors.append(f"{prefix} has invalid requested_speed")
+        return
+    if requested == "fast" and record.get("requested_model") != "gpt-5.6-luna":
+        errors.append(f"{prefix} requests Fast outside the Luna-only routing policy")
+    if accepted is not None and accepted not in SPEED_MODES:
+        errors.append(f"{prefix} has invalid platform_accepted_speed")
+    if observed not in {None, "unknown", *SPEED_MODES}:
+        errors.append(f"{prefix} has invalid observed_runtime_speed")
+    if record.get("control_state") in accepted_states and accepted != requested:
+        errors.append(f"{prefix} accepted speed mismatch")
+    if observed not in {None, "unknown", requested}:
+        errors.append(f"{prefix} observed speed mismatch")
+
+    if strict and isinstance(route_plan, dict):
+        candidates = route_plan.get("candidates")
+        selected = (
+            isinstance(candidates, list)
+            and any(
+                isinstance(candidate, dict)
+                and candidate.get("surface", "app_thread")
+                == record.get("surface", "app_thread")
+                and candidate.get("model") == record.get("requested_model")
+                and candidate.get("thinking") == record.get("thinking")
+                and candidate.get("speed") == requested
+                for candidate in candidates
+            )
+        )
+        if not selected:
+            errors.append(f"{prefix} speed identity does not match RoutePlan")
 
 
 def main() -> int:
@@ -221,6 +292,12 @@ def main() -> int:
                 and observed_model != requested_model
             ):
                 result["errors"].append(f"{prefix} observed model mismatch")
+            validate_speed_identity(
+                record,
+                prefix=prefix,
+                accepted_states={"RUNNING", "COMPLETED", "CLOSED"},
+                errors=result["errors"],
+            )
 
             if not valid_timestamp(record.get("last_observed_at")):
                 result["errors"].append(f"{prefix} has invalid last_observed_at")
@@ -379,6 +456,12 @@ def main() -> int:
         if state in {"CONTROL_READY", "DATA_READY", "COMPLETED"}:
             if not nonempty_string(record.get("thread_status")):
                 result["errors"].append(f"{prefix} lacks an official thread_status")
+        validate_speed_identity(
+            record,
+            prefix=prefix,
+            accepted_states={"CONTROL_READY", "DATA_READY", "COMPLETED"},
+            errors=result["errors"],
+        )
 
         output = record.get("output")
         if adopted is True and not nonempty_string(output):

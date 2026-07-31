@@ -54,6 +54,19 @@ def reasoning_levels(model: dict[str, Any]) -> set[str]:
     return levels
 
 
+def service_tiers(model: dict[str, Any]) -> set[str]:
+    raw = model.get("service_tiers")
+    if not isinstance(raw, list):
+        return set()
+    tiers: set[str] = set()
+    for item in raw:
+        if isinstance(item, str):
+            tiers.add(item)
+        elif isinstance(item, dict) and isinstance(item.get("id"), str):
+            tiers.add(item["id"])
+    return tiers
+
+
 def catalog_models(payload: Any) -> list[dict[str, Any]]:
     if isinstance(payload, dict) and isinstance(payload.get("models"), list):
         return [item for item in payload["models"] if isinstance(item, dict)]
@@ -203,6 +216,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--model", required=True)
     parser.add_argument("--thinking", required=True)
     parser.add_argument(
+        "--speed",
+        choices=("standard", "fast"),
+        default="standard",
+        help="Requested service speed. Fast maps to service_tier=priority.",
+    )
+    parser.add_argument(
         "--surface",
         choices=("native_subagent", "app_thread"),
         default="app_thread",
@@ -212,8 +231,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--catalog", type=Path)
     parser.add_argument("--runtime-confirmed", action="store_true")
     parser.add_argument(
+        "--service-tier-confirmed",
+        action="store_true",
+        help="Confirm that the live Surface schema accepted service_tier=priority.",
+    )
+    parser.add_argument(
         "--host",
-        help="Stable host identifier required for native live-spawn evidence.",
+        help="Stable host identifier required for native evidence and App Fast evidence.",
     )
     parser.add_argument(
         "--provider-status",
@@ -235,10 +259,13 @@ def main() -> int:
         "checked_at": datetime.now(timezone.utc).isoformat(),
         "model": args.model,
         "thinking": args.thinking,
+        "speed": args.speed,
+        "service_tier": "priority" if args.speed == "fast" else None,
         "surface": args.surface,
         "registry_eligible": False,
         "runtime_status": "unknown",
         "runtime_evidence": None,
+        "speed_evidence": None,
         "provider_status": args.provider_status,
         "data_allowed": args.data_allowed,
         "route_status": "fail",
@@ -265,11 +292,24 @@ def main() -> int:
         return 2
 
     forbidden = set(registry.get("policy", {}).get("forbidden_thinking", []))
+    fast_routing_models = set(
+        registry.get("policy", {}).get("fast_routing_models", [])
+    )
     registry_thinking = supported_thinking(entry, args.surface)
     if args.thinking in forbidden:
         result["errors"].append("thinking is forbidden by registry policy")
     elif args.thinking not in registry_thinking:
         result["errors"].append("thinking is not declared for this model")
+    if args.speed == "fast" and args.model not in fast_routing_models:
+        result["errors"].append("Fast is outside the Luna-only routing policy")
+    if args.service_tier_confirmed and args.speed != "fast":
+        result["errors"].append("--service-tier-confirmed requires --speed fast")
+    if args.service_tier_confirmed and not args.runtime_confirmed:
+        result["errors"].append("--service-tier-confirmed requires --runtime-confirmed")
+    if args.speed == "fast" and args.runtime_confirmed and not args.service_tier_confirmed:
+        result["errors"].append(
+            "Fast runtime confirmation requires --service-tier-confirmed"
+        )
     result["registry_eligible"] = not result["errors"]
     result["checks"]["registry"] = {
         "status": entry.get("status"),
@@ -278,6 +318,8 @@ def main() -> int:
         "terms_default": entry.get("terms_default", "unknown"),
         "surface": args.surface,
         "thinking_supported": args.thinking in registry_thinking,
+        "speed": args.speed,
+        "fast_policy_allowed": args.model in fast_routing_models,
     }
 
     if entry.get("terms_default") == "blocked":
@@ -289,6 +331,13 @@ def main() -> int:
         and (not isinstance(args.host, str) or not args.host.strip())
     ):
         result["errors"].append("native runtime confirmation requires --host")
+    if (
+        args.surface == "app_thread"
+        and args.speed == "fast"
+        and args.runtime_confirmed
+        and (not isinstance(args.host, str) or not args.host.strip())
+    ):
+        result["errors"].append("App Fast runtime confirmation requires --host")
 
     manual_ready = True
     if entry.get("status") == "manual_only":
@@ -317,13 +366,19 @@ def main() -> int:
         else:
             levels = reasoning_levels(catalog_entry)
             supported = not levels or args.thinking in levels
+            tiers = service_tiers(catalog_entry)
+            speed_declared = args.speed == "standard" or "priority" in tiers
             result["checks"]["catalog"] = {
                 "found": True,
                 "thinking_supported": supported,
                 "declared_levels": sorted(levels),
+                "speed_declared": speed_declared,
+                "declared_service_tiers": sorted(tiers),
             }
             if not supported:
                 result["errors"].append("runtime catalog rejects the requested thinking level")
+            elif not speed_declared:
+                result["errors"].append("runtime catalog lacks the requested Fast service tier")
             else:
                 catalog_declared = True
 
@@ -335,6 +390,20 @@ def main() -> int:
                 "surface": args.surface,
                 "model": args.model,
                 "thinking": args.thinking,
+                "speed": args.speed,
+                "service_tier": "priority" if args.speed == "fast" else None,
+                "accepted": True,
+                "host": args.host,
+                "checked_at": result["checked_at"],
+            }
+        elif args.speed == "fast":
+            result["speed_evidence"] = {
+                "kind": "live_create_schema",
+                "surface": args.surface,
+                "model": args.model,
+                "thinking": args.thinking,
+                "speed": args.speed,
+                "service_tier": "priority",
                 "accepted": True,
                 "host": args.host,
                 "checked_at": result["checked_at"],

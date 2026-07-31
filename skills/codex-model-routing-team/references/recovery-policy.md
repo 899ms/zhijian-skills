@@ -8,6 +8,7 @@ fallback 的目标是让任务可恢复，同时保持模型、数据边界和�
 
 ```json
 {
+  "schema_version": "2.1",
   "task_class": "DEEP_AGENTIC_CODE",
   "risk": "medium",
   "minimum_thinking": "high",
@@ -17,15 +18,15 @@ fallback 的目标是让任务可恢复，同时保持模型、数据边界和�
   "explicit_user_request": false,
   "risk_acknowledged": false,
   "candidates": [
-    {"surface": "native_subagent", "model": "gpt-5.6-sol", "thinking": "high", "runtime_evidence": {"kind": "live_spawn_schema", "surface": "native_subagent", "model": "gpt-5.6-sol", "thinking": "high", "accepted": true, "host": "current-host", "checked_at": "<ISO-8601>"}},
-    {"surface": "app_thread", "model": "gpt-5.6-sol", "thinking": "high"}
+    {"surface": "native_subagent", "model": "gpt-5.6-sol", "thinking": "high", "speed": "standard", "runtime_evidence": {"kind": "live_spawn_schema", "surface": "native_subagent", "model": "gpt-5.6-sol", "thinking": "high", "speed": "standard", "service_tier": null, "accepted": true, "host": "current-host", "checked_at": "<ISO-8601>"}},
+    {"surface": "app_thread", "model": "gpt-5.6-sol", "thinking": "high", "speed": "standard"}
   ],
   "max_worker_threads": 2,
   "max_followups_per_thread": 1
 }
 ```
 
-`max_worker_threads` 必须等于已声明候选数：只有一个候选且失败后由主 Agent 接管时写 `1`；声明一个 fallback 候选时写 `2`。它不能为未来未声明的模型预留空位。旧计划省略 `surface` 时兼容解释为 `app_thread`；新计划必须显式写 Surface。
+`max_worker_threads` 必须等于已声明候选数：只有一个候选且失败后由主 Agent 接管时写 `1`；声明一个 fallback 候选时写 `2`。它不能为未来未声明的模型预留空位。旧计划省略版本/`surface/speed` 时兼容解释为 legacy App Thread Standard；新计划必须显式写 `schema_version: "2.1"`、Surface 和 speed。
 
 候选链不能包含循环、Ultra、低于 `minimum_thinking` 的降级，或 Provider 策略不允许的目标。非 blocked 的 manual-only 模型只能出现在用户明确点名的 RoutePlan 首项，不能作为静默 fallback；当前 Gemini Antigravity registry entry 因 terms blocked 会被 validator 拒绝。
 
@@ -37,23 +38,23 @@ concrete RoutePlan 必须通过 `scripts/validate_route_plan.py`。画像名不�
 
 App Thread 健康判断分为五层：
 
-1. `STATIC_READY`：registry、live runtime、`thinking` 和 Provider 门通过。
+1. `STATIC_READY`：registry、live runtime、`thinking`、`speed` 和 Provider 门通过。
 2. `PROBE_READY`：可选语义 canary 在当前 provider/model 上精确回显 nonce。
 3. `CREATION_PENDING`：调用已发起，或只返回 `pendingWorktreeId`，尚未取得稳定正式 Thread。
 4. `CONTROL_READY`：正式 ID 通过 `read_thread`；排队 worktree 还需两次连续官方观察的 thread id/cwd 一致。
 5. `DATA_READY`：当前 turn 出现首个 assistant-originated 输出项（reasoning/assistant message）或模型发起的工具调用；用户消息、Thread 元数据和 MCP 初始化错误不计入。完整交付通过验收后才进入 `COMPLETED`。
 
-`DATA_READY` 只证明数据面开始响应，不证明实际模型身份。`read_thread` 没有模型回显时，`observed_runtime_model` 必须保持 `unknown`。
+`DATA_READY` 只证明数据面开始响应，不证明实际模型或速度身份。`read_thread` 没有对应回显时，`observed_runtime_model` 与 `observed_runtime_speed` 必须保持 `unknown`。
 
-成功缓存只参与候选排序，不保证下一次调用成功。建议在当前 run ledger 中对精确 `account-scope/host/surface/model/thinking/tool-signature/App-version` 保存 10 分钟正向证据；不要为此创建新的全局状态事实源。
+成功缓存只参与候选排序，不保证下一次调用成功。建议在当前 run ledger 中对精确 `account-scope/host/surface/model/thinking/speed/tool-signature/App-version` 保存 10 分钟正向证据；不要为此创建新的全局状态事实源。
 
-原生 Subagent 使用更短的控制面：`PLANNED → SPAWN_PENDING → RUNNING → COMPLETED/FAILED → CLOSED`。live spawn schema 必须接受精确 `model/reasoning_effort`，V1 使用 `fork_context=false`，V2 使用 `fork_turns="none"`。返回 agent id 只证明 Worker 已创建；平台未回显实际模型时，`observed_runtime_model` 仍写 `unknown`。详见 [原生 Subagent 生命周期](native-subagent-lifecycle.md)。
+原生 Subagent 使用更短的控制面：`PLANNED → SPAWN_PENDING → RUNNING → COMPLETED/FAILED → CLOSED`。live spawn schema 必须接受精确 `model/reasoning_effort/speed`；Fast 还必须接受 `service_tier=priority`。V1 使用 `fork_context=false`，V2 使用 `fork_turns="none"`。返回 agent id 只证明 Worker 已创建；平台未回显实际模型或速度时，对应 observed 字段仍写 `unknown`。详见 [原生 Subagent 生命周期](native-subagent-lifecycle.md)。
 
 ## 错误分类
 
 | 类别 | 作用域 | 当前任务动作 | 熔断 |
 | --- | --- | --- | --- |
-| unsupported model / thinking | 精确 host/surface/model/thinking | 不重试原组合，进入预声明下一候选 | 立即打开，直到目录、App 或策略版本变化 |
+| unsupported model / thinking / speed | 精确 host/surface/model/thinking/speed | 不重试原组合，进入预声明下一候选 | 立即打开，直到目录、App 或策略版本变化 |
 | 认证/授权失败 | provider + account | 不在同 provider 重试；进入已授权 provider 或主 Agent 接管 | 立即打开，凭证变化后解除 |
 | 429 / 配额不足 | provider/model/account | 遵守 `Retry-After`；当前任务进入下一候选 | 按 `Retry-After`；缺失时初始 10 分钟 |
 | 创建超时/实体化歧义 | host + App 初始化链 | 用唯一 task id 有界查询；唯一稳定匹配则恢复，零/多匹配则进入 `UNKNOWN` | 两次近期故障后短暂隔离 |
@@ -72,9 +73,9 @@ App Thread 健康判断分为五层：
 - 返回正式 ID 后立即写入 ledger；返回 `pendingWorktreeId` 时只写 pending 字段。实体化只更新观察与派生状态，不改变 attempt 计数。
 - 每个子任务最多发起两次 Worker attempt，跨 Surface 替换也计入根任务上限 8。
 - `UNKNOWN` 记录先按 `thread-supervision-protocol.md` 继续官方查证；查证完成前禁止 fallback 或第二次创建。
-- 同一精确 `surface/model/thinking` 组合在同一子任务中最多创建一次；语义 canary 的一次复测不占 Worker 槽位，但消耗 Provider 配额并记录在审计中。
+- 同一精确 `surface/model/thinking/speed` 组合在同一子任务中最多创建一次；语义 canary 的一次复测不占 Worker 槽位，但消耗 Provider 配额并记录在审计中。
 - 完整输出需要纠正时复用原 Worker，最多发送一次 follow-up。
-- Surface、模型、Provider 或 `thinking` 改变时创建新 Worker，并使用候选链中的下一项。
+- Surface、模型、Provider、`thinking` 或 `speed` 改变时创建新 Worker，并使用候选链中的下一项。
 - 第二 Worker 仍失败时由主 Agent 接管或明确报告阻塞，禁止继续试第三个模型。
 - 原生结果被采纳前必须确认完整输出；采纳后必须关闭 agent 并写 `CLOSED`。App Thread 的采纳、保留与归档仍遵守 Thread 监督协议。
 
@@ -83,6 +84,7 @@ App Thread 健康判断分为五层：
 - 失败后临时选择“当前看起来最健康”的任意模型。
 - 对同一组合进行无界重试。
 - 静默降低 `thinking` 或扩大 provider allowlist。
+- 绕过 RoutePlan 临时打开 Fast，或把请求/接受的 Fast 冒充 observed Fast。
 - MCP 初始化失败后连续更换模型。
 - 为每个候选创建空 App Thread canary。
 - 原生 spawn 不支持精确组合后静默继承父 Agent 的模型或推理强度。

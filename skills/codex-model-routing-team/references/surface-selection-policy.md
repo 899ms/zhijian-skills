@@ -9,13 +9,13 @@
 3. 用户明确要求后台/独立 Thread，或任务需要恢复、单独打开、project/worktree 隔离、独立历史或严格审计时使用 `app_thread`。预计超过 30 分钟或正式交付物达到 4 个只作为耐久信号，需同时存在持久化、恢复或独立审计需求才升级。
 4. Surface 缺少精确 live 能力、Provider 门不通过或所有权无法隔离时，进入预声明的下一候选；没有下一候选时由主 Agent 接管。
 
-旧 RoutePlan 候选没有 `surface` 时按 `app_thread` 解释。每个候选的规范形状为：
+旧 RoutePlan 候选没有 `surface/speed` 时按 `app_thread/standard` 解释。`schema_version: "2.1"` 的候选规范形状为：
 
 ```json
-{"surface": "native_subagent", "model": "gpt-5.6-sol", "thinking": "medium", "runtime_evidence": {"kind": "live_spawn_schema", "surface": "native_subagent", "model": "gpt-5.6-sol", "thinking": "medium", "accepted": true, "host": "current-host", "checked_at": "<ISO-8601>"}}
+{"surface": "native_subagent", "model": "gpt-5.6-sol", "thinking": "medium", "speed": "standard", "runtime_evidence": {"kind": "live_spawn_schema", "surface": "native_subagent", "model": "gpt-5.6-sol", "thinking": "medium", "speed": "standard", "service_tier": null, "accepted": true, "host": "current-host", "checked_at": "<ISO-8601>"}}
 ```
 
-`thinking` 是策略字段：原生工具映射为 `reasoning_effort`，App Thread 映射为 `thinking`。跨 Surface fallback 必须在 `candidates` 中预声明；`surface + model + thinking` 才是唯一组合，同模型同强度的两种 Surface 不构成循环。
+`thinking` 是策略字段：原生工具映射为 `reasoning_effort`，App Thread 映射为 `thinking`。`speed=fast` 映射为 `service_tier=priority`，只有 Luna 可以使用，且必须有 live Surface 证据。跨 Surface fallback 必须在 `candidates` 中预声明；`surface + model + thinking + speed` 才是唯一组合。
 
 ## 额度
 
@@ -27,4 +27,4 @@
 
 ## 模型身份
 
-feature flag、模型 catalog 和文档只提供候选证据。原生候选的 `runtime_evidence` 必须来自当前会话 live spawn schema，与 host/Surface/model/thinking 绑定并在 10 分钟后失效；它是协调器审计证据，不是防篡改凭证。成功调用可写 `platform_accepted_model`，平台未回显真实身份时 `observed_runtime_model` 保持 `unknown`。
+feature flag、模型 catalog 和文档只提供候选证据。原生候选的 `runtime_evidence` 必须来自当前会话 live spawn schema，与 host/Surface/model/thinking/speed 绑定并在 10 分钟后失效；App Fast 使用同样期限的 `speed_evidence`。它们是协调器审计证据，不是防篡改凭证。成功调用分别写 `platform_accepted_model/platform_accepted_speed`，平台未回显真实身份或速度时对应 observed 字段保持 `unknown`。

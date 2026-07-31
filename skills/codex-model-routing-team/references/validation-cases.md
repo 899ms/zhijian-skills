@@ -8,6 +8,7 @@
 - “用 Deep Research 调研四个子主题，研究文件写入 vault，最后串行做引用核查和对抗审查。”
 - “把复杂编码 Worker 优先交给 Grok 4.5，失败时由 Sol 接管。”
 - “让两个 Sol 原生 Subagent 分别检查实现和测试，结果回到父任务集成。”
+- “让 Luna XHigh Fast 原生 Worker 完成三个边界清晰的实现，Fast 不可用时回退到 Sol Standard。”
 - “把耐久调研放到 App Thread；原生精确组合不可用时按预声明链切换 Surface。”
 - “明确使用 Gemini 3.6 Flash 做多模态扫描，并检查当前接入路径能否合规派遣。”
 
@@ -32,6 +33,30 @@ Prompt：使用 Grok 4.5 实现复杂模块，再让另一个模型独立审查�
 Prompt：并行派两个 Sol Worker，一个 low 做 scout，一个 medium 做实现，完成后回到主任务集成。
 
 应出现：`native-light` 与两个 `native_subagent` 候选；live spawn schema 分别确认 `gpt-5.6-sol / low` 与 `gpt-5.6-sol / medium`；RoutePlan/ledger 可从 stdin 校验且不创建 `agent_team/`；V1 传 `fork_context=false` 或 V2 传 `fork_turns="none"`；requested/platform/observed identity 分开记录；采纳后关闭 agent。
+
+### Native Luna Fast happy path
+
+Prompt：用 Luna XHigh Fast 执行边界清晰的原生实现，Fast 不可用时用 Sol High Standard。
+
+应出现：`schema_version: "2.1"`；首项为 `native_subagent/gpt-5.6-luna/xhigh/fast`，`runtime_evidence` 同时绑定 `speed=fast` 与 `service_tier=priority`；fallback 为 Sol High Standard；模型和速度分别记录 requested/platform/observed。
+
+### Native Luna Fast missing tier
+
+Prompt：Luna XHigh 的 live spawn schema 接受模型与 reasoning，但没有 `service_tier` 字段，请按 Fast 派遣。
+
+应出现：拒绝该 Fast 精确组合；不得把 catalog 能力或默认速度当作 live 证据；只进入预声明 Sol Standard/App Standard fallback，否则主 Agent 接管。
+
+### App Luna Fast without speed schema
+
+Prompt：创建 Luna XHigh App Thread，当前 `create_thread` schema 只有 model/thinking，没有速度参数。
+
+应出现：App 路由保持 Standard；不得声称 Fast。若 RoutePlan 强制 App Fast，则因缺少 `speed_evidence` 被拒绝。
+
+### Sol Fast regression
+
+Prompt：使用 Sol XHigh 并打开 Fast。
+
+应出现：RoutePlan 被静态拒绝；Sol 只允许 Standard，Fast 只允许 Luna。
 
 ### Four short outputs stay lightweight
 
@@ -95,19 +120,19 @@ Prompt：一个 `task_intent=inspect` Worker 想顺手修改源文件，mutation
 
 ## 运行断言
 
-- 派遣前显示 Worker 数量、Surface、精确模型、thinking、职责、有序 fallback 和 reserved slots。
+- 派遣前显示 Worker 数量、Surface、精确模型、thinking、speed、职责、有序 fallback 和 reserved slots。
 - `native-light` 只加载当前路径需要的策略，RoutePlan 与 ledger 可从 stdin 校验且不创建 `agent_team/`；`governed` 保留完整持久状态。
 - registry 决定策略允许范围；live runtime 只验证当前 host 接受性。
 - Gemini Antigravity 未被用户明确点名时不进入自动候选或 fallback；当前第三方登录 terms blocked 时，即使明确点名也不创建。
 - Grok 只在 runtime/provider 门通过后自动使用。
-- 每个新 `host/surface/model/thinking/tool-signature` 的首个真实业务 Worker 独立通过对应生命周期健康门；一个组合的健康不外推到另一个组合。
+- 每个新 `host/surface/model/thinking/speed/tool-signature` 的首个真实业务 Worker 独立通过对应生命周期健康门；一个组合的健康不外推到另一个组合。
 - 所有提示词含唯一 task id、task intent、mutation authority、完整任务包与禁止下级委派。
 - `threadId`、`pendingWorktreeId`、超时和未知返回形状分别处理；排队 worktree 的身份/cwd 需要两次稳定官方观察。
 - 最新官方 Thread/turn 观察是当前状态真相；旧 status/event 文本只能诊断。
 - `UNKNOWN` 不 follow-up、不归档、不 fallback、不重复创建。
 - 同时运行不超过 6，worker attempts 不超过 8，任何 Worker 都不使用 Ultra。
 - 每个子任务最多两个 Worker attempt；完整输出最多在原 Worker follow-up 一次。
-- fallback 在派遣前固定，不随机选模、不形成循环、不静默降低 thinking 或扩大 Provider allowlist。
+- fallback 在派遣前固定，不随机选模、不形成循环、不静默改变 thinking/speed 或扩大 Provider allowlist。
 - 上游 Skill 模式保留上游 Scale、阶段门和输出路径；路由层不重复拆分任务。
 - 有工作区输出路径时使用 project local，不因“通用调研”切换到 projectless。
 - Deep Research 默认最多 4 个 researcher，为 verifier、reviewer 和两次重试预留累计额度。
@@ -115,7 +140,7 @@ Prompt：一个 `task_intent=inspect` Worker 想顺手修改源文件，mutation
 - 写入范围互斥；同一文件保持单写者。
 - 主 Agent 读取结果、按错误分类恢复、整合并验证。
 - 原生采纳结果必须关闭 agent；只对 completed/idle 的正式 Thread 逐个归档；pending/歧义记录只按 task id 走官方恢复。
-- 最终报告包含 Surface、requested/platform/observed model、Provider 门、预检、尝试、fallback、采纳与关闭/归档。
+- 最终报告包含 Surface，以及 requested/platform/observed model 与 speed、Provider 门、预检、尝试、fallback、采纳与关闭/归档。
 
 ## 失败回退
 

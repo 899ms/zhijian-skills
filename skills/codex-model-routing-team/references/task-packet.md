@@ -50,8 +50,8 @@
 
 每次 Worker attempt 使用唯一 task id。fallback Worker 使用新 task id；App Thread 由此避免 `list_threads(query=task_id)` 匹配旧 Thread，原生 Worker 由此关联 agent id 与输出。`result_correlation_id` 只用于结果关联，不代表任务正确完成。
 
-主 Agent 另外记录所选 Surface、`model`、`thinking` 与选择理由。任务包中严禁声称 Worker 已加载某个预制 Agent Type。
+主 Agent 另外记录所选 Surface、`model`、`thinking`、`speed` 与选择理由。任务包中严禁声称 Worker 已加载某个预制 Agent Type。
 
-主 Agent 还要在任务包之外保存 RoutePlan：任务画像、精确候选链、最低 `thinking`、Provider 策略、健康证据和 fallback 条件。Worker 不自行选择或切换模型，也不需要看到其他候选的凭证与配额信息。
+主 Agent 还要在任务包之外保存 `schema_version: "2.1"` 的 RoutePlan：任务画像、精确候选链、最低 `thinking`、速度、Provider 策略、健康证据和 fallback 条件。Worker 不自行选择或切换模型/速度，也不需要看到其他候选的凭证与配额信息。
 
 上游 Skill 模式下，任务包必须原样保留上游定义的输出路径、阶段依赖和验收标准。路由层可以收紧安全边界，不能扩大写入范围或跳过质量门。

@@ -5,8 +5,8 @@
 ## 创建前检查
 
 - 确认 `codex_app__list_projects`、`codex_app__create_thread`、`codex_app__list_threads`、`codex_app__read_thread`、`codex_app__send_message_to_thread` 和 `codex_app__set_thread_archived` 可用。
-- 从 `model-registry.json`、`routing-policy.md` 和 `provider-policy.md` 取得精确 `model`、`thinking`、候选链与 Provider 门。
-- live `create_thread` 工具元数据只验证当前 host 接受性，不能覆盖 registry 的 automatic/manual-only 策略。
+- 从 `model-registry.json`、`routing-policy.md` 和 `provider-policy.md` 取得精确 `model`、`thinking`、`speed`、候选链与 Provider 门。
+- live `create_thread` 工具元数据只验证当前 host 接受性，不能覆盖 registry 的 automatic/manual-only 策略。没有显式速度参数时 App Thread 只能按 Standard 路由；Fast 必须有 `speed_evidence`。
 - 任务包声明任何工作区输出路径时，先用 `list_projects` 取得匹配 `projectId` 并使用 project local；纯聊天交付才可 projectless。
 - 为每次 creation attempt 生成唯一 `task_id`，写入 ledger 和任务包。
 
@@ -27,7 +27,7 @@ python3 scripts/model_preflight.py \
   --data-allowed
 ```
 
-`--runtime-confirmed` 只能在主 Agent 已从当前 host 的 live 工具元数据确认精确组合后传入。原生 Surface 会输出绑定 host/model/thinking/checked_at 的 `runtime_evidence`，供 RoutePlan 使用；Responses 语义 probe 不能替代原生 spawn schema 证据。缺少 live/provider/data 任一证据时，脚本返回 `unknown` 或 `manual_review`。
+`--runtime-confirmed` 只能在主 Agent 已从当前 host 的 live 工具元数据确认精确组合后传入。Fast 还必须传 `--speed fast --service-tier-confirmed --host <host>`。原生 Surface 会输出绑定 host/model/thinking/speed/checked_at 的 `runtime_evidence`；App Fast 输出 `speed_evidence`。Responses 语义 probe 不能替代 live schema 证据。缺少 live/provider/data 任一证据时，脚本返回 `unknown` 或 `manual_review`。
 
 本地 catalog 只作诊断；registry 决定策略允许范围，live runtime 决定当前 host 是否接受组合。Gemini Antigravity 当前 terms blocked，显式点名也不能覆盖 Provider 门。
 
@@ -52,7 +52,7 @@ python3 scripts/model_preflight.py \
 
 ### 首个真实业务 Worker
 
-禁止创建空 Thread 探针。每个新 `host/model/thinking/tool-signature` 的第一个有业务价值 Worker 兼作最终数据面探针；它达到 `DATA_READY` 后，才释放同组合后续任务。一个模型的健康不能外推到另一个模型。
+禁止创建空 Thread 探针。每个新 `host/model/thinking/speed/tool-signature` 的第一个有业务价值 Worker 兼作最终数据面探针；它达到 `DATA_READY` 后，才释放同组合后续任务。一个模型或速度组合的健康不能外推到另一个组合。
 
 concrete RoutePlan 在派遣前写成 JSON 并验证：
 
@@ -63,13 +63,13 @@ python3 scripts/validate_route_plan.py /path/to/route-plan.json
 ## 创建与实体化
 
 1. 调用 `create_thread` 前递增 root worker attempt、兼容字段 creation attempt 与 subtask attempt，写入 `surface: app_thread`、`thread_id: null`、`pending_worktree_id: null`、`control_state: PLANNED` 的完整审计记录。
-2. 调用开始时更新为 `CREATION_PENDING`，显式传入任务包、模型、thinking 和目标环境。
+2. 调用开始时更新为 `CREATION_PENDING`，显式传入任务包、模型、thinking 和目标环境；只有 live schema 已证明速度参数时才传 Fast，否则使用 Standard。
 3. 返回 `threadId`、`pendingWorktreeId`、超时或未知形状时，严格按 `thread-supervision-protocol.md` 分类和恢复。
 4. `pendingWorktreeId` 不是正式 Thread id；只有唯一 task id 查询、正式读取和稳定观察通过后才进入 `CONTROL_READY`。
 5. 当前 turn 出现首个 assistant-originated reasoning/message 或模型工具调用时进入 `DATA_READY`。user message、Thread 元数据、客户端提示和 MCP 初始化错误不计入。
 6. 同组合探针通过后每波最多新增 3 个任务，防止新会话同时初始化 MCP 造成拥塞。
 
-`DATA_READY` 与模型身份分开；没有真实模型回显时，`observed_runtime_model` 保持 `unknown`。
+`DATA_READY` 与模型/速度身份分开；没有真实回显时，`observed_runtime_model` 与 `observed_runtime_speed` 保持 `unknown`。
 
 零/多匹配、读取失败和创建结果歧义进入 `UNKNOWN`。`UNKNOWN` 不 follow-up、不归档、不 fallback、不重复创建；先继续官方查证或由主 Agent 接管。
 

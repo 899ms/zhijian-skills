@@ -24,7 +24,7 @@
 
 ## OpenAI 基线
 
-`gpt-5.6-luna` 与 `gpt-5.6-sol` 使用当前 Codex App 已配置的 OpenAI 路径。它们是本 Skill 的默认基线，但仍需通过 live runtime 的模型/`thinking` 接受性检查。当前项目若有更窄的数据规则，以项目规则为准。
+`gpt-5.6-luna` 与 `gpt-5.6-sol` 使用当前 Codex App 已配置的 OpenAI 路径。它们是本 Skill 的默认基线，但仍需通过 live runtime 的模型/`thinking`/`speed` 接受性检查。只有 Luna 可请求 Fast；Sol 与其他模型保持 Standard。当前项目若有更窄的数据规则，以项目规则为准。
 
 ## xAI / Grok 4.5
 
@@ -59,6 +59,9 @@ model
 requested_model
 platform_accepted_model
 observed_runtime_model
+requested_speed
+platform_accepted_speed
+observed_runtime_speed
 provider
 credential_path
 terms_status
@@ -67,4 +70,4 @@ provider_allowlist
 quota_signal
 ```
 
-`model` 保持为 `requested_model` 的兼容别名。平台没有回显真实运行模型时，`observed_runtime_model` 记为 `unknown`，不能用请求值代填。
+`model` 保持为 `requested_model` 的兼容别名。平台没有回显真实运行模型或速度时，对应 observed 字段记为 `unknown`，不能用请求值代填。

@@ -52,6 +52,26 @@
       "expected_output": "选择 native-light/native_subagent；分别 live 确认 gpt-5.6-sol/low 与 gpt-5.6-sol/medium；显式传 model、reasoning_effort 和 fresh-context 参数；RoutePlan 与 ledger 可从 stdin 校验，不创建 agent_team；采纳后关闭 agent。"
     },
     {
+      "id": "native-luna-fast-priority",
+      "prompt": "让 Luna XHigh Fast 原生 Worker 完成边界清晰的实现，失败后用 Sol High Standard。",
+      "expected_output": "使用 schema_version 2.1；首项 native_subagent/gpt-5.6-luna/xhigh/fast 的 runtime_evidence 必须绑定 service_tier=priority；fallback 为 Sol High Standard；模型和速度分别记录 requested/platform/observed。"
+    },
+    {
+      "id": "native-luna-fast-missing-tier",
+      "prompt": "Luna XHigh 的 spawn schema 支持 model 和 reasoning，但没有 service_tier 字段，请仍按 Fast 派遣。",
+      "expected_output": "拒绝 Luna Fast 精确组合；catalog 支持不能替代 live priority 证据；只走预声明 Sol Standard/App Standard fallback，否则主 Agent 接管。"
+    },
+    {
+      "id": "app-luna-fast-missing-speed-schema",
+      "prompt": "创建 Luna XHigh App Thread；当前 create_thread 只有 model 和 thinking，没有速度参数。",
+      "expected_output": "App Thread 保持 Standard；不得声称 Fast。强制 App Fast 的 RoutePlan 因缺少 tuple-bound speed_evidence 被拒绝。"
+    },
+    {
+      "id": "sol-fast-static-rejection",
+      "prompt": "让 Sol XHigh 使用原生 Fast。",
+      "expected_output": "静态拒绝 RoutePlan；Sol 只允许 Standard，Fast 自动路由只允许 Luna。"
+    },
+    {
       "id": "native-light-four-short-outputs",
       "prompt": "四个互斥的小文件预计十分钟完成，交给三个 OpenAI 原生 Worker，结果回到父任务集成，不需要恢复或独立历史。",
       "expected_output": "选择 native-light；四个产物本身不触发 App Thread；不创建 agent_team；仍执行 Provider、精确模型、6/8、单写者、fresh-context 和关闭门。"
