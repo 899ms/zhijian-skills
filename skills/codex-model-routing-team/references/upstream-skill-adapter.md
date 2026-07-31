@@ -14,7 +14,7 @@
 
 本 Skill 拥有：
 
-- Worker Surface、`model` 与 `thinking`
+- Worker Surface、`model`、`thinking` 与 `speed`
 - RoutePlan、Provider allowlist、模型预检与 deterministic fallback
 - 原生 Subagent 的 fresh-context spawn、等待、follow-up 与关闭
 - App Thread 的 project / projectless 选择、创建、实体化、读取、追问与归档
@@ -28,7 +28,7 @@
 1. 读取上游计划、任务账本、阶段门和输出路径。
 2. 接受上游已经完成的 Scale，不重新拆分任务。
 3. 计算当前阶段 Worker、后续阶段和重试的 reserved slots。
-4. 输出派遣通知，列明当前 Worker 与保留额度。
+4. 输出派遣通知，列明当前 Worker 的 Surface、模型、thinking、speed 与保留额度。
 5. 把上游任务转换成 `references/task-packet.md`，保留原始验收标准。
 6. 短时、边界清晰、父任务内集成的阶段优先原生 Subagent；持久恢复、worktree、独立历史或严格 Thread 审计优先 App Thread。
 7. 原生候选按 `references/native-subagent-lifecycle.md` 执行；App Thread 有工作区输出时绑定匹配 project local，并按 `references/thread-lifecycle.md` 与 `references/thread-supervision-protocol.md` 执行。
@@ -43,8 +43,8 @@
 researcher_count + 1 verifier + 1 reviewer + retry_reserve <= 8
 ```
 
-- researcher：默认 2–4 个；短时扫描可用 Native Scout/Worker，需要独立耐久产物时用 Luna X High App Thread。公开技术研究可在 Provider 门通过后使用 Grok Medium。
-- verifier：1 个，可用 Native Smart Worker；需要独立耐久记录时用 Luna X High App Thread，在 draft 存在后创建。
+- researcher：默认 2–4 个；短时一般研究可在 live schema 接受 priority 时用 Native Luna X High Fast，快速事实扫描用 Native Scout；需要独立耐久产物时用 Luna X High App Standard。公开技术研究可在 Provider 门通过后使用 Grok Medium。
+- verifier：1 个，live schema 接受 priority 时可用 Native Luna X High Fast，否则用 Native Sol Smart Worker；需要独立耐久记录时用 Luna X High App Standard，在 draft 存在后创建。
 - reviewer：1 个，Sol High，在 cited 存在并通过检查后创建；需要异构工程复核时可按 RoutePlan 使用 Grok High。
 - FATAL 复审：最多一次 Sol X High，使用 retry reserve。
 - 所有任务绑定包含 `01_项目/调研` 的 vault project。
@@ -73,7 +73,10 @@ researcher_count + 1 verifier + 1 reviewer + retry_reserve <= 8
   "platform_accepted_model": null,
   "observed_runtime_model": "unknown",
   "thinking": "high",
-  "route_plan": {},
+  "requested_speed": "standard",
+  "platform_accepted_speed": null,
+  "observed_runtime_speed": "unknown",
+  "route_plan": {"schema_version": "2.1", "candidates": [{"surface": "app_thread", "model": "gpt-5.6-luna", "thinking": "high", "speed": "standard"}]},
   "provider_policy": {},
   "materialized": false,
   "data_ready": false,

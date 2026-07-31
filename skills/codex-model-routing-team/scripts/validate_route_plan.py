@@ -28,7 +28,7 @@ def load_input(source: str) -> Any:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Validate a concrete RoutePlan against model, thinking, provider, and retry policies."
+        description="Validate a concrete RoutePlan against model, thinking, speed, provider, and retry policies."
     )
     parser.add_argument("plan", help="RoutePlan JSON path, or - to read JSON from stdin")
     parser.add_argument("--registry", type=Path, default=DEFAULT_REGISTRY)
@@ -40,6 +40,8 @@ def valid_runtime_evidence(
     *,
     model: str,
     thinking: str,
+    speed: str,
+    strict_speed: bool,
     now: datetime,
 ) -> tuple[bool, str | None]:
     if not isinstance(evidence, dict):
@@ -50,6 +52,9 @@ def valid_runtime_evidence(
         "model": model,
         "thinking": thinking,
     }
+    if strict_speed or speed == "fast":
+        expected["speed"] = speed
+        expected["service_tier"] = "priority" if speed == "fast" else None
     if (
         any(evidence.get(key) != value for key, value in expected.items())
         or evidence.get("accepted") is not True
@@ -72,6 +77,48 @@ def valid_runtime_evidence(
         return False, "native runtime evidence is stale"
     if age < -timedelta(minutes=1):
         return False, "native runtime evidence is dated in the future"
+    return True, None
+
+
+def valid_app_speed_evidence(
+    evidence: Any,
+    *,
+    model: str,
+    thinking: str,
+    now: datetime,
+) -> tuple[bool, str | None]:
+    if not isinstance(evidence, dict):
+        return False, "App Fast route requires tuple-bound live speed evidence"
+    expected = {
+        "kind": "live_create_schema",
+        "surface": "app_thread",
+        "model": model,
+        "thinking": thinking,
+        "speed": "fast",
+        "service_tier": "priority",
+    }
+    if (
+        any(evidence.get(key) != value for key, value in expected.items())
+        or evidence.get("accepted") is not True
+    ):
+        return False, "App Fast evidence does not match the candidate tuple"
+    host = evidence.get("host")
+    if not isinstance(host, str) or not host.strip():
+        return False, "App Fast evidence lacks a host identity"
+    checked_at = evidence.get("checked_at")
+    if not isinstance(checked_at, str):
+        return False, "App Fast evidence has an invalid checked_at"
+    try:
+        checked = datetime.fromisoformat(checked_at.replace("Z", "+00:00"))
+    except ValueError:
+        return False, "App Fast evidence has an invalid checked_at"
+    if checked.tzinfo is None:
+        return False, "App Fast evidence has an invalid checked_at"
+    age = now - checked.astimezone(timezone.utc)
+    if age > RUNTIME_EVIDENCE_TTL:
+        return False, "App Fast evidence is stale"
+    if age < -timedelta(minutes=1):
+        return False, "App Fast evidence is dated in the future"
     return True, None
 
 
@@ -105,6 +152,17 @@ def main() -> int:
     order = registry.get("policy", {}).get("thinking_order", [])
     rank = {name: index for index, name in enumerate(order)}
     forbidden = set(registry.get("policy", {}).get("forbidden_thinking", []))
+    speed_modes = set(registry.get("policy", {}).get("speed_modes", []))
+    default_speed = registry.get("policy", {}).get("default_speed", "standard")
+    fast_routing_models = set(registry.get("policy", {}).get("fast_routing_models", []))
+    current_schema_version = registry.get("policy", {}).get(
+        "current_route_plan_schema_version", "2.1"
+    )
+    plan_schema_version = plan.get("schema_version")
+    strict_route_plan = plan_schema_version == current_schema_version
+    if plan_schema_version is not None and not strict_route_plan:
+        result["errors"].append("schema_version is unsupported")
+    result["schema_version"] = plan_schema_version or "legacy"
 
     for field in ("explicit_user_request", "risk_acknowledged"):
         if not isinstance(plan.get(field), bool):
@@ -138,7 +196,7 @@ def main() -> int:
         result["errors"].append("data_allowed_providers must be a string array")
         data_allowed = []
 
-    seen: set[tuple[str, str, str]] = set()
+    seen: set[tuple[str, str, str, str]] = set()
     now = datetime.now(timezone.utc)
     for index, candidate in enumerate(candidates):
         if not isinstance(candidate, dict):
@@ -146,22 +204,44 @@ def main() -> int:
             continue
         model_id = candidate.get("model")
         thinking = candidate.get("thinking")
+        speed = candidate.get("speed", default_speed)
         surface = candidate.get("surface", "app_thread")
+        if strict_route_plan and "surface" not in candidate:
+            result["errors"].append(f"candidate {index} must declare surface")
+        if strict_route_plan and "speed" not in candidate:
+            result["errors"].append(f"candidate {index} must declare speed")
         if surface not in KNOWN_SURFACES:
             result["errors"].append(f"candidate {index} uses an unknown execution surface")
             continue
         if not isinstance(model_id, str) or model_id not in models:
             result["errors"].append(f"candidate {index} uses an unknown model")
             continue
+        if not isinstance(speed, str) or speed not in speed_modes:
+            result["errors"].append(f"candidate {index} uses an unknown speed")
+            continue
+        if speed == "fast" and model_id not in fast_routing_models:
+            result["errors"].append(f"candidate {index} requests Fast outside the Luna-only routing policy")
         entry = models[model_id]
         surface_thinking = supported_thinking(entry, surface)
         if not isinstance(thinking, str) or thinking not in surface_thinking:
             result["errors"].append(f"candidate {index} uses unsupported thinking")
             continue
         runtime_evidence = candidate.get("runtime_evidence")
+        speed_evidence = candidate.get("speed_evidence")
         if surface == "native_subagent":
             evidence_valid, evidence_error = valid_runtime_evidence(
                 runtime_evidence,
+                model=model_id,
+                thinking=thinking,
+                speed=speed,
+                strict_speed=strict_route_plan,
+                now=now,
+            )
+            if not evidence_valid:
+                result["errors"].append(f"candidate {index} {evidence_error}")
+        elif speed == "fast":
+            evidence_valid, evidence_error = valid_app_speed_evidence(
+                speed_evidence,
                 model=model_id,
                 thinking=thinking,
                 now=now,
@@ -172,7 +252,7 @@ def main() -> int:
             result["errors"].append(f"candidate {index} uses forbidden thinking")
         if minimum in rank and rank.get(thinking, -1) < rank[minimum]:
             result["errors"].append(f"candidate {index} falls below minimum_thinking")
-        key = (surface, model_id, thinking)
+        key = (surface, model_id, thinking, speed)
         if key in seen:
             result["errors"].append("candidate chain contains a duplicate or loop")
         seen.add(key)
@@ -181,7 +261,9 @@ def main() -> int:
                 "surface": surface,
                 "model": model_id,
                 "thinking": thinking,
+                "speed": speed,
                 "runtime_evidence": runtime_evidence,
+                "speed_evidence": speed_evidence,
             }
         )
 

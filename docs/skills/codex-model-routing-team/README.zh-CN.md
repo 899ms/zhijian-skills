@@ -8,7 +8,7 @@
 
 <p align="center"><a href="./README.md">English</a> · <a href="https://github.com/zjp1997720/zhijian-skills/tree/main/skills/codex-model-routing-team">统一源码</a></p>
 
-适合复杂并行任务：主 Agent 负责规划、文件所有权和集成，Worker 按明确 Surface、模型与推理强度执行。
+适合复杂并行任务：主 Agent 负责规划、文件所有权和集成，Worker 按明确 Surface、模型、推理强度与速度执行。
 
 ## 安装
 
@@ -54,11 +54,11 @@ find ~/.agents/skills/codex-model-routing-team -maxdepth 2 -type f | sort
 ```markdown
 ## Codex 后台模型路由授权
 
-- 用户长期授权 Codex 在复杂、可并行任务中自动使用 `$codex-model-routing-team`，并按任务生命周期选择精确模型的原生 Subagent 或 Codex App 独立 Thread；派遣前用一条简短通知说明数量、Surface、模型、强度和职责，无需再次确认。
+- 用户长期授权 Codex 在复杂、可并行任务中自动使用 `$codex-model-routing-team`，并按任务生命周期选择精确模型的原生 Subagent 或 Codex App 独立 Thread；派遣前用一条简短通知说明数量、Surface、模型、强度、速度和职责，无需再次确认。
 - 主 Agent 保持当前模型，负责规划、文件所有权、集成、验证和最终交付。
 - 原生 Subagent 默认处理短时、边界清晰、回到父任务集成的工作；需要持久恢复、worktree、独立历史或严格 Thread 审计时使用 App Thread。
 - 跨 Surface 同时运行最多 6 个 Worker；单个根任务累计最多 8 次 Worker attempt，失败、未实体化和 fallback 都计数。Worker 不得继续创建任何后台任务或子 Agent。
-- Worker 禁止使用 Ultra；Terra 为 opt-in，默认不参与自动路由。原生精确模型/推理强度必须通过 live spawn schema；不可用时只走预声明 fallback 或由主 Agent 接管。
+- Worker 禁止使用 Ultra；Terra 为 opt-in，默认不参与自动路由。原生精确模型/推理强度/速度必须通过 live spawn schema；只有 Luna 可请求 Fast，Sol/Terra 保持 Standard。不可用时只走预声明 fallback 或由主 Agent 接管。
 - 简单问答、状态查询、单文件小改、强顺序任务以及发布、发送、付款、删除、账户或生产操作不自动派遣。
 ```
 
@@ -66,7 +66,7 @@ find ~/.agents/skills/codex-model-routing-team -maxdepth 2 -type f | sort
 
 ## 为什么需要它
 
-当前 Codex 原生 Subagent 的 spawn schema 已经可以暴露每个 Worker 的 `model` 与推理强度控制。可用性仍取决于具体 runtime 和 Surface：同一环境可能接受 Sol、拒绝 Terra；“请求或平台接受了某模型”也不等于平台回显了真实运行模型。
+当前 Codex 原生 Subagent 的 spawn schema 已经可以暴露每个 Worker 的 `model`、推理强度，并在部分 V2 host 上暴露原生 Fast。可用性仍取决于具体 runtime 和 Surface；请求或平台接受模型/速度也不等于平台回显了真实运行身份。
 
 这个 Skill 把新能力变成受控双路径路由器：边界清晰、回到父任务集成的工作用原生 Subagent；需要持久恢复、独立任务历史或 worktree 的工作用 Codex App Thread。两条路径共享 Provider 门、fallback 计划、次数预算和主 Agent 验收。
 
@@ -75,11 +75,11 @@ find ~/.agents/skills/codex-model-routing-team -maxdepth 2 -type f | sort
 ## 主要能力
 
 - 只路由真正复杂且可并行的任务，例如多来源调研、多章节内容、复杂 Skill 或 PPT、跨模块开发和独立验证。
-- 原生 Sol low/medium/high 分别承担 scout、worker、smart worker；Luna 与 Sol App Thread 提供耐久基线；Grok 4.5 在 runtime/provider 预检后承担复杂执行和异构审查。
+- 原生 Sol low/medium/high 提供 Standard scout 与 fallback；live schema 接受 `service_tier=priority` 时，Luna High/XHigh/Max Fast 承担默认原生执行。Luna 与 Sol App Thread 提供耐久 Standard 基线；Grok 4.5 在 runtime/provider 预检后承担复杂执行和异构审查。
 - `gpt-5.6-terra` 为 opt-in，只能作为用户明确点名的首项候选；unknown model 只判定该精确原生组合失败，禁止静默继承父模型。
 - Gemini 3.6 Flash 保留显式路由模板，但当前 Antigravity 第三方登录路径受官方条款阻断；正式 API/Vertex 路径需要新的 registry entry。
 - 每波最多新增 3 个 Worker，跨 Surface 同时运行最多 6 个，单个根任务累计最多 8 次 Worker attempt。
-- 每个新模型/推理强度/工具签名组合的首个真实业务任务充当健康探针；HTTP 成功、Thread 实体化、模型数据事件和交付质量分别验收。
+- 每个新模型/推理强度/速度/工具签名组合的首个真实业务任务充当健康探针；HTTP 成功、Thread 实体化、模型数据事件和交付质量分别验收。
 - 区分正式 `threadId`、排队 `pendingWorktreeId`、超时和歧义状态；用唯一 task id 恢复排队任务，`UNKNOWN` 状态禁止追问、归档、fallback 和重复创建。
 - 以最新官方 Thread/turn 读取作为当前状态真相，通过最小 ledger validator 检查 attempt、实体化、DATA_READY 与归档不变量。
 - 用 `task_intent` 和 `mutation_authority` 限定 Worker 写入权限；研究和验证任务不能顺手扩大修改范围。
@@ -91,10 +91,10 @@ find ~/.agents/skills/codex-model-routing-team -maxdepth 2 -type f | sort
 ## 工作方式
 
 1. 主 Agent 固定任务画像、Provider allowlist、执行 Surface 和有序候选链。
-2. 校验 registry 与 Provider 门；每个原生 `model/reasoning_effort` 精确组合还要通过 live spawn schema。
+2. 校验 registry 与 Provider 门；每个原生 `model/reasoning_effort/speed` 精确组合还要通过 live spawn schema，Fast 必须接受 `service_tier=priority`。
 3. 边界清晰的 OpenAI 原生任务使用 `native-light`；耐久、跨 Provider、fallback 或高风险任务使用 `governed`。
 4. 原生 V1 使用 `fork_context=false`，V2 使用 `fork_turns="none"`；App Thread 使用唯一 task id 和官方读取恢复排队 worktree。
-5. requested、platform accepted 与 observed runtime model 分开记录；平台未回显时 observed 保持 `unknown`。
+5. 模型与速度都分开记录 requested、platform accepted 与 observed runtime；平台未回显时 observed 保持 `unknown`。
 6. 失败只沿预声明链前进，包括跨 Surface fallback；单候选失败后由主 Agent 接管。
 7. 已采纳的原生 Worker 必须关闭；App Thread 必须通过完成与归档门。
 
@@ -127,8 +127,8 @@ Deep Research 默认预算为 `2-4 个 researcher + 1 个 verifier + 1 个 revie
 
 ## 环境要求与边界
 
-- Codex 能提供可确认精确模型/推理组合的原生 Subagent spawn、Codex App Thread 工具或两者。某条声明路径不可用时，只能使用预声明的另一条路径。
-- 当前账号可以使用主 Agent 选择的模型与推理强度。
+- Codex 能提供可确认精确模型/推理/速度组合的原生 Subagent spawn、Codex App Thread 工具或两者。某条声明路径不可用时，只能使用预声明的另一条路径。
+- 当前账号可以使用主 Agent 选择的模型、推理强度与速度；App `create_thread` 没有速度参数时只能按 Standard 路由。
 - `gpt-5.6-sol / medium` 只用于用户明确点名或 RoutePlan 明确证明中等推理足够的任务；默认画像仍保持 high 以上。
 - 跨 Provider 路由前必须确认数据边界、凭证路径和服务条款；订阅可登录不等于第三方代理被授权。
 - Worker 必须能够验证已经真实创建。原生模型接受状态与 observed identity 分开记录；App Thread 仍必须通过实体化门。
@@ -155,7 +155,7 @@ Agent 的完整工作流见 [SKILL.md](../../../skills/codex-model-routing-team/
 
 ## 验证情况
 
-工作流已经覆盖原生 Sol 路由、Terra opt-in 拒绝与 fallback、Luna/Sol App Thread、条件 Grok 4.5 和 Gemini Provider 阻断；包含 Surface 预检、RoutePlan 校验、原生关闭门、pending worktree 恢复、混合 ledger 校验和隔离 `npx skills` 安装。
+工作流已经覆盖 Native Luna Fast priority 证据、Sol/Terra Standard 边界、App Fast 缺少速度 schema 的拒绝、Terra opt-in fallback、条件 Grok 4.5 和 Gemini Provider 阻断；包含 Surface 预检、RoutePlan 校验、速度审计、原生关闭门、pending worktree 恢复、混合 ledger 校验和隔离 `npx skills` 安装。
 
 ## 许可证
 
