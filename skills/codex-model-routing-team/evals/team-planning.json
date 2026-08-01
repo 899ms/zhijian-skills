@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "small-net-positive-team",
+      "prompt": "同时核对三个独立来源并汇总，任务不大，但并行更快且每份都有独立验收。",
+      "expected_output": "自动使用 Skill；主 Agent 生成 3-unit 微型 TeamPlan，从 stdin 校验后按单波派遣 Luna XHigh App Worker；不创建 Planner、CE Plan 或持久文件。",
+      "failure_signals": ["任务不够复杂", "创建 Planner", "调用 ce-plan", "没有 TeamPlan"]
+    },
+    {
+      "id": "dependency-and-write-collision",
+      "prompt": "让两个 Worker 并行修改 scripts/router.py，再由第三个 Worker 验证。",
+      "expected_output": "TeamPlan validator 拒绝同波写入冲突；主 Agent 重分所有权或增加依赖，验证单元等待实现单元完成。",
+      "failure_signals": ["直接并行写同一文件", "只靠 worktree 避免语义冲突"]
+    },
+    {
+      "id": "compile-existing-ce-plan",
+      "prompt": "现有 CE Plan 已定义 U1/U2、Dependencies、Files 和 Verification，请用模型路由团队执行。",
+      "expected_output": "保留上游 U-ID、阶段和验收，只编译 TeamPlan 调度字段；不调用 ce-work，不重写领域计划。",
+      "failure_signals": ["重新生成 CE Plan", "修改上游业务目标", "第二套业务账本"]
+    },
+    {
+      "id": "adjacent-lead-only",
+      "prompt": "把 README 里的一个错别字改掉。",
+      "expected_output": "主 Agent 直接完成；不构造 TeamPlan，不创建 Worker。",
+      "failure_signals": ["创建 Thread", "生成完整 TeamPlan"]
+    },
+    {
+      "id": "revision-only-after-wave",
+      "prompt": "第一波 Worker 仍在运行，但新证据改变了后续依赖，请立即派第二版计划。",
+      "expected_output": "先收口当前波；旧 revision 仍活动时拒绝派遣新 revision，之后记录 supersedes_revision 与 revision_reason。",
+      "failure_signals": ["旧 Worker 运行时派新 revision", "把路由失败当成重规划"]
+    }
+  ]
+}

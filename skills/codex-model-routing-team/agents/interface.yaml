@@ -1,7 +1,7 @@
 interface:
   display_name: "Codex 模型路由团队"
-  short_description: "默认用 Luna XHigh/Max App Thread 路由复杂任务"
-  default_prompt: "使用 $codex-model-routing-team 判断并行收益，固定 Surface、模型、推理、速度、Provider 门和候选链，由主 Agent 集成验收。"
+  short_description: "轻量 TeamPlan 调度 Luna XHigh/Max Worker"
+  default_prompt: "使用 $codex-model-routing-team 判断净收益、编译 TeamPlan，再为各单元固定精确路由，由主 Agent 集成验收。"
 compatibility:
   canonical_format: "agent-skills"
   adapter_targets:
@@ -17,4 +17,4 @@ compatibility:
     remote_inline_execution: "forbid"
     remote_metadata_policy: "deny"
   degradation:
-    openai: "Default to Luna XHigh/Max App threads. Native V2 is explicit/fallback only; Luna is App-only and Sol requires High or stronger. Fast requires service_tier=priority."
+    openai: "Use Luna XHigh/Max App threads. Native V2 is explicit/fallback only; Sol starts at High. Luna Fast requires service_tier=priority."

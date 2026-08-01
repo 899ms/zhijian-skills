@@ -1,0 +1,71 @@
+{
+  "fallback_positive_concepts": [
+    "parallel_team",
+    "explicit_routing"
+  ],
+  "positive_concepts": {
+    "parallel_team": {
+      "weight": 0.55,
+      "phrases": [
+        "并行任务",
+        "多个独立工作流",
+        "两个以上有独立交付物的工作流",
+        "独立交付物",
+        "并行核验",
+        "并行完成",
+        "并行做",
+        "parallel work",
+        "independent deliverables"
+      ]
+    },
+    "explicit_routing": {
+      "weight": 0.45,
+      "phrases": [
+        "模型路由",
+        "后台 worker",
+        "agents team",
+        "luna worker",
+        "grok worker",
+        "gemini worker",
+        "model routing",
+        "background workers"
+      ]
+    }
+  },
+  "negative_concepts": {
+    "small_or_single": {
+      "weight": 0.65,
+      "exclusive": true,
+      "phrases": [
+        "单文件",
+        "一个错别字",
+        "只让一个 worker",
+        "single file",
+        "one worker"
+      ]
+    },
+    "status_or_explain": {
+      "weight": 0.65,
+      "exclusive": true,
+      "phrases": [
+        "什么状态",
+        "解释一下",
+        "不需要执行任务",
+        "status check",
+        "just explain"
+      ]
+    },
+    "unsafe_or_sequential": {
+      "weight": 0.75,
+      "exclusive": true,
+      "phrases": [
+        "直接发布",
+        "不要创建 worker",
+        "严格按顺序",
+        "协调成本会高于并行收益",
+        "publish directly",
+        "strictly sequential"
+      ]
+    }
+  }
+}

@@ -43,7 +43,7 @@ npx skills add zjp1997720/zhijian-skills \
 | --- | --- | --- | --- |
 | Codex 管理 | [`codex-doctor`](docs/skills/codex-doctor/README.zh-CN.md) | 只读诊断上下文、配置和工作区漂移 | [文档](docs/skills/codex-doctor/README.zh-CN.md) |
 | Codex 管理 | [`codex-handoff`](docs/skills/codex-handoff/README.zh-CN.md) | 把历史过大、响应变慢的 Codex task 换到一个紧凑的新 task 继续 | [文档](docs/skills/codex-handoff/README.zh-CN.md) |
-| Codex 管理 | [`codex-model-routing-team`](docs/skills/codex-model-routing-team/README.zh-CN.md) | 把后台任务分配给明确的模型和推理强度 | [文档](docs/skills/codex-model-routing-team/README.zh-CN.md) |
+| Codex 管理 | [`codex-model-routing-team`](docs/skills/codex-model-routing-team/README.zh-CN.md) | 把并行工作编译成 TeamPlan，并将 Worker 路由到明确模型 | [文档](docs/skills/codex-model-routing-team/README.zh-CN.md) |
 | Codex 管理 | [`codex-skill-admin`](docs/skills/codex-skill-admin/README.zh-CN.md) | 审计、关闭、恢复并验证本地 Codex Skill | [文档](docs/skills/codex-skill-admin/README.zh-CN.md) |
 | Codex 体验 | [`codex-theme-studio`](docs/skills/codex-theme-studio/README.zh-CN.md) | 设计、注入、验证并恢复可逆的 Codex Desktop 主题 | [文档](docs/skills/codex-theme-studio/README.zh-CN.md) |
 | 知识系统 | [`enterprise-clone-builder`](docs/skills/enterprise-clone-builder/README.zh-CN.md) | 从企业证据构建结构化数字分身仓库 | [文档](docs/skills/enterprise-clone-builder/README.zh-CN.md) |
@@ -63,7 +63,7 @@ npx skills add zjp1997720/zhijian-skills \
 - **安装包保持完整。** 每个 Skill 依赖的脚本、参考资料、主题和资源都会一起安装。
 - **版本独立，仓库统一。** 每个 Skill 保留独立版本、Changelog、统一仓库 Tag 和测试。
 
-`codex-model-routing-team` 可以手动点名，也可以通过文档提供的 `AGENTS.md` 授权块，在复杂并行任务中自动触发。
+`codex-model-routing-team` 可以手动点名，也可以通过文档提供的 `AGENTS.md` 授权块，在并行执行具有明确净收益时自动触发。
 
 ## 仓库模型
 
