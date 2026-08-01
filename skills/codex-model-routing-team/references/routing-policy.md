@@ -17,7 +17,7 @@
 路由优先级固定为：
 
 1. 数据边界、Provider 条款、工具需求、任务风险和最低推理强度等硬门。
-2. [Surface 选择策略](surface-selection-policy.md)：短时、边界清晰、父任务集成优先原生 Subagent；持久、可恢复、worktree 或独立审计优先 App Thread。
+2. [Surface 选择策略](surface-selection-policy.md)：自动路由默认 App Thread，以使用 Luna XHigh/Max；原生 Subagent 只用于显式请求或预声明 fallback。
 3. [模型注册表](model-registry.json) 的 automatic、opt-in 和 manual-only 状态。
 4. [恢复策略](recovery-policy.md) 中精确 `surface/model/thinking/speed` 组合的熔断与近期健康证据。
 5. 对应任务类型的能力匹配、独立验证需求、延迟和稳定性信号。
@@ -31,16 +31,11 @@
 
 | 路由名 | Surface | `model` | 推理强度 | 速度 | 适用工作 |
 | --- | --- | --- | --- | --- | --- |
-| Native Scout | `native_subagent` | `gpt-5.6-sol` | `low` | Standard | 快速定位、搜索、事实扫描、边界清晰的小型探查 |
-| Native Sol Worker | `native_subagent` | `gpt-5.6-sol` | `medium` | Standard | Luna Fast 不可用时的常规原生 fallback |
-| Native Sol Smart Worker | `native_subagent` | `gpt-5.6-sol` | `high` | Standard | Luna Fast 不可用时的复杂原生 fallback |
-| Native Luna High Fast | `native_subagent` | `gpt-5.6-luna` | `high` | Fast | live schema 接受 priority 时的机械提取、分类和简单验证 |
-| Native Luna X High Fast | `native_subagent` | `gpt-5.6-luna` | `xhigh` | Fast | live schema 接受 priority 时的默认原生研究、实现与审查 |
-| Native Luna Max Fast | `native_subagent` | `gpt-5.6-luna` | `max` | Fast | live schema 接受 priority 时的边界清晰高难执行 |
-| Luna High App | `app_thread` | `gpt-5.6-luna` | `high` | Standard | 机械提取、格式整理、分类、简单验证的耐久执行 |
-| Luna X High App | `app_thread` | `gpt-5.6-luna` | `xhigh` | Standard | 默认耐久 Worker；调研、初稿、常规编码与审查 |
-| Luna Max App | `app_thread` | `gpt-5.6-luna` | `max` | Standard | 边界清晰、难度高、时效不敏感的耐久深度执行 |
-| Sol Medium | `app_thread` | `gpt-5.6-sol` | `medium` | Standard | 用户明确点名或有证据支持的中等强度耐久执行 |
+| Native Sol High | `native_subagent` | `gpt-5.6-sol` | `high` | Standard | 用户明确要求原生或 App 不可用时的边界清晰 fallback |
+| Native Sol X High | `native_subagent` | `gpt-5.6-sol` | `xhigh` | Standard | 显式原生高难实现与审查 |
+| Native Sol Max | `native_subagent` | `gpt-5.6-sol` | `max` | Standard | 有明确质量理由的最高强度原生任务 |
+| Luna X High App | `app_thread` | `gpt-5.6-luna` | `xhigh` | Standard / Fast | 默认 Worker；调研、写作、编码、验证与审查 |
+| Luna Max App | `app_thread` | `gpt-5.6-luna` | `max` | Standard / Fast | 高歧义、高风险或边界清晰的高难深度执行 |
 | Sol High | `app_thread` | `gpt-5.6-sol` | `high` | Standard | 高歧义规划、架构、困难调试、高风险判断、关键审查 |
 | Sol X High | `app_thread` | `gpt-5.6-sol` | `xhigh` | Standard | 更深推理的关键审查与方案裁决 |
 | Sol Max | `app_thread` | `gpt-5.6-sol` | `max` | Standard | 有明确质量理由的最高强度单任务 |
@@ -52,7 +47,7 @@
 
 Ultra 永久禁止。不得把成本比例、订阅额度或 TPS 写成未经当前环境验证的固定事实。
 
-`thinking` 是 RoutePlan 的跨 Surface 规范字段，比较顺序为 `low < medium < high < xhigh < max`。原生 spawn 时映射到 `reasoning_effort`；App Thread 创建时映射到 `thinking`。候选必须同时满足该 Surface 的支持范围和 `minimum_thinking`。
+`thinking` 是 RoutePlan 的跨 Surface 规范字段，比较顺序为 `low < medium < high < xhigh < max`。原生 spawn 时映射到 `reasoning_effort`；App Thread 创建时映射到 `thinking`。候选必须同时满足该 Surface 的支持范围和 `minimum_thinking`。Luna 自动路由只允许 XHigh/Max；Sol 无论 Surface 都只允许 High/XHigh/Max，Medium/Low 即使用户点名也拒绝。
 
 `speed` 是与模型、推理强度分离的 RoutePlan 字段，取值为 `standard | fast`。Fast 映射为 `service_tier=priority`；Standard 不传该 tier。只有 Luna 允许 `speed=fast`，Sol、Terra 和其他模型必须写 `speed=standard`。`schema_version: "2.1"` 的 RoutePlan 必须显式填写；旧计划省略版本/速度时兼容解释为 Standard。某个 Surface 的 live schema 没有速度参数时，该 Surface 不能证明或强制 Fast，必须把精确组合视为不可用或保持 Standard。
 
@@ -62,19 +57,19 @@ Ultra 永久禁止。不得把成本比例、订阅额度或 TPS 写成未经当
 
 | 画像 | 最低 thinking | 主候选 → fallback | 说明 |
 | --- | --- | --- | --- |
-| `NATIVE_SCOUT` | low | Native Scout → Native Sol Worker | 快速探查；结果回到父任务直接使用 |
-| `NATIVE_WORKER` | high | Native Luna X High Fast → Native Sol Smart Worker | 默认原生实现与分析；Fast schema 缺失时走 Sol Standard |
-| `NATIVE_SMART_WORKER` | high | Native Luna Max Fast → Sol X High App Thread | 原生高难任务；Fast 不可用或需要耐久恢复时 fallback |
+| `NATIVE_WORKER_EXPLICIT` | high | Native Sol High → Luna X High App | 仅用户明确要求原生，或预声明 App 不可用 fallback |
+| `NATIVE_SMART_WORKER_EXPLICIT` | xhigh | Native Sol X High → Luna Max App | 显式原生高难任务；失败后回到 Luna App |
 | `DEFAULT_GENERAL` | high | Luna X High App → Sol High App Thread | 通用耐久研究、写作、编码与验证；App 未暴露速度参数时保持 Standard |
-| `FAST_MECHANICAL` | high | Native Luna High Fast → Luna High App | 低风险提取、分类和格式整理；Fast 不可用时转耐久 Standard |
+| `HIGH_RISK_GENERAL` | xhigh | Luna Max App → Sol X High App Thread | 高风险、高歧义与高难执行默认升 Luna Max |
+| `FAST_MECHANICAL` | xhigh | Luna X High App Fast / Standard → Sol High App | live create schema 接受 priority 才用 Fast，否则首项直接写 Standard |
 | `DEEP_AGENTIC_CODE` | high | Grok High → Sol High App Thread | Grok/provider 通过硬门后用于复杂工程执行 |
 | `REVIEW_OPENAI_PRIMARY` | high | Grok High → Sol X High App Thread | OpenAI 主执行后的异构复核 |
 | `REVIEW_XAI_PRIMARY` | xhigh | Sol X High App Thread → Luna X High App | xAI 主执行后的 OpenAI 复核 |
 | `CRITICAL_ARBITRATION` | xhigh | Sol X High App Thread → Sol Max App Thread | 关键裁决保持 OpenAI 高强度质量下限 |
-| `TERRA_EXPLICIT` | low | Terra Opt-in → 对应最低强度的 Sol | 仅显式请求；Terra 不可用时走预声明 Sol 或主 Agent |
+| `TERRA_EXPLICIT` | low | Terra Opt-in → Sol High | 仅显式请求；Terra 不可用时走预声明 Sol High 或主 Agent |
 | `GEMINI_EXPLICIT_FAST_BREADTH` | medium | Gemini Medium → Luna X High App | 当前 Antigravity 条款 blocked，不能执行 |
 
-fallback 必须满足最低 `thinking`。首项被静态门排除时，通知应说明从下一项开始，不能伪称运行时失败。`Sol Medium` App Thread 只用于用户明确指定或有任务证据的计划；默认耐久画像仍从 high 起步。
+fallback 必须满足最低 `thinking`。首项被静态门排除时，通知应说明从下一项开始，不能伪称运行时失败。Luna XHigh 是默认质量下限，高难/高风险升 Max；Sol 的最低允许强度固定为 High。
 
 新 RoutePlan 顶层写 `"schema_version": "2.1"`。Standard 原生候选结构：
 
@@ -82,13 +77,13 @@ fallback 必须满足最低 `thinking`。首项被静态门排除时，通知应
 {
   "surface": "native_subagent",
   "model": "gpt-5.6-sol",
-  "thinking": "medium",
+  "thinking": "high",
   "speed": "standard",
   "runtime_evidence": {
     "kind": "live_spawn_schema",
     "surface": "native_subagent",
     "model": "gpt-5.6-sol",
-    "thinking": "medium",
+    "thinking": "high",
     "speed": "standard",
     "service_tier": null,
     "accepted": true,
@@ -98,7 +93,7 @@ fallback 必须满足最低 `thinking`。首项被静态门排除时，通知应
 }
 ```
 
-Native Luna Fast 使用同一 `runtime_evidence`，但必须同时包含 `"speed": "fast"` 与 `"service_tier": "priority"`。App Luna Fast 只有在 `create_thread` 的 live schema 明确接受速度参数时才允许，并在候选中附加：
+当前官方原生 V2 live schema 不开放 Luna，因此不得生成 Native Luna 候选。App Luna Fast 只有在 `create_thread` 的 live schema 明确接受速度参数时才允许，并在候选中附加：
 
 ```json
 "speed_evidence": {

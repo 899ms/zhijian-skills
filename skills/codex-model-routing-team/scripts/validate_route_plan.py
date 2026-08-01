@@ -155,6 +155,12 @@ def main() -> int:
     speed_modes = set(registry.get("policy", {}).get("speed_modes", []))
     default_speed = registry.get("policy", {}).get("default_speed", "standard")
     fast_routing_models = set(registry.get("policy", {}).get("fast_routing_models", []))
+    app_thread_only_models = set(
+        registry.get("policy", {}).get("app_thread_only_models", [])
+    )
+    native_first_requires_explicit = registry.get("policy", {}).get(
+        "native_first_candidate_requires_explicit_request", True
+    )
     current_schema_version = registry.get("policy", {}).get(
         "current_route_plan_schema_version", "2.1"
     )
@@ -221,6 +227,19 @@ def main() -> int:
             continue
         if speed == "fast" and model_id not in fast_routing_models:
             result["errors"].append(f"candidate {index} requests Fast outside the Luna-only routing policy")
+        if surface == "native_subagent" and model_id in app_thread_only_models:
+            result["errors"].append(
+                f"candidate {index} model is App Thread only in the current routing policy"
+            )
+        if (
+            surface == "native_subagent"
+            and index == 0
+            and native_first_requires_explicit
+            and plan.get("explicit_user_request") is not True
+        ):
+            result["errors"].append(
+                "native first candidate requires explicit_user_request; automatic routes default to App Thread"
+            )
         entry = models[model_id]
         surface_thinking = supported_thinking(entry, surface)
         if not isinstance(thinking, str) or thinking not in surface_thinking:

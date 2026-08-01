@@ -4,7 +4,7 @@
   <img src="./assets/readme/hero.svg" width="100%" alt="Codex 主任务把受控的后台工作分配给明确模型">
 </p>
 
-<p align="center"><strong>主 Agent 负责集成和验收；受控工作路由到精确模型的原生 Subagent 或耐久 App Thread。</strong></p>
+<p align="center"><strong>主 Agent 负责集成和验收；复杂工作默认路由到 Luna XHigh/Max App Thread。</strong></p>
 
 <p align="center"><a href="./README.md">English</a> · <a href="https://github.com/zjp1997720/zhijian-skills/tree/main/skills/codex-model-routing-team">统一源码</a></p>
 
@@ -54,11 +54,11 @@ find ~/.agents/skills/codex-model-routing-team -maxdepth 2 -type f | sort
 ```markdown
 ## Codex 后台模型路由授权
 
-- 用户长期授权 Codex 在复杂、可并行任务中自动使用 `$codex-model-routing-team`，并按任务生命周期选择精确模型的原生 Subagent 或 Codex App 独立 Thread；派遣前用一条简短通知说明数量、Surface、模型、强度、速度和职责，无需再次确认。
+- 用户长期授权 Codex 在复杂、可并行任务中自动使用 `$codex-model-routing-team`；默认创建 Luna XHigh App 独立 Thread，高难或高风险任务升 Luna Max；派遣前用一条简短通知说明数量、Surface、模型、强度、速度和职责，无需再次确认。
 - 主 Agent 保持当前模型，负责规划、文件所有权、集成、验证和最终交付。
-- 原生 Subagent 默认处理短时、边界清晰、回到父任务集成的工作；需要持久恢复、worktree、独立历史或严格 Thread 审计时使用 App Thread。
+- 默认使用 App Thread。当前官方 V2 live schema 不开放 Luna，原生 Subagent 只用于用户明确点名或预声明 fallback。
 - 跨 Surface 同时运行最多 6 个 Worker；单个根任务累计最多 8 次 Worker attempt，失败、未实体化和 fallback 都计数。Worker 不得继续创建任何后台任务或子 Agent。
-- Worker 禁止使用 Ultra；Terra 为 opt-in，默认不参与自动路由。原生精确模型/推理强度/速度必须通过 live spawn schema；只有 Luna 可请求 Fast，Sol/Terra 保持 Standard。不可用时只走预声明 fallback 或由主 Agent 接管。
+- Worker 禁止使用 Ultra；Terra 为 opt-in，默认不参与自动路由。Luna 只走 App Thread 且最低 XHigh，Sol 在任一 Surface 都最低 High。只有 App Luna 可在 live schema 接受 `service_tier=priority` 时请求 Fast，Sol/Terra 保持 Standard。不可用时只走预声明 fallback 或由主 Agent 接管。
 - 简单问答、状态查询、单文件小改、强顺序任务以及发布、发送、付款、删除、账户或生产操作不自动派遣。
 ```
 
@@ -66,16 +66,16 @@ find ~/.agents/skills/codex-model-routing-team -maxdepth 2 -type f | sort
 
 ## 为什么需要它
 
-当前 Codex 原生 Subagent 的 spawn schema 已经可以暴露每个 Worker 的 `model`、推理强度，并在部分 V2 host 上暴露原生 Fast。可用性仍取决于具体 runtime 和 Surface；请求或平台接受模型/速度也不等于平台回显了真实运行身份。
+当前 Codex 官方原生 V2 的 spawn schema 可以暴露每个 Worker 的模型和推理强度，但 live schema 不开放 Luna。可用性仍取决于具体 runtime 和 Surface；代理 catalog 也不能作为官方原生能力证据。
 
-这个 Skill 把新能力变成受控双路径路由器：边界清晰、回到父任务集成的工作用原生 Subagent；需要持久恢复、独立任务历史或 worktree 的工作用 Codex App Thread。两条路径共享 Provider 门、fallback 计划、次数预算和主 Agent 验收。
+因此这个 Skill 默认使用 App Thread，确保能调用 Luna：普通复杂任务从 XHigh 起步，高难或高风险任务升 Max。原生 Sol 仅用于显式请求或预声明 fallback；两条路径共享 Provider 门、fallback 计划、次数预算和主 Agent 验收。
 
-普通 2–3 个 OpenAI 原生 Worker 默认走 `native-light`：只加载当前路径需要的策略，RoutePlan 和 ledger 可通过 stdin 校验并留在上下文，不创建 `agent_team/`。涉及恢复、worktree、独立历史、高风险审批、跨 Provider 或 fallback 时进入完整 `governed` 路径。两档共享同一套安全门。
+普通自动路由默认走完整 `governed` App Thread 路径。`native-light` 只保留给显式原生请求或预声明 fallback：RoutePlan 和 ledger 可通过 stdin 校验并留在上下文，不创建 `agent_team/`。两档共享同一套安全门。
 
 ## 主要能力
 
 - 只路由真正复杂且可并行的任务，例如多来源调研、多章节内容、复杂 Skill 或 PPT、跨模块开发和独立验证。
-- 原生 Sol low/medium/high 提供 Standard scout 与 fallback；live schema 接受 `service_tier=priority` 时，Luna High/XHigh/Max Fast 承担默认原生执行。Luna 与 Sol App Thread 提供耐久 Standard 基线；Grok 4.5 在 runtime/provider 预检后承担复杂执行和异构审查。
+- 默认使用 Luna XHigh App Thread，高难或高风险任务升 Luna Max。Native Luna 静态拒绝；Sol 仅允许 High/XHigh/Max 且始终 Standard。App Luna 只有在 live create schema 接受 `service_tier=priority` 时才使用 Fast；Grok 4.5 在 runtime/provider 预检后承担复杂执行和异构审查。
 - `gpt-5.6-terra` 为 opt-in，只能作为用户明确点名的首项候选；unknown model 只判定该精确原生组合失败，禁止静默继承父模型。
 - Gemini 3.6 Flash 保留显式路由模板，但当前 Antigravity 第三方登录路径受官方条款阻断；正式 API/Vertex 路径需要新的 registry entry。
 - 每波最多新增 3 个 Worker，跨 Surface 同时运行最多 6 个，单个根任务累计最多 8 次 Worker attempt。
@@ -92,7 +92,7 @@ find ~/.agents/skills/codex-model-routing-team -maxdepth 2 -type f | sort
 
 1. 主 Agent 固定任务画像、Provider allowlist、执行 Surface 和有序候选链。
 2. 校验 registry 与 Provider 门；每个原生 `model/reasoning_effort/speed` 精确组合还要通过 live spawn schema，Fast 必须接受 `service_tier=priority`。
-3. 边界清晰的 OpenAI 原生任务使用 `native-light`；耐久、跨 Provider、fallback 或高风险任务使用 `governed`。
+3. 自动路由使用 governed Luna App Thread；只有显式原生请求或预声明 fallback 才使用 `native-light`，且 Sol 最低 High。
 4. 原生 V1 使用 `fork_context=false`，V2 使用 `fork_turns="none"`；App Thread 使用唯一 task id 和官方读取恢复排队 worktree。
 5. 模型与速度都分开记录 requested、platform accepted 与 observed runtime；平台未回显时 observed 保持 `unknown`。
 6. 失败只沿预声明链前进，包括跨 Surface fallback；单候选失败后由主 Agent 接管。
@@ -129,7 +129,7 @@ Deep Research 默认预算为 `2-4 个 researcher + 1 个 verifier + 1 个 revie
 
 - Codex 能提供可确认精确模型/推理/速度组合的原生 Subagent spawn、Codex App Thread 工具或两者。某条声明路径不可用时，只能使用预声明的另一条路径。
 - 当前账号可以使用主 Agent 选择的模型、推理强度与速度；App `create_thread` 没有速度参数时只能按 Standard 路由。
-- `gpt-5.6-sol / medium` 只用于用户明确点名或 RoutePlan 明确证明中等推理足够的任务；默认画像仍保持 high 以上。
+- Luna 只走 App Thread 且必须为 XHigh/Max；Sol 在任一 Surface 都必须为 High/XHigh/Max，Medium/Low 即使用户点名也拒绝。
 - 跨 Provider 路由前必须确认数据边界、凭证路径和服务条款；订阅可登录不等于第三方代理被授权。
 - Worker 必须能够验证已经真实创建。原生模型接受状态与 observed identity 分开记录；App Thread 仍必须通过实体化门。
 - Terra 因 live 可用性与策略声明可能不同而保持 opt-in；Ultra 永久禁止。
@@ -155,7 +155,7 @@ Agent 的完整工作流见 [SKILL.md](../../../skills/codex-model-routing-team/
 
 ## 验证情况
 
-工作流已经覆盖 Native Luna Fast priority 证据、Sol/Terra Standard 边界、App Fast 缺少速度 schema 的拒绝、Terra opt-in fallback、条件 Grok 4.5 和 Gemini Provider 阻断；包含 Surface 预检、RoutePlan 校验、速度审计、原生关闭门、pending worktree 恢复、混合 ledger 校验和隔离 `npx skills` 安装。
+工作流已经覆盖 App-first Luna XHigh/Max、Native Luna 与 Sol Medium/Low 的静态拒绝、Sol/Terra Standard 边界、App Fast 缺少速度 schema 的拒绝、Terra opt-in fallback、条件 Grok 4.5 和 Gemini Provider 阻断；包含 Surface 预检、RoutePlan 校验、速度审计、原生关闭门、pending worktree 恢复、混合 ledger 校验和隔离 `npx skills` 安装。
 
 ## 许可证
 

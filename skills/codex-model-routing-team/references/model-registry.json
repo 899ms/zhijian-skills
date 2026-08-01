@@ -1,6 +1,6 @@
 {
   "schema_version": "2.1.0",
-  "updated_at": "2026-07-31",
+  "updated_at": "2026-08-01",
   "policy": {
     "runtime_metadata_role": "validate_only",
     "unknown_model_action": "reject",
@@ -12,6 +12,23 @@
     "default_speed": "standard",
     "service_tier_by_speed": {"standard": null, "fast": "priority"},
     "fast_routing_models": ["gpt-5.6-luna"],
+    "app_thread_only_models": ["gpt-5.6-luna"],
+    "native_first_candidate_requires_explicit_request": true,
+    "default_surface": "app_thread",
+    "default_openai_route": {
+      "surface": "app_thread",
+      "model": "gpt-5.6-luna",
+      "thinking": "xhigh"
+    },
+    "high_risk_openai_route": {
+      "surface": "app_thread",
+      "model": "gpt-5.6-luna",
+      "thinking": "max"
+    },
+    "minimum_thinking_by_model": {
+      "gpt-5.6-luna": "xhigh",
+      "gpt-5.6-sol": "high"
+    },
     "default_disabled_models": [
       "gpt-5.5",
       "gpt-5.4",
@@ -26,10 +43,10 @@
       "provider": "openai",
       "status": "baseline",
       "automatic": true,
-      "thinking": ["high", "xhigh", "max"],
+      "thinking": ["xhigh", "max"],
       "surface_thinking": {
-        "native_subagent": ["high", "xhigh", "max"],
-        "app_thread": ["high", "xhigh", "max"]
+        "native_subagent": [],
+        "app_thread": ["xhigh", "max"]
       },
       "roles": ["general_worker", "fast_baseline", "research", "draft", "routine_code", "verification"],
       "provider_policy": "openai_baseline",
@@ -40,12 +57,12 @@
       "provider": "openai",
       "status": "baseline",
       "automatic": true,
-      "thinking": ["low", "medium", "high", "xhigh", "max"],
+      "thinking": ["high", "xhigh", "max"],
       "surface_thinking": {
-        "native_subagent": ["low", "medium", "high", "xhigh", "max"],
-        "app_thread": ["medium", "high", "xhigh", "max"]
+        "native_subagent": ["high", "xhigh", "max"],
+        "app_thread": ["high", "xhigh", "max"]
       },
-      "roles": ["native_scout", "native_worker", "native_smart_worker", "architecture", "hard_debugging", "critical_review", "arbitration", "fallback_deep"],
+      "roles": ["native_worker", "native_smart_worker", "architecture", "hard_debugging", "critical_review", "arbitration", "fallback_deep"],
       "provider_policy": "openai_baseline",
       "terms_default": "allowed"
     },

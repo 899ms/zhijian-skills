@@ -295,7 +295,12 @@ def main() -> int:
     fast_routing_models = set(
         registry.get("policy", {}).get("fast_routing_models", [])
     )
+    app_thread_only_models = set(
+        registry.get("policy", {}).get("app_thread_only_models", [])
+    )
     registry_thinking = supported_thinking(entry, args.surface)
+    if args.surface == "native_subagent" and args.model in app_thread_only_models:
+        result["errors"].append("model is App Thread only in the current routing policy")
     if args.thinking in forbidden:
         result["errors"].append("thinking is forbidden by registry policy")
     elif args.thinking not in registry_thinking:

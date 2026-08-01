@@ -53,6 +53,19 @@ class SkillContractTests(unittest.TestCase):
         self.assertTrue(models["gpt-5.6-luna"]["automatic"])
         self.assertTrue(models["gpt-5.6-sol"]["automatic"])
         self.assertEqual(registry["policy"]["fast_routing_models"], ["gpt-5.6-luna"])
+        self.assertEqual(registry["policy"]["app_thread_only_models"], ["gpt-5.6-luna"])
+        self.assertEqual(registry["policy"]["default_surface"], "app_thread")
+        self.assertEqual(
+            registry["policy"]["default_openai_route"],
+            {
+                "surface": "app_thread",
+                "model": "gpt-5.6-luna",
+                "thinking": "xhigh",
+            },
+        )
+        self.assertEqual(models["gpt-5.6-luna"]["surface_thinking"]["native_subagent"], [])
+        self.assertEqual(models["gpt-5.6-luna"]["thinking"], ["xhigh", "max"])
+        self.assertEqual(models["gpt-5.6-sol"]["thinking"], ["high", "xhigh", "max"])
         self.assertEqual(models["gpt-5.6-terra"]["status"], "opt_in")
         self.assertFalse(models["gpt-5.6-terra"]["automatic"])
         self.assertEqual(models["antigravity/gemini-3.6-flash"]["status"], "manual_only")
@@ -119,7 +132,9 @@ class SkillContractTests(unittest.TestCase):
             encoding="utf-8"
         )
         for case in (
-            "Native Luna Fast happy path",
+            "Default App Luna happy path",
+            "Native Luna rejected",
+            "Sol Medium rejected",
             "Surface selection",
             "Adjacent non-goal",
             "Regression",
@@ -215,8 +230,25 @@ class SkillContractTests(unittest.TestCase):
             "allowed",
             "--data-allowed",
         )
-        self.assertEqual(native_low.returncode, 0, native_low.stderr or native_low.stdout)
-        self.assertEqual(json.loads(native_low.stdout)["surface"], "native_subagent")
+        self.assertEqual(native_low.returncode, 2, native_low.stderr or native_low.stdout)
+        self.assertIn("not declared for this model", native_low.stdout)
+
+        native_high = self.run_preflight(
+            "--surface",
+            "native_subagent",
+            "--model",
+            "gpt-5.6-sol",
+            "--thinking",
+            "high",
+            "--runtime-confirmed",
+            "--host",
+            "test-host",
+            "--provider-status",
+            "allowed",
+            "--data-allowed",
+        )
+        self.assertEqual(native_high.returncode, 0, native_high.stderr or native_high.stdout)
+        self.assertEqual(json.loads(native_high.stdout)["surface"], "native_subagent")
 
         missing_host = self.run_preflight(
             "--surface",
@@ -224,7 +256,7 @@ class SkillContractTests(unittest.TestCase):
             "--model",
             "gpt-5.6-sol",
             "--thinking",
-            "low",
+            "high",
             "--runtime-confirmed",
             "--provider-status",
             "allowed",
@@ -268,8 +300,8 @@ class SkillContractTests(unittest.TestCase):
         self.assertEqual(terra_explicit.returncode, 0, terra_explicit.stderr or terra_explicit.stdout)
         self.assertTrue(json.loads(terra_explicit.stdout)["route_eligible"])
 
-    def test_preflight_requires_live_priority_evidence_for_luna_fast(self) -> None:
-        missing_tier = self.run_preflight(
+    def test_preflight_rejects_native_luna_and_sol_fast(self) -> None:
+        native_luna = self.run_preflight(
             "--surface",
             "native_subagent",
             "--model",
@@ -285,30 +317,8 @@ class SkillContractTests(unittest.TestCase):
             "allowed",
             "--data-allowed",
         )
-        self.assertEqual(missing_tier.returncode, 2, missing_tier.stdout)
-        self.assertIn("requires --service-tier-confirmed", missing_tier.stdout)
-
-        confirmed = self.run_preflight(
-            "--surface",
-            "native_subagent",
-            "--model",
-            "gpt-5.6-luna",
-            "--thinking",
-            "xhigh",
-            "--speed",
-            "fast",
-            "--runtime-confirmed",
-            "--service-tier-confirmed",
-            "--host",
-            "test-host",
-            "--provider-status",
-            "allowed",
-            "--data-allowed",
-        )
-        self.assertEqual(confirmed.returncode, 0, confirmed.stdout)
-        evidence = json.loads(confirmed.stdout)["runtime_evidence"]
-        self.assertEqual(evidence["speed"], "fast")
-        self.assertEqual(evidence["service_tier"], "priority")
+        self.assertEqual(native_luna.returncode, 2, native_luna.stdout)
+        self.assertIn("App Thread only", native_luna.stdout)
 
         sol_fast = self.run_preflight(
             "--surface",
@@ -580,7 +590,7 @@ class SkillContractTests(unittest.TestCase):
     def live_spawn_evidence(
         self,
         model: str = "gpt-5.6-sol",
-        thinking: str = "low",
+        thinking: str = "high",
         speed: str | None = None,
         **overrides: object,
     ) -> dict[str, object]:
@@ -622,7 +632,7 @@ class SkillContractTests(unittest.TestCase):
     def native_candidate(
         self,
         model: str = "gpt-5.6-sol",
-        thinking: str = "low",
+        thinking: str = "high",
         **overrides: object,
     ) -> dict[str, object]:
         candidate: dict[str, object] = {
@@ -679,7 +689,7 @@ class SkillContractTests(unittest.TestCase):
         self.assertEqual(mismatch.returncode, 2, mismatch.stderr or mismatch.stdout)
         self.assertIn("must match the declared candidate count", mismatch.stdout)
 
-    def test_route_plan_validator_accepts_explicit_sol_medium(self) -> None:
+    def test_route_plan_validator_rejects_explicit_sol_medium(self) -> None:
         plan = {
             "task_class": "EXPLICIT_DURABLE_GENERAL",
             "minimum_thinking": "medium",
@@ -692,8 +702,9 @@ class SkillContractTests(unittest.TestCase):
             "max_worker_threads": 1,
             "max_followups_per_thread": 1,
         }
-        valid = self.run_route_validator(plan)
-        self.assertEqual(valid.returncode, 0, valid.stderr or valid.stdout)
+        invalid = self.run_route_validator(plan)
+        self.assertEqual(invalid.returncode, 2, invalid.stderr or invalid.stdout)
+        self.assertIn("unsupported thinking", invalid.stdout)
 
     def test_route_plan_validator_allows_fast_only_for_luna(self) -> None:
         plan = {
@@ -726,15 +737,15 @@ class SkillContractTests(unittest.TestCase):
         self.assertEqual(sol_fast.returncode, 2, sol_fast.stderr or sol_fast.stdout)
         self.assertIn("Luna-only routing policy", sol_fast.stdout)
 
-    def test_route_plan_validator_binds_native_luna_fast_to_priority_evidence(self) -> None:
+    def test_route_plan_validator_rejects_native_luna_even_with_runtime_evidence(self) -> None:
         plan = {
             "schema_version": "2.1",
-            "task_class": "NATIVE_WORKER",
+            "task_class": "NATIVE_WORKER_EXPLICIT",
             "minimum_thinking": "high",
             "provider_allowlist": ["openai"],
             "provider_status": {"openai": "allowed"},
             "data_allowed_providers": ["openai"],
-            "explicit_user_request": False,
+            "explicit_user_request": True,
             "risk_acknowledged": False,
             "candidates": [
                 {
@@ -750,13 +761,9 @@ class SkillContractTests(unittest.TestCase):
             "max_worker_threads": 1,
             "max_followups_per_thread": 1,
         }
-        valid = self.run_route_validator(plan)
-        self.assertEqual(valid.returncode, 0, valid.stdout)
-
-        plan["candidates"][0]["runtime_evidence"].pop("service_tier")
-        missing_priority = self.run_route_validator(plan)
-        self.assertEqual(missing_priority.returncode, 2, missing_priority.stdout)
-        self.assertIn("runtime evidence does not match", missing_priority.stdout)
+        invalid = self.run_route_validator(plan)
+        self.assertEqual(invalid.returncode, 2, invalid.stdout)
+        self.assertIn("App Thread only", invalid.stdout)
 
     def test_route_plan_validator_rejects_app_fast_without_live_speed_evidence(self) -> None:
         plan = {
@@ -802,10 +809,10 @@ class SkillContractTests(unittest.TestCase):
         self.assertIn("must declare surface", invalid.stdout)
         self.assertIn("must declare speed", invalid.stdout)
 
-    def test_route_plan_validator_accepts_native_sol_low_with_live_evidence(self) -> None:
+    def test_route_plan_validator_accepts_native_sol_high_with_live_evidence(self) -> None:
         plan = {
-            "task_class": "NATIVE_SCOUT",
-            "minimum_thinking": "low",
+            "task_class": "NATIVE_WORKER_EXPLICIT",
+            "minimum_thinking": "high",
             "provider_allowlist": ["openai"],
             "provider_status": {"openai": "allowed"},
             "data_allowed_providers": ["openai"],
@@ -815,6 +822,11 @@ class SkillContractTests(unittest.TestCase):
             "max_worker_threads": 1,
             "max_followups_per_thread": 1,
         }
+        automatic_native = self.run_route_validator(plan)
+        self.assertEqual(automatic_native.returncode, 2, automatic_native.stdout)
+        self.assertIn("automatic routes default to App Thread", automatic_native.stdout)
+
+        plan["explicit_user_request"] = True
         valid = self.run_route_validator(plan)
         self.assertEqual(valid.returncode, 0, valid.stderr or valid.stdout)
 
@@ -829,12 +841,12 @@ class SkillContractTests(unittest.TestCase):
 
     def test_route_plan_validator_accepts_stdin_without_persisting_a_plan(self) -> None:
         plan = {
-            "task_class": "NATIVE_SCOUT",
-            "minimum_thinking": "low",
+            "task_class": "NATIVE_WORKER_EXPLICIT",
+            "minimum_thinking": "high",
             "provider_allowlist": ["openai"],
             "provider_status": {"openai": "allowed"},
             "data_allowed_providers": ["openai"],
-            "explicit_user_request": False,
+            "explicit_user_request": True,
             "risk_acknowledged": False,
             "candidates": [self.native_candidate()],
             "max_worker_threads": 1,
@@ -851,18 +863,23 @@ class SkillContractTests(unittest.TestCase):
     def test_route_plan_validator_supports_predeclared_cross_surface_fallback(self) -> None:
         plan = {
             "task_class": "DEFAULT_GENERAL",
-            "minimum_thinking": "medium",
+            "minimum_thinking": "high",
             "provider_allowlist": ["openai"],
             "provider_status": {"openai": "allowed"},
             "data_allowed_providers": ["openai"],
-            "explicit_user_request": True,
+            "explicit_user_request": False,
             "risk_acknowledged": False,
             "candidates": [
-                self.native_candidate(thinking="medium"),
                 {
                     "surface": "app_thread",
+                    "model": "gpt-5.6-luna",
+                    "thinking": "xhigh",
+                },
+                {
+                    "surface": "native_subagent",
                     "model": "gpt-5.6-sol",
-                    "thinking": "medium",
+                    "thinking": "high",
+                    "runtime_evidence": self.live_spawn_evidence(),
                 },
             ],
             "max_worker_threads": 2,
@@ -1057,7 +1074,7 @@ class SkillContractTests(unittest.TestCase):
             "requested_model": "gpt-5.6-sol",
             "platform_accepted_model": "gpt-5.6-sol",
             "observed_runtime_model": "unknown",
-            "thinking": "low",
+            "thinking": "high",
             "route_plan": {},
             "provider_policy": {},
             "status": "completed",
@@ -1190,13 +1207,12 @@ class SkillContractTests(unittest.TestCase):
 
     def test_ledger_validator_preserves_luna_only_fast_identity(self) -> None:
         route_plan = self.route_plan_21(
-            surface="native_subagent",
+            surface="app_thread",
             model="gpt-5.6-luna",
             thinking="xhigh",
             speed="fast",
         )
-        luna_fast = self.native_ledger_record(
-            worker_attempt=1,
+        luna_fast = self.ledger_record(
             model="gpt-5.6-luna",
             requested_model="gpt-5.6-luna",
             platform_accepted_model="gpt-5.6-luna",
@@ -1214,7 +1230,7 @@ class SkillContractTests(unittest.TestCase):
         sol_fast["requested_model"] = "gpt-5.6-sol"
         sol_fast["platform_accepted_model"] = "gpt-5.6-sol"
         sol_fast["route_plan"] = self.route_plan_21(
-            surface="native_subagent",
+            surface="app_thread",
             model="gpt-5.6-sol",
             thinking="xhigh",
             speed="fast",
