@@ -1,11 +1,11 @@
 ---
 name: codex-model-routing-team
-description: 为复杂、可并行的知识或编程任务路由显式模型、推理强度与速度的原生 Subagent 或 Codex App 独立 Thread，由主 Agent 负责 Provider 数据边界、分工、集成和验收。用于 2 个以上独立工作流、多来源/章节/模块、独立验证，或用户明确要求模型路由、后台 Worker、Agents Team、Grok/Gemini Worker、持久 Thread。简单问答、状态查询、单文件小改、强顺序任务和发布/付款/删除/账户操作不得自动触发。
+description: 为复杂、可并行任务默认创建 Luna XHigh/Max Codex App Thread，并在 live schema 支持时使用原生 fallback，由主 Agent 负责数据边界、分工、集成和验收。用于多个独立工作流、来源/章节/模块、独立验证，或用户明确要求模型路由、后台 Worker、Agents Team、Grok/Gemini Worker。简单问答、状态查询、单文件小改、强顺序任务和不可逆操作不自动触发。
 ---
 
 # Codex 模型路由团队
 
-主 Agent 始终负责规划、文件所有权、集成和最终验收，并保持当前模型。短时、边界清晰、回到父任务集成的工作优先 `native_subagent`；恢复、worktree、独立历史或严格审计使用 `app_thread`。
+主 Agent 保持当前模型并负责规划、文件所有权、集成和验收。默认路由为 `app_thread/gpt-5.6-luna/xhigh`，高难/高风险升 `max`；`native_subagent` 只用于显式请求或预声明 fallback。
 
 ## 不使用
 
@@ -13,8 +13,8 @@ description: 为复杂、可并行的知识或编程任务路由显式模型、�
 
 ## 执行模式
 
-- `native-light`：2–3 个 OpenAI 原生 Worker；RoutePlan/ledger 可从 stdin 校验，不创建协调文件。
-- `governed`：App Thread、跨 Provider、fallback、恢复、worktree、高风险审批或耐久审计；按 [耐久模式](references/durable-mode.md) 保留状态。
+- `governed`（默认）：2–3 个 Luna App Thread，XHigh 起步；短任务从 stdin 校验，需要恢复/worktree/审计时按 [耐久模式](references/durable-mode.md) 留状态。
+- `native-light`（显式/回退）：App 不可用时须预声明；Luna 不可走原生，Sol 最低 High。
 - 上游 Skill 已定义拆分、阶段和产物时，遵守 [适配协议](references/upstream-skill-adapter.md)，不重做 Scale、阶段门或第二套账本。
 
 ## 执行流程
@@ -31,7 +31,8 @@ description: 为复杂、可并行的知识或编程任务路由显式模型、�
 ## 硬门
 
 - registry 决定策略允许范围；live schema 只证明当前 host 接受精确组合。请求、平台接受与 observed 模型/速度必须分开记录，未回显保持 `unknown`。
-- Fast 是 `service_tier=priority`，不是模型 ID；只有 Luna 可用，Sol、Terra 和其他模型一律 Standard。Surface 未显式接受速度参数时不得声称 Fast。
+- 官方原生 V2 live schema 未开放 Luna；Luna 仅走 App Thread，XHigh 起步，高难/高风险 Max。Sol 无论 Surface 均最低 High；Medium/Low 静态拒绝。
+- Fast 是 `service_tier=priority`，不是模型 ID；只有 Luna 可用，Sol、Terra 和其他模型一律 Standard。App Surface 未显式接受速度参数时 Luna 保持 Standard，不得声称 Fast。
 - Terra 仅在用户点名时作为首项；Grok 须通过 runtime/provider 门；Gemini Antigravity 当前 blocked。禁止自动使用旧模型、Ultra 或低于最低 `thinking` 的 fallback。
 - Worker 不得继续派生任务，也不得执行发布、发送、付款、删除、账户或生产变更。主 Agent 不切换自身模型。
 - `pendingWorktreeId`/未知返回值不可管理；零或多匹配进入 `UNKNOWN`，禁止追问、归档、fallback、重复创建或修改 Codex 数据库。上游阶段门始终优先。

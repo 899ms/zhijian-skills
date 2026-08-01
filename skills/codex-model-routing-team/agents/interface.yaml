@@ -1,6 +1,6 @@
 interface:
   display_name: "Codex 模型路由团队"
-  short_description: "为复杂任务路由原生 Subagent 或耐久 App Thread"
+  short_description: "默认用 Luna XHigh/Max App Thread 路由复杂任务"
   default_prompt: "使用 $codex-model-routing-team 判断并行收益，固定 Surface、模型、推理、速度、Provider 门和候选链，由主 Agent 集成验收。"
 compatibility:
   canonical_format: "agent-skills"
@@ -17,4 +17,4 @@ compatibility:
     remote_inline_execution: "forbid"
     remote_metadata_policy: "deny"
   degradation:
-    openai: "Require a live exact route; Fast requires service_tier=priority. Use App threads for durable/worktree tasks, otherwise execute in the lead task."
+    openai: "Default to Luna XHigh/Max App threads. Native V2 is explicit/fallback only; Luna is App-only and Sol requires High or stronger. Fast requires service_tier=priority."

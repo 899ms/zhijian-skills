@@ -3,8 +3,9 @@
 ## Unreleased
 
 - Make `speed` a versioned RoutePlan dimension with backward-compatible legacy Standard behavior.
-- Require live `service_tier=priority` evidence for Native Luna Fast and live `create_thread` speed evidence for App Fast; keep Sol, Terra, and other models on Standard.
-- Add conditional Native Luna High/XHigh/Max Fast profiles, separate requested/accepted/observed speed audit fields, and regression coverage for missing tier evidence and Surface mismatch.
+- Default automatic routing to Luna XHigh App Thread, raise difficult or high-risk tasks to Luna Max, and keep native V2 only for explicit requests or predeclared fallback.
+- Treat Luna as App-only while the official native V2 live schema omits it; require Sol High or stronger on every Surface and reject Sol Medium/Low even when explicitly requested.
+- Require live `create_thread` speed evidence for App Luna Fast; keep Sol, Terra, and other models on Standard while preserving separate requested/accepted/observed speed audit fields.
 - Slim initial Skill/interface context from 1708 to 890 estimated tokens by keeping only triggers, branch selection, the shared execution skeleton, hard gates, and the output contract; defer detailed policy and lifecycle rules to existing references.
 
 ## 2.1.0 — 2026-07-27

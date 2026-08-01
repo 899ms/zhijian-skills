@@ -5,17 +5,17 @@
 ## 确定性选择顺序
 
 1. 简单问答、状态查询、单文件小改、强顺序任务和不可逆操作留在主 Agent。
-2. 边界清晰、由父任务汇总、无需恢复或独立工作区的并行任务优先 `native_subagent`。
-3. 用户明确要求后台/独立 Thread，或任务需要恢复、单独打开、project/worktree 隔离、独立历史或严格审计时使用 `app_thread`。预计超过 30 分钟或正式交付物达到 4 个只作为耐久信号，需同时存在持久化、恢复或独立审计需求才升级。
+2. 自动路由默认 `app_thread`，优先使用 `gpt-5.6-luna/xhigh`；高难或高风险任务使用 Luna Max。短时和文件数量不改变这个默认值。
+3. 只有用户明确要求原生 Subagent，或 App Thread 路径不可用且 RoutePlan 已预声明 fallback 时，才使用 `native_subagent`。当前官方原生 V2 live schema 不开放 Luna；原生 OpenAI 自动候选只能使用 live schema 接受的 Sol High/XHigh/Max，Terra 仍须用户点名。
 4. Surface 缺少精确 live 能力、Provider 门不通过或所有权无法隔离时，进入预声明的下一候选；没有下一候选时由主 Agent 接管。
 
 旧 RoutePlan 候选没有 `surface/speed` 时按 `app_thread/standard` 解释。`schema_version: "2.1"` 的候选规范形状为：
 
 ```json
-{"surface": "native_subagent", "model": "gpt-5.6-sol", "thinking": "medium", "speed": "standard", "runtime_evidence": {"kind": "live_spawn_schema", "surface": "native_subagent", "model": "gpt-5.6-sol", "thinking": "medium", "speed": "standard", "service_tier": null, "accepted": true, "host": "current-host", "checked_at": "<ISO-8601>"}}
+{"surface": "app_thread", "model": "gpt-5.6-luna", "thinking": "xhigh", "speed": "standard"}
 ```
 
-`thinking` 是策略字段：原生工具映射为 `reasoning_effort`，App Thread 映射为 `thinking`。`speed=fast` 映射为 `service_tier=priority`，只有 Luna 可以使用，且必须有 live Surface 证据。跨 Surface fallback 必须在 `candidates` 中预声明；`surface + model + thinking + speed` 才是唯一组合。
+`thinking` 是策略字段：原生工具映射为 `reasoning_effort`，App Thread 映射为 `thinking`。Luna 最低 XHigh，Sol 最低 High。`speed=fast` 映射为 `service_tier=priority`，只有 App Luna 可以使用，且必须有 live Surface 证据。跨 Surface fallback 必须在 `candidates` 中预声明；`surface + model + thinking + speed` 才是唯一组合。
 
 ## 额度
 

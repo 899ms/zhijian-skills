@@ -18,7 +18,7 @@ fallback 的目标是让任务可恢复，同时保持模型、数据边界和�
   "explicit_user_request": false,
   "risk_acknowledged": false,
   "candidates": [
-    {"surface": "native_subagent", "model": "gpt-5.6-sol", "thinking": "high", "speed": "standard", "runtime_evidence": {"kind": "live_spawn_schema", "surface": "native_subagent", "model": "gpt-5.6-sol", "thinking": "high", "speed": "standard", "service_tier": null, "accepted": true, "host": "current-host", "checked_at": "<ISO-8601>"}},
+    {"surface": "app_thread", "model": "gpt-5.6-luna", "thinking": "xhigh", "speed": "standard"},
     {"surface": "app_thread", "model": "gpt-5.6-sol", "thinking": "high", "speed": "standard"}
   ],
   "max_worker_threads": 2,
@@ -48,7 +48,7 @@ App Thread 健康判断分为五层：
 
 成功缓存只参与候选排序，不保证下一次调用成功。建议在当前 run ledger 中对精确 `account-scope/host/surface/model/thinking/speed/tool-signature/App-version` 保存 10 分钟正向证据；不要为此创建新的全局状态事实源。
 
-原生 Subagent 使用更短的控制面：`PLANNED → SPAWN_PENDING → RUNNING → COMPLETED/FAILED → CLOSED`。live spawn schema 必须接受精确 `model/reasoning_effort/speed`；Fast 还必须接受 `service_tier=priority`。V1 使用 `fork_context=false`，V2 使用 `fork_turns="none"`。返回 agent id 只证明 Worker 已创建；平台未回显实际模型或速度时，对应 observed 字段仍写 `unknown`。详见 [原生 Subagent 生命周期](native-subagent-lifecycle.md)。
+原生 Subagent 使用更短的控制面：`PLANNED → SPAWN_PENDING → RUNNING → COMPLETED/FAILED → CLOSED`。它只用于显式请求或预声明 fallback，live spawn schema 必须接受精确 `model/reasoning_effort/speed`。当前 Luna 不在官方原生 V2 live schema 中；Sol 必须 High 以上并保持 Standard。V1 使用 `fork_context=false`，V2 使用 `fork_turns="none"`。返回 agent id 只证明 Worker 已创建；平台未回显实际模型或速度时，对应 observed 字段仍写 `unknown`。详见 [原生 Subagent 生命周期](native-subagent-lifecycle.md)。
 
 ## 错误分类
 

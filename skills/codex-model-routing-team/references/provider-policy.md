@@ -24,7 +24,7 @@
 
 ## OpenAI 基线
 
-`gpt-5.6-luna` 与 `gpt-5.6-sol` 使用当前 Codex App 已配置的 OpenAI 路径。它们是本 Skill 的默认基线，但仍需通过 live runtime 的模型/`thinking`/`speed` 接受性检查。只有 Luna 可请求 Fast；Sol 与其他模型保持 Standard。当前项目若有更窄的数据规则，以项目规则为准。
+`gpt-5.6-luna` 与 `gpt-5.6-sol` 使用当前 Codex App 已配置的 OpenAI 路径。自动路由默认创建 Luna XHigh App Thread，高难/高风险升 Luna Max；当前官方原生 V2 live schema 不开放 Luna。Sol 仅作为 High 以上的显式原生路径、fallback 或专项审查。只有 App Luna 可请求 Fast；Sol 与其他模型保持 Standard。当前项目若有更窄的数据规则，以项目规则为准。
 
 ## xAI / Grok 4.5
 

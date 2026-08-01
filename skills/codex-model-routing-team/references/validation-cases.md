@@ -7,8 +7,8 @@
 - “并行检查三个模块的回归，再由主 Agent 修复和验收。”
 - “用 Deep Research 调研四个子主题，研究文件写入 vault，最后串行做引用核查和对抗审查。”
 - “把复杂编码 Worker 优先交给 Grok 4.5，失败时由 Sol 接管。”
-- “让两个 Sol 原生 Subagent 分别检查实现和测试，结果回到父任务集成。”
-- “让 Luna XHigh Fast 原生 Worker 完成三个边界清晰的实现，Fast 不可用时回退到 Sol Standard。”
+- “明确让两个 Sol High 原生 Subagent 分别检查实现和测试，结果回到父任务集成。”
+- “默认用 Luna XHigh App Thread 完成三个边界清晰的实现，高风险任务升 Luna Max。”
 - “把耐久调研放到 App Thread；原生精确组合不可用时按预声明链切换 Surface。”
 - “明确使用 Gemini 3.6 Flash 做多模态扫描，并检查当前接入路径能否合规派遣。”
 
@@ -30,21 +30,27 @@ Prompt：使用 Grok 4.5 实现复杂模块，再让另一个模型独立审查�
 
 ### Native exact-model happy path
 
-Prompt：并行派两个 Sol Worker，一个 low 做 scout，一个 medium 做实现，完成后回到主任务集成。
+Prompt：明确要求并行派两个原生 Sol Worker，一个 High 做扫描，一个 XHigh 做实现，完成后回到主任务集成。
 
-应出现：`native-light` 与两个 `native_subagent` 候选；live spawn schema 分别确认 `gpt-5.6-sol / low` 与 `gpt-5.6-sol / medium`；RoutePlan/ledger 可从 stdin 校验且不创建 `agent_team/`；V1 传 `fork_context=false` 或 V2 传 `fork_turns="none"`；requested/platform/observed identity 分开记录；采纳后关闭 agent。
+应出现：`native-light` 与两个 `native_subagent` 候选；live spawn schema 分别确认 `gpt-5.6-sol / high` 与 `gpt-5.6-sol / xhigh`；RoutePlan/ledger 可从 stdin 校验且不创建 `agent_team/`；V1 传 `fork_context=false` 或 V2 传 `fork_turns="none"`；requested/platform/observed identity 分开记录；采纳后关闭 agent。
 
-### Native Luna Fast happy path
+### Default App Luna happy path
 
-Prompt：用 Luna XHigh Fast 执行边界清晰的原生实现，Fast 不可用时用 Sol High Standard。
+Prompt：并行完成三个普通复杂子任务，没有点名 Surface 或模型。
 
-应出现：`schema_version: "2.1"`；首项为 `native_subagent/gpt-5.6-luna/xhigh/fast`，`runtime_evidence` 同时绑定 `speed=fast` 与 `service_tier=priority`；fallback 为 Sol High Standard；模型和速度分别记录 requested/platform/observed。
+应出现：默认首项为 `app_thread/gpt-5.6-luna/xhigh`，高风险子任务升 `max`；若 live create schema 接受 priority 可写 Fast，否则显式写 Standard；fallback 为 Sol High App Standard。
 
-### Native Luna Fast missing tier
+### Native Luna rejected
 
-Prompt：Luna XHigh 的 live spawn schema 接受模型与 reasoning，但没有 `service_tier` 字段，请按 Fast 派遣。
+Prompt：要求用官方原生 MultiAgent V2 创建 Luna XHigh Worker。
 
-应出现：拒绝该 Fast 精确组合；不得把 catalog 能力或默认速度当作 live 证据；只进入预声明 Sol Standard/App Standard fallback，否则主 Agent 接管。
+应出现：registry 静态拒绝 `native_subagent/gpt-5.6-luna`；不得用代理 catalog 或请求字段冒充官方 live schema 支持；改用 Luna App Thread，或沿预声明链进入 Sol High Standard。
+
+### Sol Medium rejected
+
+Prompt：创建 Sol Medium Worker，用户认为 Medium 足够。
+
+应出现：无论 App 还是原生都静态拒绝；Sol 的质量下限是 High，不以显式请求绕过。
 
 ### App Luna Fast without speed schema
 
@@ -60,9 +66,9 @@ Prompt：使用 Sol XHigh 并打开 Fast。
 
 ### Four short outputs stay lightweight
 
-Prompt：四个互斥的小文件预计十分钟完成，交给三个 OpenAI 原生 Worker，结果回到父任务集成，不需要恢复或独立历史。
+Prompt：四个互斥的小文件预计十分钟完成，明确交给三个 Sol High 原生 Worker，结果回到父任务集成，不需要恢复或独立历史。
 
-应出现：选择 `native-light`；交付物数量本身不触发 App Thread；不创建持久协调文件；Provider、精确模型、6/8、单写者、fresh-context、身份和关闭门保持不变。
+应出现：因用户明确点名原生而选择 `native-light`；不创建持久协调文件；Provider、Sol High 下限、6/8、单写者、fresh-context、身份和关闭门保持不变。
 
 ### Native model rejection
 
@@ -74,7 +80,7 @@ Prompt：用户明确要求 Terra low 原生 Worker，但当前 V2 spawn 返回 
 
 Prompt：一个 5 分钟只读代码检查和一个需要独立 worktree、跨会话恢复的实现任务并行执行。
 
-应出现：只读检查选择 `native_subagent`；实现任务选择 `app_thread`；两者共享 6 并发、8 attempts 总上限和单写者规则。
+应出现：两个任务默认都选择 `app_thread`，普通只读检查用 Luna XHigh，独立 worktree 实现按风险用 Luna XHigh/Max；只有显式请求或 App fallback 才使用原生。
 
 ### Ambiguous
 
@@ -121,7 +127,7 @@ Prompt：一个 `task_intent=inspect` Worker 想顺手修改源文件，mutation
 ## 运行断言
 
 - 派遣前显示 Worker 数量、Surface、精确模型、thinking、speed、职责、有序 fallback 和 reserved slots。
-- `native-light` 只加载当前路径需要的策略，RoutePlan 与 ledger 可从 stdin 校验且不创建 `agent_team/`；`governed` 保留完整持久状态。
+- `governed` App Thread 是自动默认；`native-light` 仅用于显式原生或预声明 fallback，RoutePlan 与 ledger 可从 stdin 校验且不创建 `agent_team/`。
 - registry 决定策略允许范围；live runtime 只验证当前 host 接受性。
 - Gemini Antigravity 未被用户明确点名时不进入自动候选或 fallback；当前第三方登录 terms blocked 时，即使明确点名也不创建。
 - Grok 只在 runtime/provider 门通过后自动使用。
@@ -145,6 +151,8 @@ Prompt：一个 `task_intent=inspect` Worker 想顺手修改源文件，mutation
 ## 失败回退
 
 - Grok High unsupported：精确组合立即熔断，进入预声明 Sol High；不再试 Grok Medium。
+- Native Luna：静态排除，改走 Luna XHigh/Max App Thread；不得把 CLIProxyAPI catalog 能力外推为官方原生 V2 支持。
+- Sol Medium/Low：静态排除，不因用户显式点名降级；改用 Sol High 或 Luna XHigh/Max。
 - Terra 未明确点名：静态门排除；Terra 出现在 fallback 位置时 RoutePlan 拒绝。
 - Terra 原生返回 unknown model：只熔断该 Surface 的精确组合；按预声明链进入 Sol 或 App Thread，禁止静默继承。
 - Gemini 未明确点名：静态门排除，不运行 canary，不创建 Thread。

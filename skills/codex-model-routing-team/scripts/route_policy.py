@@ -13,6 +13,7 @@ def supported_thinking(entry: dict[str, Any], surface: str) -> set[str]:
         surface_levels = surface_map.get(surface)
         if isinstance(surface_levels, list):
             return {item for item in surface_levels if isinstance(item, str)}
+        return set()
 
     fallback = entry.get("thinking")
     if not isinstance(fallback, list):

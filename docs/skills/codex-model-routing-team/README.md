@@ -4,7 +4,7 @@
   <img src="./assets/readme/hero.svg" width="100%" alt="A lead Codex task routes bounded background work to explicit models">
 </p>
 
-<p align="center"><strong>Route bounded work to exact-model native subagents or durable App threads while one lead owns integration and verification.</strong></p>
+<p align="center"><strong>Default complex work to Luna XHigh/Max App threads while one lead owns integration and verification.</strong></p>
 
 <p align="center"><a href="./README.zh-CN.md">简体中文</a> · <a href="https://github.com/zjp1997720/zhijian-skills/tree/main/skills/codex-model-routing-team">Canonical source</a></p>
 
@@ -54,11 +54,11 @@ To let Codex activate the Skill automatically for suitable complex work, add the
 ```markdown
 ## Codex background model-routing authorization
 
-- The user authorizes Codex to use `$codex-model-routing-team` automatically for complex, parallelizable tasks and select either an exact-model native subagent or an independent Codex App thread. Before dispatch, briefly state the Worker count, surface, model, reasoning level, speed, and responsibility. No additional confirmation is required.
+- The user authorizes Codex to use `$codex-model-routing-team` automatically for complex, parallelizable tasks. Default to independent Luna XHigh App threads and raise high-risk or difficult work to Luna Max. Before dispatch, briefly state the Worker count, surface, model, reasoning level, speed, and responsibility. No additional confirmation is required.
 - The lead agent keeps its current model and owns planning, file ownership, integration, verification, and final delivery.
-- Prefer native subagents for short, bounded work integrated into the parent task. Use App threads for durable, recoverable, worktree, or audit-heavy work.
+- Use App threads by default. Native subagents are explicit-request or predeclared-fallback only because the current official V2 live schema does not expose Luna.
 - Run at most 6 Workers concurrently and make at most 8 Worker attempts for one root task; failures, non-materialized calls, and fallbacks count. Workers must not create more Workers or subagents.
-- Workers must not use Ultra. Terra is opt-in and excluded from automatic routing. Every native route must be confirmed by the live spawn schema for its exact model, reasoning effort, and speed. Only Luna may request Fast; Sol and Terra remain Standard. Unavailable combinations follow only a predeclared fallback or return to the lead agent.
+- Workers must not use Ultra. Terra is opt-in and excluded from automatic routing. Luna is App-only and starts at XHigh; Sol starts at High on every surface. Only App Luna may request Fast, with live `service_tier=priority` evidence; Sol and Terra remain Standard. Unavailable combinations follow only a predeclared fallback or return to the lead agent.
 - Do not auto-dispatch simple questions, status checks, small single-file edits, strongly sequential work, publishing, sending, payment, deletion, account, or production operations.
 ```
 
@@ -66,16 +66,16 @@ This is user-configured Codex instruction, not a hidden OpenAI system prompt. Ex
 
 ## Why this exists
 
-Current Codex native subagent spawn schemas can expose per-worker `model`, reasoning controls, and on some V2 hosts native Fast. Support remains runtime- and surface-specific, and requested or accepted model/speed is not the same as an observed runtime identity.
+Current official Codex native V2 spawn schemas can expose per-worker model and reasoning controls, but the live schema does not expose Luna. Support remains runtime- and surface-specific, and a proxy catalog cannot be treated as evidence of official native support.
 
-This Skill turns that capability into a controlled router. It uses native subagents for bounded parent-integrated work and Codex App threads for durable or worktree tasks, with the same Provider gates, fallback plan, attempt budget, and lead-agent verification.
+This Skill therefore defaults to App threads so Luna remains available. Ordinary complex work starts at Luna XHigh and difficult or high-risk work rises to Luna Max. Native Sol remains available only for explicit requests or predeclared fallback, under the same Provider gates, attempt budget, and lead-agent verification.
 
-Ordinary groups of two or three OpenAI native Workers use `native-light`: load only the policies needed by that route, validate RoutePlans and ledgers through stdin, and avoid creating `agent_team/`. Recovery, worktrees, independent history, high-risk approval, cross-Provider routes, and fallbacks use the full `governed` path. Both profiles keep the same safety gates.
+Ordinary automatic groups use the governed App-thread path. `native-light` is retained only for explicit native requests or predeclared fallback; it validates RoutePlans and ledgers through stdin and avoids creating `agent_team/`. Both profiles keep the same safety gates.
 
 ## What it does
 
 - Routes only complex, genuinely parallel work such as multi-source research, multi-section content, large Skills or decks, and independent engineering workstreams.
-- Uses native Sol low/medium/high as Standard scout and fallback profiles. When the live schema accepts `service_tier=priority`, Luna High/XHigh/Max Fast becomes the default native execution path. Luna and Sol App threads remain durable Standard baselines; Grok 4.5 stays conditional on runtime/provider preflight.
+- Defaults to Luna XHigh App threads and raises difficult or high-risk work to Luna Max. Native Luna is rejected; Sol is High/XHigh/Max only and remains Standard. App Luna may use Fast only when the live create schema accepts `service_tier=priority`; Grok 4.5 stays conditional on runtime/provider preflight.
 - Keeps `gpt-5.6-terra` opt-in and first-candidate-only. An unknown-model response fails that exact native route and never silently inherits the parent model.
 - Retains explicit Gemini 3.6 Flash route templates while blocking the current third-party Antigravity login path; an official API/Vertex path needs a separate registry entry.
 - Limits fan-out to three new Workers per wave, six concurrent Workers, and eight Worker attempts per root request across both surfaces.
@@ -92,7 +92,7 @@ Ordinary groups of two or three OpenAI native Workers use `native-light`: load o
 
 1. The lead freezes a task profile, Provider allowlist, execution surface, and ordered candidate chain.
 2. It validates the registry and Provider policy, then confirms every native `model/reasoning_effort/speed` against the live spawn schema; Fast must accept `service_tier=priority`.
-3. Bounded OpenAI native work uses `native-light`; durable, cross-Provider, fallback, or high-risk work uses `governed`.
+3. Automatic work uses governed Luna App threads. `native-light` is used only for an explicit native request or a predeclared fallback, with Sol High or stronger.
 4. Native V1 uses `fork_context=false`; V2 uses `fork_turns="none"`. App threads keep unique task ids and recover queued worktrees through official reads.
 5. Requested, platform-accepted, and observed runtime identities remain separate for both model and speed. Missing runtime identity stays `unknown`.
 6. Failures advance only through the predeclared chain, including cross-surface fallbacks. A single-candidate failure returns to the lead agent.
@@ -129,7 +129,7 @@ Use $codex-model-routing-team as the routing Orchestrator for $deep-research. Pr
 
 - Codex with a native subagent spawn surface that can confirm exact model/reasoning/speed combinations, Codex App thread tools, or both. If one declared surface is unavailable, only a predeclared fallback may use the other.
 - Access to the models, reasoning levels, and speeds selected by the lead agent. If App `create_thread` has no speed parameter, that route remains Standard.
-- `gpt-5.6-sol / medium` is limited to explicit or evidence-backed RoutePlans; default profiles retain their high-or-stronger minimum.
+- Luna routes require XHigh or Max and use App threads. Sol routes require High, XHigh, or Max on every surface; Medium and Low are rejected even when explicitly requested.
 - Provider terms, credential paths, and data boundaries must allow each cross-provider route. A working consumer subscription does not by itself authorize a third-party proxy.
 - Worker creation must be verifiable. Native model acceptance and observed identity are recorded separately; App Thread materialization remains mandatory.
 - Terra remains opt-in because live availability can differ from policy declaration. Ultra remains forbidden.
@@ -155,7 +155,7 @@ The agent workflow lives in [SKILL.md](../../../skills/codex-model-routing-team/
 
 ## Validation
 
-The workflow covers Native Luna Fast priority evidence, Sol/Terra Standard boundaries, rejection of App Fast without a live speed schema, opt-in Terra fallback, conditional Grok 4.5, and provider blocking for explicit Gemini requests. Validation includes surface-aware preflight, RoutePlan and speed-audit checks, native close gates, queued-worktree recovery, mixed ledgers, and isolated `npx skills` installation.
+The workflow covers App-first Luna XHigh/Max routing, static rejection of Native Luna and Sol Medium/Low, Sol/Terra Standard boundaries, rejection of App Fast without a live speed schema, opt-in Terra fallback, conditional Grok 4.5, and provider blocking for explicit Gemini requests. Validation includes surface-aware preflight, RoutePlan and speed-audit checks, native close gates, queued-worktree recovery, mixed ledgers, and isolated `npx skills` installation.
 
 ## License
 
