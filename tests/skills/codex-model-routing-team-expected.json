@@ -44,6 +44,10 @@
     "platform_accepted_speed",
     "observed_runtime_speed"
   ],
+  "team_plan_audit_fields": [
+    "unit_id",
+    "team_plan_revision"
+  ],
   "deep_research_budget": {
     "max_default_researchers": 4,
     "verifiers": 1,

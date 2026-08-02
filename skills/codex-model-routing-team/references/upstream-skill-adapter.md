@@ -14,6 +14,7 @@
 
 本 Skill 拥有：
 
+- 把上游单元编译成轻量 TeamPlan 的 Worker、依赖、所有权、预算与集成顺序；不重写业务语义
 - Worker Surface、`model`、`thinking` 与 `speed`
 - RoutePlan、Provider allowlist、模型预检与 deterministic fallback
 - 原生 Subagent 的 fresh-context spawn、等待、follow-up 与关闭
@@ -26,14 +27,15 @@
 ## 调用流程
 
 1. 读取上游计划、任务账本、阶段门和输出路径。
-2. 接受上游已经完成的 Scale，不重新拆分任务。
-3. 计算当前阶段 Worker、后续阶段和重试的 reserved slots。
-4. 输出派遣通知，列明当前 Worker 的 Surface、模型、thinking、speed 与保留额度。
-5. 把上游任务转换成 `references/task-packet.md`，保留原始验收标准。
-6. 自动路由阶段默认使用 Luna XHigh/Max App Thread；只有用户明确要求原生，或 App 路径不可用且已预声明 fallback 时才使用原生 Subagent。
-7. 原生候选按 `references/native-subagent-lifecycle.md` 执行；App Thread 有工作区输出时绑定匹配 project local，并按 `references/thread-lifecycle.md` 与 `references/thread-supervision-protocol.md` 执行。
-8. 主 Agent 验证输出文件并更新上游账本。
-9. 只有上游阶段完成且结果采纳后，才关闭原生 Worker 或归档满足收尾门的 App Thread。
+2. 接受上游已经完成的 Scale 和业务单元，不重新拆分任务；按 [TeamPlan 协议](team-plan.md) 编译来源 ID、依赖、所有权、交付物和验收。
+3. 两个及以上 Worker 时从 stdin 运行 `scripts/validate_team_plan.py`；失败则修正一次、串行化或由主 Agent 接管，禁止调用第二套重型计划。
+4. 计算当前阶段 Worker、后续阶段和重试的 reserved slots。
+5. 输出派遣通知，列明当前 Worker 的 Surface、模型、thinking、speed 与保留额度。
+6. 把验证后的 unit 转换成 `references/task-packet.md`，保留原始验收标准与 `unit_id/team_plan_revision`。
+7. 自动路由阶段默认使用 Luna XHigh/Max App Thread；只有用户明确要求原生，或 App 路径不可用且已预声明 fallback 时才使用原生 Subagent。
+8. 原生候选按 `references/native-subagent-lifecycle.md` 执行；App Thread 有工作区输出时绑定匹配 project local，并按 `references/thread-lifecycle.md` 与 `references/thread-supervision-protocol.md` 执行。
+9. 主 Agent 验证输出文件并更新上游账本。
+10. 只有上游阶段完成且结果采纳后，才关闭原生 Worker 或归档满足收尾门的 App Thread。
 
 上游 run summary 的 Worker 记录按 Surface 分别遵守 [原生审计 schema](native-audit-schema.json) 或 [Thread 审计 schema](audit-schema.json)。每次创建使用唯一 task id 并递增 worker/subtask attempt；每次调用 `create_thread` 前另外写兼容字段 creation attempt，返回正式 id 或 pending id 后写入对应字段。`model` 继续作为 `requested_model` 的兼容别名。平台视图不保证返回模型字段，禁止依赖事后反查恢复路由信息。
 
@@ -59,6 +61,8 @@ researcher_count + 1 verifier + 1 reviewer + retry_reserve <= 8
   "worker_attempt": 1,
   "subtask_attempt": 1,
   "task_id": "deepresearch-topic-t1-a1",
+  "unit_id": "U1",
+  "team_plan_revision": 1,
   "surface": "app_thread",
   "creation_attempt": 1,
   "thread_id": null,

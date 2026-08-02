@@ -43,7 +43,7 @@ npx skills add zjp1997720/zhijian-skills \
 | --- | --- | --- | --- |
 | Codex control | [`codex-doctor`](docs/skills/codex-doctor/README.md) | Diagnose context, configuration, and workspace drift without changing files | [Docs](docs/skills/codex-doctor/README.md) |
 | Codex control | [`codex-handoff`](docs/skills/codex-handoff/README.md) | Continue an oversized or slow Codex task in a fresh task with compact context | [Docs](docs/skills/codex-handoff/README.md) |
-| Codex control | [`codex-model-routing-team`](docs/skills/codex-model-routing-team/README.md) | Route bounded background tasks to explicit models and reasoning levels | [Docs](docs/skills/codex-model-routing-team/README.md) |
+| Codex control | [`codex-model-routing-team`](docs/skills/codex-model-routing-team/README.md) | Compile parallel work into TeamPlans and route Workers to explicit models | [Docs](docs/skills/codex-model-routing-team/README.md) |
 | Codex control | [`codex-skill-admin`](docs/skills/codex-skill-admin/README.md) | Audit, disable, restore, and verify local Codex Skills | [Docs](docs/skills/codex-skill-admin/README.md) |
 | Codex experience | [`codex-theme-studio`](docs/skills/codex-theme-studio/README.md) | Design, apply, verify, and restore reversible Codex Desktop themes | [Docs](docs/skills/codex-theme-studio/README.md) |
 | Knowledge systems | [`enterprise-clone-builder`](docs/skills/enterprise-clone-builder/README.md) | Build a structured enterprise digital-twin repository from evidence | [Docs](docs/skills/enterprise-clone-builder/README.md) |
@@ -63,7 +63,7 @@ npx skills add zjp1997720/zhijian-skills \
 - **Complete installation units.** Supporting scripts, references, themes, and assets travel with each Skill.
 - **Independent versions, one repository.** Every Skill owns its version, Changelog, canonical Tag, and tests while sharing this publishing source.
 
-`codex-model-routing-team` can be invoked explicitly. Its documentation also includes an optional `AGENTS.md` authorization block for automatic activation on complex parallel work.
+`codex-model-routing-team` can be invoked explicitly. Its documentation also includes an optional `AGENTS.md` authorization block for automatic activation when parallel execution has a clear net benefit.
 
 ## Repository model
 

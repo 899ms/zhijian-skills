@@ -8,7 +8,7 @@
 
 <p align="center"><a href="./README.md">English</a> · <a href="https://github.com/zjp1997720/zhijian-skills/tree/main/skills/codex-model-routing-team">统一源码</a></p>
 
-适合复杂并行任务：主 Agent 负责规划、文件所有权和集成，Worker 按明确 Surface、模型、推理强度与速度执行。
+适合存在明确净并行收益的任务：主 Agent 先把工作编译成轻量 TeamPlan，再让 Worker 按独立交付物、明确所有权和精确模型路由执行，最后统一集成与验收。
 
 ## 安装
 
@@ -39,7 +39,7 @@ npx skills ls -g -a codex
 find ~/.agents/skills/codex-model-routing-team -maxdepth 2 -type f | sort
 ```
 
-文件列表至少应包含 `SKILL.md`、`references/model-registry.json`、`references/audit-schema.json`、`references/native-audit-schema.json`、`references/surface-selection-policy.md`、`references/native-subagent-lifecycle.md`、`references/routing-policy.md`、`references/provider-policy.md`、`references/recovery-policy.md`、`references/task-packet.md`、`references/thread-lifecycle.md`、`references/thread-supervision-protocol.md`、`scripts/route_policy.py`、`scripts/model_preflight.py`、`scripts/validate_route_plan.py` 和 `scripts/validate_team_ledger.py`。如果只有 `SKILL.md`，说明装到的是旧版残缺包，删除后重新安装当前版本。
+文件列表至少应包含 `SKILL.md`、`references/team-plan.md`、`references/model-registry.json`、`references/audit-schema.json`、`references/native-audit-schema.json`、`references/surface-selection-policy.md`、`references/native-subagent-lifecycle.md`、`references/routing-policy.md`、`references/provider-policy.md`、`references/recovery-policy.md`、`references/task-packet.md`、`references/thread-lifecycle.md`、`references/thread-supervision-protocol.md`、`scripts/route_policy.py`、`scripts/model_preflight.py`、`scripts/validate_team_plan.py`、`scripts/validate_route_plan.py` 和 `scripts/validate_team_ledger.py`。如果只有 `SKILL.md`，说明装到的是旧版残缺包，删除后重新安装当前版本。
 
 ## 启用方式
 
@@ -54,7 +54,8 @@ find ~/.agents/skills/codex-model-routing-team -maxdepth 2 -type f | sort
 ```markdown
 ## Codex 后台模型路由授权
 
-- 用户长期授权 Codex 在复杂、可并行任务中自动使用 `$codex-model-routing-team`；默认创建 Luna XHigh App 独立 Thread，高难或高风险任务升 Luna Max；派遣前用一条简短通知说明数量、Surface、模型、强度、速度和职责，无需再次确认。
+- 用户长期授权：当任务可安全拆成两个以上拥有独立交付物的 Worker 单元，且预计在不降低质量下限的前提下，时间或模型成本净收益高于创建、协调和集成成本时，自动使用 `$codex-model-routing-team`；派遣前简报数量、Surface、精确模型、强度、速度和职责，无需再次确认。
+- 准备创建两个以上 Worker 时，主 Agent 必须先生成轻量 TeamPlan；已有 CE Plan、Codex Plan 或上游 Skill 计划时只编译、不重写。TeamPlan 默认不创建独立 Planner、不进入重型规划流程、不写持久文件。
 - 主 Agent 保持当前模型，负责规划、文件所有权、集成、验证和最终交付。
 - 默认使用 App Thread。当前官方 V2 live schema 不开放 Luna，原生 Subagent 只用于用户明确点名或预声明 fallback。
 - 跨 Surface 同时运行最多 6 个 Worker；单个根任务累计最多 8 次 Worker attempt，失败、未实体化和 fallback 都计数。Worker 不得继续创建任何后台任务或子 Agent。
@@ -68,13 +69,14 @@ find ~/.agents/skills/codex-model-routing-team -maxdepth 2 -type f | sort
 
 当前 Codex 官方原生 V2 的 spawn schema 可以暴露每个 Worker 的模型和推理强度，但 live schema 不开放 Luna。可用性仍取决于具体 runtime 和 Surface；代理 catalog 也不能作为官方原生能力证据。
 
-因此这个 Skill 默认使用 App Thread，确保能调用 Luna：普通复杂任务从 XHigh 起步，高难或高风险任务升 Max。原生 Sol 仅用于显式请求或预声明 fallback；两条路径共享 Provider 门、fallback 计划、次数预算和主 Agent 验收。
+因此这个 Skill 默认使用 App Thread，确保能调用 Luna：普通任务从 XHigh 起步，高难或高风险任务升 Max。派遣前，轻量 TeamPlan 先固定单元、依赖、所有权、交付物、验收和集成顺序；原生 Sol 仅用于显式请求或预声明 fallback。TeamPlan 管编排，RoutePlan 管模型路由，两条 Surface 共享 Provider 门、fallback 计划、次数预算和主 Agent 验收。
 
 普通自动路由默认走完整 `governed` App Thread 路径。`native-light` 只保留给显式原生请求或预声明 fallback：RoutePlan 和 ledger 可通过 stdin 校验并留在上下文，不创建 `agent_team/`。两档共享同一套安全门。
 
 ## 主要能力
 
-- 只路由真正复杂且可并行的任务，例如多来源调研、多章节内容、复杂 Skill 或 PPT、跨模块开发和独立验证。
+- 用净收益门判断是否派遣：至少两个单元拥有独立交付物与完成条件，且节省高于协调成本；否则由主 Agent 直接完成。
+- 两个以上 Worker 必须先编译并校验轻量 TeamPlan，明确依赖、写入所有权、交付物、验收和集成顺序；已有计划只编译、不重写。
 - 默认使用 Luna XHigh App Thread，高难或高风险任务升 Luna Max。Native Luna 静态拒绝；Sol 仅允许 High/XHigh/Max 且始终 Standard。App Luna 只有在 live create schema 接受 `service_tier=priority` 时才使用 Fast；Grok 4.5 在 runtime/provider 预检后承担复杂执行和异构审查。
 - `gpt-5.6-terra` 为 opt-in，只能作为用户明确点名的首项候选；unknown model 只判定该精确原生组合失败，禁止静默继承父模型。
 - Gemini 3.6 Flash 保留显式路由模板，但当前 Antigravity 第三方登录路径受官方条款阻断；正式 API/Vertex 路径需要新的 registry entry。
@@ -90,24 +92,25 @@ find ~/.agents/skills/codex-model-routing-team -maxdepth 2 -type f | sort
 
 ## 工作方式
 
-1. 主 Agent 固定任务画像、Provider allowlist、执行 Surface 和有序候选链。
-2. 校验 registry 与 Provider 门；每个原生 `model/reasoning_effort/speed` 精确组合还要通过 live spawn schema，Fast 必须接受 `service_tier=priority`。
-3. 自动路由使用 governed Luna App Thread；只有显式原生请求或预声明 fallback 才使用 `native-light`，且 Sol 最低 High。
-4. 原生 V1 使用 `fork_context=false`，V2 使用 `fork_turns="none"`；App Thread 使用唯一 task id 和官方读取恢复排队 worktree。
-5. 模型与速度都分开记录 requested、platform accepted 与 observed runtime；平台未回显时 observed 保持 `unknown`。
-6. 失败只沿预声明链前进，包括跨 Surface fallback；单候选失败后由主 Agent 接管。
-7. 已采纳的原生 Worker 必须关闭；App Thread 必须通过完成与归档门。
+1. 主 Agent 通过净收益门；两个以上 Worker 时把任务编译为 2–3 个 TeamPlan unit，并先运行结构校验。
+2. 为每个 unit 固定任务画像、Provider allowlist、执行 Surface 和有序候选链，生成对应 Task Packet 与 RoutePlan。
+3. 校验 registry 与 Provider 门；每个原生 `model/reasoning_effort/speed` 精确组合还要通过 live spawn schema，Fast 必须接受 `service_tier=priority`。
+4. 自动路由使用 governed Luna App Thread；只有显式原生请求或预声明 fallback 才使用 `native-light`，且 Sol 最低 High。
+5. 原生 V1 使用 `fork_context=false`，V2 使用 `fork_turns="none"`；App Thread 使用唯一 task id 和官方读取恢复排队 worktree。
+6. 模型与速度都分开记录 requested、platform accepted 与 observed runtime；失败只沿预声明链前进。
+7. 主 Agent 按 TeamPlan 集成顺序验收；已采纳原生 Worker 必须关闭，App Thread 必须通过完成与归档门。
 
 轻量路径可以直接从 stdin 校验，不留下临时协调文件：
 
 ```bash
+printf '%s' "$TEAM_PLAN_JSON" | python3 scripts/validate_team_plan.py -
 printf '%s' "$ROUTE_PLAN_JSON" | python3 scripts/validate_route_plan.py -
 printf '%s' "$TEAM_LEDGER_JSON" | python3 scripts/validate_team_ledger.py -
 ```
 
 `max_worker_threads` 必须等于候选链长度：单候选且失败后由主 Agent 接管时写 `1`；声明 fallback 候选时写 `2`。
 
-上游 Skill 已经完成任务拆分时，本 Skill 接受其阶段顺序和任务预算，只负责模型路由、任务生命周期与安全上限。声明工作区输出路径的任务始终绑定项目；只有纯聊天交付才能使用 projectless。
+上游 Skill 已经完成任务拆分时，本 Skill把现有单元编译为 TeamPlan，保留其阶段顺序、产物和质量门，不再猜一套计划。声明工作区输出路径的任务始终绑定项目；只有纯聊天交付才能使用 projectless。
 
 Deep Research 默认预算为 `2-4 个 researcher + 1 个 verifier + 1 个 reviewer + 2 个重试位`，总数不超过 8 个。
 
@@ -155,7 +158,7 @@ Agent 的完整工作流见 [SKILL.md](../../../skills/codex-model-routing-team/
 
 ## 验证情况
 
-工作流已经覆盖 App-first Luna XHigh/Max、Native Luna 与 Sol Medium/Low 的静态拒绝、Sol/Terra Standard 边界、App Fast 缺少速度 schema 的拒绝、Terra opt-in fallback、条件 Grok 4.5 和 Gemini Provider 阻断；包含 Surface 预检、RoutePlan 校验、速度审计、原生关闭门、pending worktree 恢复、混合 ledger 校验和隔离 `npx skills` 安装。
+工作流已经覆盖净收益判断、TeamPlan 依赖层、同波写冲突、预算、修订和计划外 Worker 校验，以及 App-first Luna XHigh/Max、Native Luna 与 Sol Medium/Low 的静态拒绝、速度审计、pending worktree 恢复、混合 ledger 和隔离 `npx skills` 安装。
 
 ## 许可证
 

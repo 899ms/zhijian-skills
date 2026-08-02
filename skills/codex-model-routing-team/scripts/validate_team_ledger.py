@@ -8,6 +8,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from validate_team_plan import validate_team_plan_payload
+
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SCHEMA = SKILL_ROOT / "references" / "audit-schema.json"
@@ -56,6 +58,26 @@ def valid_timestamp(value: Any) -> bool:
     except ValueError:
         return False
     return True
+
+
+def record_is_in_flight(record: dict[str, Any]) -> bool:
+    state = record.get("control_state")
+    if record.get("surface", "app_thread") == "native_subagent":
+        return state in {
+            "PLANNED",
+            "SPAWN_PENDING",
+            "RUNNING",
+            "COMPLETED",
+            "UNKNOWN",
+            "FAILED",
+        }
+    return state in {
+        "PLANNED",
+        "CREATION_PENDING",
+        "CONTROL_READY",
+        "DATA_READY",
+        "UNKNOWN",
+    }
 
 
 def nonempty_string(value: Any) -> bool:
@@ -151,6 +173,46 @@ def main() -> int:
         return 2
 
     result["record_count"] = len(records)
+    team_plan_units: dict[int, set[str]] = {}
+    active_team_plan_revision: int | None = None
+    if root is not None and (
+        "team_plans" in root or "active_team_plan_revision" in root
+    ):
+        team_plans = root.get("team_plans")
+        active_team_plan_revision = root.get("active_team_plan_revision")
+        if not isinstance(team_plans, list) or not team_plans:
+            result["errors"].append("root team_plans must be a non-empty array")
+        else:
+            revisions: list[int] = []
+            for index, team_plan in enumerate(team_plans):
+                validation = validate_team_plan_payload(team_plan)
+                if not validation["team_plan_valid"]:
+                    for error in validation["errors"]:
+                        result["errors"].append(
+                            f"team_plans[{index}] is invalid: {error}"
+                        )
+                    continue
+                revision = team_plan["revision"]
+                revisions.append(revision)
+                team_plan_units[revision] = {
+                    unit["unit_id"] for unit in team_plan["units"]
+                }
+            if revisions and revisions != list(range(1, len(revisions) + 1)):
+                result["errors"].append(
+                    "TeamPlan revisions must be ordered and contiguous from 1"
+                )
+            if (
+                not isinstance(active_team_plan_revision, int)
+                or isinstance(active_team_plan_revision, bool)
+                or active_team_plan_revision not in team_plan_units
+            ):
+                result["errors"].append(
+                    "active_team_plan_revision must name an available revision"
+                )
+            elif revisions and active_team_plan_revision != revisions[-1]:
+                result["errors"].append(
+                    "active_team_plan_revision must name the latest revision"
+                )
     surfaces = {
         record.get("surface", "app_thread")
         for record in records
@@ -189,6 +251,9 @@ def main() -> int:
     thread_ids: set[str] = set()
     pending_ids: set[str] = set()
     agent_ids: set[str] = set()
+    recorded_team_units: set[tuple[int, str]] = set()
+    in_flight_team_revisions: set[int] = set()
+    team_unit_attempts: dict[tuple[int, str], list[int]] = {}
     in_flight_states = {
         "PLANNED",
         "CREATION_PENDING",
@@ -204,6 +269,42 @@ def main() -> int:
             continue
 
         surface = record.get("surface", "app_thread")
+        if team_plan_units:
+            unit_id = record.get("unit_id")
+            team_plan_revision = record.get("team_plan_revision")
+            if not nonempty_string(unit_id):
+                result["errors"].append(f"{prefix} lacks a TeamPlan unit_id")
+            if (
+                not isinstance(team_plan_revision, int)
+                or isinstance(team_plan_revision, bool)
+                or team_plan_revision < 1
+            ):
+                result["errors"].append(
+                    f"{prefix} has invalid team_plan_revision"
+                )
+            elif team_plan_revision not in team_plan_units:
+                result["errors"].append(
+                    f"{prefix} references an unknown TeamPlan revision"
+                )
+            elif nonempty_string(unit_id):
+                if unit_id not in team_plan_units[team_plan_revision]:
+                    result["errors"].append(
+                        f"{prefix} references a unit outside its TeamPlan revision"
+                    )
+                else:
+                    pair = (team_plan_revision, unit_id)
+                    recorded_team_units.add(pair)
+                    subtask_attempt = record.get("subtask_attempt")
+                    if (
+                        isinstance(subtask_attempt, int)
+                        and not isinstance(subtask_attempt, bool)
+                        and 1 <= subtask_attempt <= 2
+                    ):
+                        team_unit_attempts.setdefault(pair, []).append(
+                            subtask_attempt
+                        )
+                    if record_is_in_flight(record):
+                        in_flight_team_revisions.add(team_plan_revision)
         if surface == "native_subagent":
             missing = [field for field in native_required if field not in record]
             if missing:
@@ -505,6 +606,31 @@ def main() -> int:
         result["errors"].append("Worker attempt values must be contiguous from 1")
     if result["in_flight_count"] > MAX_IN_FLIGHT:
         result["errors"].append("in-flight records exceed the concurrency cap")
+
+    if active_team_plan_revision is not None:
+        stale_in_flight = sorted(
+            revision
+            for revision in in_flight_team_revisions
+            if revision < active_team_plan_revision
+        )
+        if stale_in_flight:
+            result["errors"].append(
+                "a newer TeamPlan revision is active while an older revision is still in flight"
+            )
+
+    for (revision, unit_id), attempts_for_unit in sorted(team_unit_attempts.items()):
+        expected = list(range(1, len(attempts_for_unit) + 1))
+        if sorted(attempts_for_unit) != expected:
+            result["errors"].append(
+                f"TeamPlan revision {revision} unit {unit_id} attempts must be unique and contiguous from 1"
+            )
+
+    for revision, unit_ids in sorted(team_plan_units.items()):
+        for unit_id in sorted(unit_ids):
+            if (revision, unit_id) not in recorded_team_units:
+                result["warnings"].append(
+                    f"TeamPlan revision {revision} unit {unit_id} has no Worker record; report its disposition"
+                )
 
     if root is not None:
         expected_attempt_counts = {

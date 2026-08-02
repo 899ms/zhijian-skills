@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add a lightweight TeamPlan compiler and dependency-free validator before every two-or-more-Worker dispatch, covering dependencies, same-wave ownership conflicts, budgets, integration order, and lead-only final verification.
+- Compile CE Plans, Codex Plans, and upstream Skill decompositions without rewriting them; keep two-to-three-unit micro plans in context and persist only durable four-plus-Worker or resumable runs.
+- Bind Worker ledger entries to `team_plan_revision` and `unit_id`, reject mid-wave structural revisions and plan-external Workers, and warn when valid units remain undispatched.
+- Replace vague complexity activation with a net-benefit gate that preserves the quality floor and compares expected time or model-cost savings against coordination cost.
 - Make `speed` a versioned RoutePlan dimension with backward-compatible legacy Standard behavior.
 - Default automatic routing to Luna XHigh App Thread, raise difficult or high-risk tasks to Luna Max, and keep native V2 only for explicit requests or predeclared fallback.
 - Treat Luna as App-only while the official native V2 live schema omits it; require Sol High or stronger on every Surface and reject Sol Medium/Low even when explicitly requested.

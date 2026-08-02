@@ -89,13 +89,18 @@ class SkillContractTests(unittest.TestCase):
         for field in contract["speed_audit_fields"]:
             self.assertIn(field, audit_schema["properties"])
             self.assertIn(field, native_schema["properties"])
+        for field in contract["team_plan_audit_fields"]:
+            self.assertIn(field, audit_schema["properties"])
+            self.assertIn(field, native_schema["properties"])
 
     def test_dual_surface_support_files_are_self_contained(self) -> None:
         required = (
             "references/native-audit-schema.json",
             "references/native-subagent-lifecycle.md",
             "references/surface-selection-policy.md",
+            "references/team-plan.md",
             "scripts/route_policy.py",
+            "scripts/validate_team_plan.py",
         )
         for relative in required:
             with self.subTest(relative=relative):
@@ -118,6 +123,8 @@ class SkillContractTests(unittest.TestCase):
             "Ultra",
             "UNKNOWN",
             "task_id",
+            "TeamPlan",
+            "scripts/validate_team_plan.py",
             "reserved slots",
             "单写者",
             "scripts/validate_route_plan.py",
@@ -138,8 +145,126 @@ class SkillContractTests(unittest.TestCase):
             "Surface selection",
             "Adjacent non-goal",
             "Regression",
+            "Net-positive TeamPlan",
+            "TeamPlan write collision",
         ):
             self.assertIn(case, cases)
+
+    def run_team_plan_validator(
+        self, plan: dict[str, object], *, stdin: bool = False
+    ) -> subprocess.CompletedProcess[str]:
+        command = [
+            sys.executable,
+            str(SKILL_ROOT / "scripts/validate_team_plan.py"),
+        ]
+        if stdin:
+            return subprocess.run(
+                [*command, "-"],
+                cwd=ROOT,
+                input=json.dumps(plan),
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "team-plan.json"
+            path.write_text(json.dumps(plan), encoding="utf-8")
+            return subprocess.run(
+                [*command, str(path)],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+    def team_plan(
+        self,
+        *,
+        unit_count: int = 2,
+        revision: int = 1,
+        supersedes_revision: int | None = None,
+    ) -> dict[str, object]:
+        units = []
+        for index in range(1, unit_count + 1):
+            units.append(
+                {
+                    "unit_id": f"U{index}",
+                    "role": "researcher" if index < unit_count else "verifier",
+                    "goal": f"Complete bounded unit {index}",
+                    "output": f"reports/u{index}.md",
+                    "depends_on": [],
+                    "ownership": {
+                        "write": [f"reports/u{index}.md"],
+                        "forbidden": [],
+                    },
+                    "done_when": f"Unit {index} evidence is reviewable",
+                }
+            )
+        return {
+            "schema_version": "1.0",
+            "revision": revision,
+            "supersedes_revision": supersedes_revision,
+            "planning_source": "ad_hoc",
+            "source_refs": [],
+            "root_goal": "Deliver an integrated result",
+            "units": units,
+            "reserved_slots": 8 - unit_count,
+            "integration_owner": "lead",
+            "integration_order": [unit["unit_id"] for unit in units],
+            "final_verification": "Lead verifies the integrated result",
+            "revision_reason": "initial" if revision == 1 else "new dependency evidence",
+        }
+
+    def test_team_plan_validator_accepts_stdin_and_computes_waves(self) -> None:
+        plan = self.team_plan(unit_count=4)
+        plan["reserved_slots"] = 4
+        result = self.run_team_plan_validator(plan, stdin=True)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload["team_plan_valid"])
+        self.assertEqual(payload["dispatch_waves"], [["U1", "U2", "U3"], ["U4"]])
+
+    def test_team_plan_validator_respects_dependency_layers(self) -> None:
+        plan = self.team_plan(unit_count=3)
+        plan["reserved_slots"] = 5
+        plan["units"][2]["depends_on"] = ["U1", "U2"]
+        result = self.run_team_plan_validator(plan)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertEqual(
+            json.loads(result.stdout)["dispatch_waves"],
+            [["U1", "U2"], ["U3"]],
+        )
+
+    def test_team_plan_validator_rejects_cycle_and_same_wave_write_overlap(self) -> None:
+        cyclic = self.team_plan()
+        cyclic["units"][0]["depends_on"] = ["U2"]
+        cyclic["units"][1]["depends_on"] = ["U1"]
+        cycle_result = self.run_team_plan_validator(cyclic)
+        self.assertEqual(cycle_result.returncode, 2, cycle_result.stdout)
+        self.assertIn("contains a cycle", cycle_result.stdout)
+
+        overlap = self.team_plan()
+        overlap["units"][0]["ownership"]["write"] = ["scripts"]
+        overlap["units"][1]["ownership"]["write"] = ["scripts/router.py"]
+        overlap_result = self.run_team_plan_validator(overlap)
+        self.assertEqual(overlap_result.returncode, 2, overlap_result.stdout)
+        self.assertIn("overlapping write scope", overlap_result.stdout)
+
+    def test_team_plan_validator_rejects_budget_and_lead_ownership_drift(self) -> None:
+        plan = self.team_plan(unit_count=6)
+        plan["reserved_slots"] = 3
+        plan["integration_owner"] = "worker"
+        result = self.run_team_plan_validator(plan)
+        self.assertEqual(result.returncode, 2, result.stdout)
+        self.assertIn("exceed the attempt cap", result.stdout)
+        self.assertIn("integration_owner must remain lead", result.stdout)
+
+    def test_team_plan_validator_requires_upstream_source_refs(self) -> None:
+        plan = self.team_plan()
+        plan["planning_source"] = "ce_plan"
+        result = self.run_team_plan_validator(plan)
+        self.assertEqual(result.returncode, 2, result.stdout)
+        self.assertIn("requires source_refs", result.stdout)
 
     def run_preflight(self, *args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
@@ -1131,6 +1256,142 @@ class SkillContractTests(unittest.TestCase):
         payload = json.loads(result.stdout)
         self.assertTrue(payload["ledger_valid"])
         self.assertEqual(payload["in_flight_count"], 1)
+
+    def test_ledger_validator_maps_workers_to_team_plan_units(self) -> None:
+        plan = self.team_plan()
+        first = self.ledger_record(unit_id="U1", team_plan_revision=1)
+        second = self.ledger_record(
+            creation_attempt=2,
+            task_id="task-beta-a1",
+            thread_id="thread-beta",
+            unit_id="U2",
+            team_plan_revision=1,
+        )
+        result = self.run_ledger_validator(
+            {
+                "team_plans": [plan],
+                "active_team_plan_revision": 1,
+                "creation_attempts": 2,
+                "worker_attempts": 2,
+                "workers": [first, second],
+            }
+        )
+        self.assertEqual(result.returncode, 0, result.stdout)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload["ledger_valid"])
+        self.assertEqual(payload["warnings"], [])
+
+    def test_ledger_validator_rejects_worker_outside_team_plan(self) -> None:
+        result = self.run_ledger_validator(
+            {
+                "team_plans": [self.team_plan()],
+                "active_team_plan_revision": 1,
+                "workers": [
+                    self.ledger_record(unit_id="U9", team_plan_revision=1)
+                ],
+            }
+        )
+        self.assertEqual(result.returncode, 2, result.stdout)
+        self.assertIn("outside its TeamPlan revision", result.stdout)
+
+    def test_ledger_validator_blocks_new_revision_while_old_wave_is_active(self) -> None:
+        revision_one = self.team_plan()
+        revision_two = self.team_plan(revision=2, supersedes_revision=1)
+        old_active = self.ledger_record(
+            unit_id="U1",
+            team_plan_revision=1,
+            control_state="DATA_READY",
+            thread_status="active",
+            turn_status="inProgress",
+            output=None,
+            adopted=False,
+            archived=False,
+        )
+        new_planned = self.ledger_record(
+            creation_attempt=2,
+            task_id="task-new-revision-a1",
+            unit_id="U1",
+            team_plan_revision=2,
+            thread_id=None,
+            control_state="PLANNED",
+            thread_status=None,
+            turn_status=None,
+            last_observed_at=None,
+            materialized=False,
+            data_ready=False,
+            status="planned",
+            output=None,
+            adopted=False,
+            archived=False,
+        )
+        result = self.run_ledger_validator(
+            {
+                "team_plans": [revision_one, revision_two],
+                "active_team_plan_revision": 2,
+                "workers": [old_active, new_planned],
+            }
+        )
+        self.assertEqual(result.returncode, 2, result.stdout)
+        self.assertIn("older revision is still in flight", result.stdout)
+
+    def test_ledger_validator_blocks_activating_revision_before_old_wave_closes(self) -> None:
+        result = self.run_ledger_validator(
+            {
+                "team_plans": [
+                    self.team_plan(),
+                    self.team_plan(revision=2, supersedes_revision=1),
+                ],
+                "active_team_plan_revision": 2,
+                "workers": [
+                    self.ledger_record(
+                        unit_id="U1",
+                        team_plan_revision=1,
+                        control_state="DATA_READY",
+                        thread_status="active",
+                        turn_status="inProgress",
+                        output=None,
+                        adopted=False,
+                        archived=False,
+                    )
+                ],
+            }
+        )
+        self.assertEqual(result.returncode, 2, result.stdout)
+        self.assertIn("older revision is still in flight", result.stdout)
+
+    def test_ledger_validator_enforces_two_contiguous_attempts_per_unit(self) -> None:
+        first = self.ledger_record(unit_id="U1", team_plan_revision=1)
+        duplicate = self.ledger_record(
+            creation_attempt=2,
+            task_id="task-alpha-a2",
+            thread_id="thread-alpha-a2",
+            unit_id="U1",
+            team_plan_revision=1,
+            subtask_attempt=1,
+        )
+        result = self.run_ledger_validator(
+            {
+                "team_plans": [self.team_plan()],
+                "active_team_plan_revision": 1,
+                "workers": [first, duplicate],
+            }
+        )
+        self.assertEqual(result.returncode, 2, result.stdout)
+        self.assertIn("attempts must be unique and contiguous", result.stdout)
+
+    def test_ledger_validator_warns_for_undispatched_team_plan_unit(self) -> None:
+        result = self.run_ledger_validator(
+            {
+                "team_plans": [self.team_plan()],
+                "active_team_plan_revision": 1,
+                "workers": [
+                    self.ledger_record(unit_id="U1", team_plan_revision=1)
+                ],
+            }
+        )
+        self.assertEqual(result.returncode, 0, result.stdout)
+        warnings = json.loads(result.stdout)["warnings"]
+        self.assertTrue(any("unit U2 has no Worker record" in item for item in warnings))
 
     def test_ledger_validator_rejects_unknown_archive_and_pending_as_thread(self) -> None:
         invalid = self.ledger_record(

@@ -22,6 +22,24 @@
 
 ## 最小行为回归
 
+### Net-positive TeamPlan
+
+Prompt：同时核对三个独立来源并汇总，任务不大，但 Luna Worker 并行预计更快且不降低验收质量。
+
+应出现：不以“任务不够复杂”为由拒绝；主 Agent 生成 3-unit 微型 TeamPlan，从 stdin 校验，计算单波派遣；每个 unit 有独立 output、ownership 和 done_when，再生成 Luna XHigh App RoutePlan 与 Task Packet；不创建 Planner 或持久文件。
+
+### TeamPlan write collision
+
+Prompt：两个实现 Worker 都计划修改 `scripts/router.py`，没有依赖关系。
+
+应出现：TeamPlan validator 拒绝同一就绪层写入冲突；主 Agent 增加依赖、重分所有权或串行执行，不能靠不同模型掩盖冲突。
+
+### Existing plan compiles, not rewrites
+
+Prompt：CE Plan 已定义 U1/U2、Dependencies、Files 和 Verification，请按模型路由团队执行。
+
+应出现：保留上游 U-ID 和业务质量门，只编译 TeamPlan 的 Worker、所有权、预算和集成顺序；不调用 `ce-work`，不重新写一份领域计划。
+
 ### Happy path
 
 Prompt：使用 Grok 4.5 实现复杂模块，再让另一个模型独立审查，最后由主 Agent 集成。
@@ -133,13 +151,15 @@ Prompt：一个 `task_intent=inspect` Worker 想顺手修改源文件，mutation
 - Grok 只在 runtime/provider 门通过后自动使用。
 - 每个新 `host/surface/model/thinking/speed/tool-signature` 的首个真实业务 Worker 独立通过对应生命周期健康门；一个组合的健康不外推到另一个组合。
 - 所有提示词含唯一 task id、task intent、mutation authority、完整任务包与禁止下级委派。
+- 两个及以上 Worker 派遣前必须有通过校验的 TeamPlan；每个 Worker 记录 `unit_id/team_plan_revision`，并恰好关联一份 Task Packet 和 RoutePlan。
+- 自动触发以净并行收益为准；`lead_only` 不构造完整 TeamPlan，微型 TeamPlan 不创建 Planner、不调用重型计划、不落持久文件。
 - `threadId`、`pendingWorktreeId`、超时和未知返回形状分别处理；排队 worktree 的身份/cwd 需要两次稳定官方观察。
 - 最新官方 Thread/turn 观察是当前状态真相；旧 status/event 文本只能诊断。
 - `UNKNOWN` 不 follow-up、不归档、不 fallback、不重复创建。
 - 同时运行不超过 6，worker attempts 不超过 8，任何 Worker 都不使用 Ultra。
 - 每个子任务最多两个 Worker attempt；完整输出最多在原 Worker follow-up 一次。
 - fallback 在派遣前固定，不随机选模、不形成循环、不静默改变 thinking/speed 或扩大 Provider allowlist。
-- 上游 Skill 模式保留上游 Scale、阶段门和输出路径；路由层不重复拆分任务。
+- 上游 Skill 模式保留上游 Scale、业务单元、阶段门和输出路径；路由层只编译 TeamPlan，不重复拆分或改写任务。
 - 有工作区输出路径时使用 project local，不因“通用调研”切换到 projectless。
 - Deep Research 默认最多 4 个 researcher，为 verifier、reviewer 和两次重试预留累计额度。
 - verifier 完成并产生 cited 文件后才能创建 reviewer。

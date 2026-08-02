@@ -1,0 +1,49 @@
+{
+  "recommended_threshold": 0.4,
+  "should_trigger": [
+    {
+      "text": "把六个独立来源分给后台 Worker 并行核验，每个来源都有独立交付物，最后统一汇总。",
+      "family": "net_parallel_benefit"
+    },
+    {
+      "text": "使用模型路由把实现、测试和审查分给三个 Worker，文件所有权不能重叠。",
+      "family": "explicit_model_routing"
+    },
+    {
+      "text": "让 Agents Team 并行完成三章内容，主 Agent 负责集成验收。",
+      "family": "explicit_team"
+    },
+    {
+      "text": "用 Luna Worker 并行做四份可独立验收的调研，速度和成本都有净收益。",
+      "family": "luna_workers"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "text": "把 README 里的一个错别字改掉。",
+      "family": "single_file_small_edit"
+    },
+    {
+      "text": "告诉我这个任务现在是什么状态。",
+      "family": "status_query"
+    },
+    {
+      "text": "直接发布这条推文，不要创建 Worker。",
+      "family": "irreversible_external_action"
+    }
+  ],
+  "near_neighbor": [
+    {
+      "text": "解释一下 Luna 和 Sol 的模型差异，不需要执行任务。",
+      "family": "model_explanation"
+    },
+    {
+      "text": "这个修改必须严格按顺序完成，协调成本会高于并行收益。",
+      "family": "sequential_negative_benefit"
+    },
+    {
+      "text": "只让一个 Worker 检查单个文件。",
+      "family": "single_worker"
+    }
+  ]
+}
