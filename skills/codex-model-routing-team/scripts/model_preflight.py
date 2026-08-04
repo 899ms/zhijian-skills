@@ -295,6 +295,9 @@ def main() -> int:
     fast_routing_models = set(
         registry.get("policy", {}).get("fast_routing_models", [])
     )
+    default_fast_models = set(
+        registry.get("policy", {}).get("default_fast_models", [])
+    )
     app_thread_only_models = set(
         registry.get("policy", {}).get("app_thread_only_models", [])
     )
@@ -306,7 +309,15 @@ def main() -> int:
     elif args.thinking not in registry_thinking:
         result["errors"].append("thinking is not declared for this model")
     if args.speed == "fast" and args.model not in fast_routing_models:
-        result["errors"].append("Fast is outside the Luna-only routing policy")
+        result["errors"].append("Fast is not eligible for this model in registry policy")
+    if (
+        args.speed == "fast"
+        and args.model not in default_fast_models
+        and not args.explicit_user_request
+    ):
+        result["errors"].append(
+            "non-default Fast requires an explicit user request"
+        )
     if args.service_tier_confirmed and args.speed != "fast":
         result["errors"].append("--service-tier-confirmed requires --speed fast")
     if args.service_tier_confirmed and not args.runtime_confirmed:
@@ -325,6 +336,7 @@ def main() -> int:
         "thinking_supported": args.thinking in registry_thinking,
         "speed": args.speed,
         "fast_policy_allowed": args.model in fast_routing_models,
+        "fast_by_default": args.model in default_fast_models,
     }
 
     if entry.get("terms_default") == "blocked":

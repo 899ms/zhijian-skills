@@ -24,6 +24,7 @@
   "planning_source": "ad_hoc",
   "source_refs": [],
   "root_goal": "交付完整且经主 Agent 验证的结果",
+  "scale_profile": "standard",
   "units": [
     {
       "unit_id": "U1",
@@ -72,10 +73,11 @@ printf '%s' "$TEAM_PLAN_JSON" | python3 scripts/validate_team_plan.py -
 
 ## 调度与所有权
 
-- 依赖图是唯一调度事实源；validator 计算就绪层并按每波最多 3 个切分。
+- 依赖图是唯一调度事实源；validator 按所选档位计算并切分就绪层。
 - 同一就绪层出现相同或父子写入路径时拒绝，主 Agent 必须增加依赖、串行化或重分所有权。
 - 文件不重叠不等于语义独立；共享 API、schema、migration、lockfile、生成物、服务、数据库、浏览器会话和限流仍由主 Agent 判断。
-- `planned workers + reserved_slots <= 8`；Worker 单元最多 6 个，跨 Surface 并发仍最多 6。
+- `standard` 是默认档：最多 6 个 Worker、累计 8 次 attempts、每波 3 个。
+- 只有大量独立可验收产物带来明确净收益、写入完全隔离且 live host 容量允许时，主 Agent 才写 `scale_profile: "expanded"` 和具体 `scale_reason`：最多 12 个 Worker、累计 16 次 attempts、每波 6 个，并至少保留 2 个 `reserved_slots`。更窄的 host/runtime 上限优先，禁止把策略上限当成平台保证。
 - `integration_order` 必须覆盖全部单元并尊重依赖；`integration_owner` 固定为 `lead`。
 
 验证通过后，每个 unit 恰好生成一份 Task Packet 和一份 RoutePlan。派遣简报只展示 Worker 数、精确路由和职责，不向用户倾倒 TeamPlan JSON。

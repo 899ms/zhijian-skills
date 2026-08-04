@@ -155,6 +155,9 @@ def main() -> int:
     speed_modes = set(registry.get("policy", {}).get("speed_modes", []))
     default_speed = registry.get("policy", {}).get("default_speed", "standard")
     fast_routing_models = set(registry.get("policy", {}).get("fast_routing_models", []))
+    default_fast_models = set(
+        registry.get("policy", {}).get("default_fast_models", [])
+    )
     app_thread_only_models = set(
         registry.get("policy", {}).get("app_thread_only_models", [])
     )
@@ -226,7 +229,17 @@ def main() -> int:
             result["errors"].append(f"candidate {index} uses an unknown speed")
             continue
         if speed == "fast" and model_id not in fast_routing_models:
-            result["errors"].append(f"candidate {index} requests Fast outside the Luna-only routing policy")
+            result["errors"].append(
+                f"candidate {index} requests Fast for a registry-ineligible model"
+            )
+        if (
+            speed == "fast"
+            and model_id not in default_fast_models
+            and plan.get("explicit_user_request") is not True
+        ):
+            result["errors"].append(
+                f"candidate {index} non-default Fast requires explicit_user_request"
+            )
         if surface == "native_subagent" and model_id in app_thread_only_models:
             result["errors"].append(
                 f"candidate {index} model is App Thread only in the current routing policy"

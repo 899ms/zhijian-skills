@@ -10,9 +10,14 @@ from typing import Any
 
 
 CURRENT_SCHEMA_VERSION = "1.0"
-MAX_PLANNED_WORKERS = 6
-MAX_WORKER_ATTEMPTS = 8
-MAX_NEW_WORKERS_PER_WAVE = 3
+SKILL_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_REGISTRY = SKILL_ROOT / "references" / "model-registry.json"
+FALLBACK_LIMIT_PROFILE = {
+    "max_planned_workers": 6,
+    "max_worker_attempts": 8,
+    "max_new_workers_per_wave": 3,
+    "min_reserved_slots": 0,
+}
 PLANNING_SOURCES = {"ad_hoc", "codex_plan", "ce_plan", "upstream_skill"}
 ROLES = {"researcher", "implementer", "verifier", "reviewer", "custom"}
 UNIT_ID_PATTERN = re.compile(r"^U[1-9][0-9]*$")
@@ -23,6 +28,10 @@ def load_input(source: str) -> Any:
     if source == "-":
         return json.load(sys.stdin)
     return json.loads(Path(source).read_text(encoding="utf-8"))
+
+
+def load_registry(path: Path = DEFAULT_REGISTRY) -> Any:
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def nonempty_string(value: Any) -> bool:
@@ -57,13 +66,17 @@ def paths_overlap(left: str, right: str) -> bool:
     return left_parts[:shorter] == right_parts[:shorter]
 
 
-def validate_team_plan_payload(payload: Any) -> dict[str, Any]:
+def validate_team_plan_payload(
+    payload: Any, registry: dict[str, Any] | None = None
+) -> dict[str, Any]:
     result: dict[str, Any] = {
         "status": "fail",
         "team_plan_valid": False,
         "schema_version": None,
         "revision": None,
         "worker_count": 0,
+        "scale_profile": None,
+        "limits": {},
         "dispatch_waves": [],
         "errors": [],
         "warnings": [],
@@ -73,6 +86,42 @@ def validate_team_plan_payload(payload: Any) -> dict[str, Any]:
     if not isinstance(payload, dict):
         errors.append("TeamPlan must be a JSON object")
         return result
+
+    if registry is None:
+        try:
+            loaded_registry = load_registry()
+        except (OSError, json.JSONDecodeError):
+            loaded_registry = {}
+        registry = loaded_registry if isinstance(loaded_registry, dict) else {}
+    policy = registry.get("policy", {}) if isinstance(registry, dict) else {}
+    profiles = policy.get("team_limit_profiles", {})
+    default_profile = policy.get("default_team_limit_profile", "standard")
+    scale_profile = payload.get("scale_profile", default_profile)
+    result["scale_profile"] = scale_profile
+    limits = profiles.get(scale_profile) if isinstance(profiles, dict) else None
+    if not isinstance(limits, dict):
+        if scale_profile == "standard":
+            limits = dict(FALLBACK_LIMIT_PROFILE)
+        else:
+            errors.append("scale_profile is not declared in registry policy")
+            limits = dict(FALLBACK_LIMIT_PROFILE)
+    required_limits = (
+        "max_planned_workers",
+        "max_worker_attempts",
+        "max_new_workers_per_wave",
+        "min_reserved_slots",
+    )
+    if not (
+        all(valid_int(limits.get(field), minimum=1) for field in required_limits[:3])
+        and valid_int(limits.get("min_reserved_slots"))
+    ):
+        errors.append("scale_profile limits are invalid")
+        limits = dict(FALLBACK_LIMIT_PROFILE)
+    result["limits"] = {field: limits[field] for field in required_limits}
+    if scale_profile != default_profile and not nonempty_string(
+        payload.get("scale_reason")
+    ):
+        errors.append("non-default scale_profile requires scale_reason")
 
     schema_version = payload.get("schema_version")
     revision = payload.get("revision")
@@ -114,14 +163,25 @@ def validate_team_plan_payload(payload: Any) -> dict[str, Any]:
         errors.append("units must be an array")
         return result
     result["worker_count"] = len(units)
-    if not 2 <= len(units) <= MAX_PLANNED_WORKERS:
-        errors.append("TeamPlan must contain between 2 and 6 Worker units")
+    max_planned_workers = limits["max_planned_workers"]
+    max_worker_attempts = limits["max_worker_attempts"]
+    max_new_workers_per_wave = limits["max_new_workers_per_wave"]
+    min_reserved_slots = limits["min_reserved_slots"]
+    if not 2 <= len(units) <= max_planned_workers:
+        errors.append(
+            f"TeamPlan must contain between 2 and {max_planned_workers} Worker units"
+        )
 
     reserved_slots = payload.get("reserved_slots")
     if not valid_int(reserved_slots):
         errors.append("reserved_slots must be a non-negative integer")
-    elif len(units) + reserved_slots > MAX_WORKER_ATTEMPTS:
-        errors.append("planned Workers plus reserved_slots exceed the attempt cap")
+    else:
+        if reserved_slots < min_reserved_slots:
+            errors.append(
+                f"scale_profile requires at least {min_reserved_slots} reserved_slots"
+            )
+        if len(units) + reserved_slots > max_worker_attempts:
+            errors.append("planned Workers plus reserved_slots exceed the attempt cap")
 
     unit_order: list[str] = []
     units_by_id: dict[str, dict[str, Any]] = {}
@@ -221,9 +281,9 @@ def validate_team_plan_payload(payload: Any) -> dict[str, Any]:
                                 errors.append(
                                     f"ready units {left_id} and {right_id} have overlapping write scope"
                                 )
-            for start in range(0, len(layer), MAX_NEW_WORKERS_PER_WAVE):
+            for start in range(0, len(layer), max_new_workers_per_wave):
                 result["dispatch_waves"].append(
-                    layer[start : start + MAX_NEW_WORKERS_PER_WAVE]
+                    layer[start : start + max_new_workers_per_wave]
                 )
 
         integration_order = payload.get("integration_order")
@@ -253,6 +313,7 @@ def parse_args() -> argparse.Namespace:
         description="Validate a lightweight TeamPlan before multi-Worker dispatch."
     )
     parser.add_argument("plan", help="TeamPlan JSON path, or - to read JSON from stdin")
+    parser.add_argument("--registry", type=Path, default=DEFAULT_REGISTRY)
     return parser.parse_args()
 
 
@@ -260,6 +321,7 @@ def main() -> int:
     args = parse_args()
     try:
         payload = load_input(args.plan)
+        registry = load_registry(args.registry)
     except (OSError, json.JSONDecodeError) as exc:
         result = {
             "status": "fail",
@@ -269,7 +331,7 @@ def main() -> int:
         }
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 2
-    result = validate_team_plan_payload(payload)
+    result = validate_team_plan_payload(payload, registry)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0 if result["team_plan_valid"] else 2
 

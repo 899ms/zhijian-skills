@@ -17,4 +17,4 @@ compatibility:
     remote_inline_execution: "forbid"
     remote_metadata_policy: "deny"
   degradation:
-    openai: "Use Luna XHigh/Max App threads. Native V2 is explicit/fallback only; Sol starts at High. Luna Fast requires service_tier=priority."
+    openai: "Default to Luna XHigh/Max App Fast when live priority evidence exists. Sol/Terra default Standard but may use explicit Fast with live evidence. TeamPlan scales from standard 6/8/3 to justified expanded 12/16/6."

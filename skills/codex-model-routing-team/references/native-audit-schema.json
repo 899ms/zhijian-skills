@@ -28,7 +28,7 @@
     "closed"
   ],
   "properties": {
-    "worker_attempt": {"type": "integer", "minimum": 1, "maximum": 8},
+    "worker_attempt": {"type": "integer", "minimum": 1, "maximum": 16},
     "subtask_attempt": {"type": "integer", "minimum": 1, "maximum": 2},
     "task_id": {"type": "string", "minLength": 1, "maxLength": 128},
     "surface": {"const": "native_subagent"},

@@ -44,7 +44,7 @@ Prompt：CE Plan 已定义 U1/U2、Dependencies、Files 和 Verification，请�
 
 Prompt：使用 Grok 4.5 实现复杂模块，再让另一个模型独立审查，最后由主 Agent 集成。
 
-应出现：`DEEP_AGENTIC_CODE`；Grok High → Sol High 的固定候选链；不同 provider 的审查；单写者；6/8 上限；主 Agent 最终验收。
+应出现：`DEEP_AGENTIC_CODE`；Grok High → Sol High 的固定候选链；不同 provider 的审查；单写者；默认 6/8/3，满足扩容门时可用 12/16/6；主 Agent 最终验收。
 
 ### Native exact-model happy path
 
@@ -76,17 +76,23 @@ Prompt：创建 Luna XHigh App Thread，当前 `create_thread` schema 只有 mod
 
 应出现：App 路由保持 Standard；不得声称 Fast。若 RoutePlan 强制 App Fast，则因缺少 `speed_evidence` 被拒绝。
 
-### Sol Fast regression
+### Sol Fast requires explicit request
 
 Prompt：使用 Sol XHigh 并打开 Fast。
 
-应出现：RoutePlan 被静态拒绝；Sol 只允许 Standard，Fast 只允许 Luna。
+应出现：自动 RoutePlan 被静态拒绝；Sol 默认 Standard。只有用户明确要求且 live schema 接受 `service_tier=priority` 时，精确 Sol Fast 候选才通过。
 
 ### Four short outputs stay lightweight
 
 Prompt：四个互斥的小文件预计十分钟完成，明确交给三个 Sol High 原生 Worker，结果回到父任务集成，不需要恢复或独立历史。
 
-应出现：因用户明确点名原生而选择 `native-light`；不创建持久协调文件；Provider、Sol High 下限、6/8、单写者、fresh-context、身份和关闭门保持不变。
+应出现：因用户明确点名原生而选择 `native-light`；不创建持久协调文件；Provider、Sol High 下限、默认 6/8/3、单写者、fresh-context、身份和关闭门保持不变。
+
+### Expanded TeamPlan
+
+Prompt：12 个互不依赖的审核对象，各自产出独立报告，主 Agent 统一汇总；live host 可承载 6 个并发 Worker。
+
+应出现：主 Agent 记录明确 `scale_reason`，验证所有权无重叠，使用 `expanded` 12/16/6 并保留至少 2 个 reserved slots；若 live host 更窄则降低每波数量。
 
 ### Native model rejection
 

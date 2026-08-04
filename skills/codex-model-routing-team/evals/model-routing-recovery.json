@@ -72,14 +72,14 @@
       "expected_output": "App Thread 保持 Standard；不得声称 Fast。强制 App Fast 的 RoutePlan 因缺少 tuple-bound speed_evidence 被拒绝。"
     },
     {
-      "id": "sol-fast-static-rejection",
+      "id": "sol-fast-explicit-gate",
       "prompt": "让 Sol XHigh 使用原生 Fast。",
-      "expected_output": "静态拒绝 RoutePlan；Sol 只允许 Standard，Fast 自动路由只允许 Luna。"
+      "expected_output": "自动 RoutePlan 静态拒绝，因为 Sol 默认 Standard；只有用户明确要求且当前原生 live schema 接受 service_tier=priority 时才允许 Sol XHigh Fast。"
     },
     {
       "id": "native-light-four-short-outputs",
       "prompt": "四个互斥的小文件预计十分钟完成，明确交给三个 Sol High 原生 Worker，结果回到父任务集成。",
-      "expected_output": "因显式原生请求选择 native-light；不创建 agent_team；仍执行 Provider、Sol High 下限、6/8、单写者、fresh-context 和关闭门。"
+      "expected_output": "因显式原生请求选择 native-light；不创建 agent_team；仍执行 Provider、Sol High 下限、默认 6/8/3、单写者、fresh-context 和关闭门。"
     },
     {
       "id": "native-terra-rejected",
@@ -89,7 +89,12 @@
     {
       "id": "surface-selection-durable",
       "prompt": "并行做一个五分钟只读检查，以及一个需要独立 worktree、跨会话恢复的实现任务。",
-      "expected_output": "两个任务默认都选 app_thread；普通检查使用 Luna XHigh，worktree 实现按风险使用 Luna XHigh/Max；两者共享并发 6、累计 attempts 8 和单写者上限。"
+      "expected_output": "两个任务默认都选 app_thread；普通检查使用 Luna XHigh，worktree 实现按风险使用 Luna XHigh/Max；使用标准 6/8/3 档并保持单写者。"
+    },
+    {
+      "id": "expanded-team-plan",
+      "prompt": "12 个互不依赖的审核对象，各自产出独立报告，主 Agent 统一汇总；当前 host 能承载 6 个并发 Worker。",
+      "expected_output": "记录 scale_reason，验证所有权隔离，选择 expanded 12/16/6 并保留至少两个 reserved slots；实际 host 上限更窄时降低每波数量。"
     },
     {
       "id": "terra-cannot-be-fallback",

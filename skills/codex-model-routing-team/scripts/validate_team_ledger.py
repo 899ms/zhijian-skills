@@ -14,8 +14,9 @@ from validate_team_plan import validate_team_plan_payload
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SCHEMA = SKILL_ROOT / "references" / "audit-schema.json"
 DEFAULT_NATIVE_SCHEMA = SKILL_ROOT / "references" / "native-audit-schema.json"
-MAX_CREATION_ATTEMPTS = 8
-MAX_IN_FLIGHT = 6
+DEFAULT_REGISTRY = SKILL_ROOT / "references" / "model-registry.json"
+FALLBACK_MAX_CREATION_ATTEMPTS = 8
+FALLBACK_MAX_IN_FLIGHT = 6
 CURRENT_ROUTE_PLAN_SCHEMA_VERSION = "2.1"
 SPEED_MODES = {"standard", "fast"}
 
@@ -37,6 +38,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("ledger", help="ledger JSON path, or - to read JSON from stdin")
     parser.add_argument("--schema", type=Path, default=DEFAULT_SCHEMA)
     parser.add_argument("--native-schema", type=Path, default=DEFAULT_NATIVE_SCHEMA)
+    parser.add_argument("--registry", type=Path, default=DEFAULT_REGISTRY)
     return parser.parse_args()
 
 
@@ -89,6 +91,8 @@ def validate_speed_identity(
     *,
     prefix: str,
     accepted_states: set[str],
+    fast_routing_models: set[str],
+    default_fast_models: set[str],
     errors: list[str],
 ) -> None:
     route_plan = record.get("route_plan")
@@ -124,8 +128,18 @@ def validate_speed_identity(
     if requested not in SPEED_MODES:
         errors.append(f"{prefix} has invalid requested_speed")
         return
-    if requested == "fast" and record.get("requested_model") != "gpt-5.6-luna":
-        errors.append(f"{prefix} requests Fast outside the Luna-only routing policy")
+    requested_model = record.get("requested_model")
+    if requested == "fast" and requested_model not in fast_routing_models:
+        errors.append(f"{prefix} requests Fast for a registry-ineligible model")
+    if (
+        requested == "fast"
+        and requested_model not in default_fast_models
+        and not (
+            isinstance(route_plan, dict)
+            and route_plan.get("explicit_user_request") is True
+        )
+    ):
+        errors.append(f"{prefix} non-default Fast lacks explicit_user_request")
     if accepted is not None and accepted not in SPEED_MODES:
         errors.append(f"{prefix} has invalid platform_accepted_speed")
     if observed not in {None, "unknown", *SPEED_MODES}:
@@ -161,19 +175,55 @@ def main() -> int:
         "ledger_valid": False,
         "record_count": 0,
         "in_flight_count": 0,
+        "scale_profile": "standard",
+        "limits": {},
         "errors": [],
         "warnings": [],
     }
     try:
         payload = load_input(args.ledger)
         root, records = records_from(payload)
+        registry = load_json(args.registry)
     except (OSError, json.JSONDecodeError, ValueError) as exc:
         result["errors"].append(f"JSON load failed: {exc}")
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 2
 
+    policy = registry.get("policy", {}) if isinstance(registry, dict) else {}
+    default_profile = policy.get("default_team_limit_profile", "standard")
+    profiles = policy.get("team_limit_profiles", {})
+    default_limits = (
+        profiles.get(default_profile, {}) if isinstance(profiles, dict) else {}
+    )
+    max_creation_attempts = default_limits.get(
+        "max_worker_attempts", FALLBACK_MAX_CREATION_ATTEMPTS
+    )
+    max_in_flight = default_limits.get(
+        "max_planned_workers", FALLBACK_MAX_IN_FLIGHT
+    )
+    if (
+        not isinstance(max_creation_attempts, int)
+        or isinstance(max_creation_attempts, bool)
+        or max_creation_attempts < 1
+    ):
+        max_creation_attempts = FALLBACK_MAX_CREATION_ATTEMPTS
+    if (
+        not isinstance(max_in_flight, int)
+        or isinstance(max_in_flight, bool)
+        or max_in_flight < 1
+    ):
+        max_in_flight = FALLBACK_MAX_IN_FLIGHT
+    fast_routing_models = set(policy.get("fast_routing_models", []))
+    default_fast_models = set(policy.get("default_fast_models", []))
+    result["scale_profile"] = default_profile
+    result["limits"] = {
+        "max_worker_attempts": max_creation_attempts,
+        "max_planned_workers": max_in_flight,
+    }
     result["record_count"] = len(records)
     team_plan_units: dict[int, set[str]] = {}
+    team_plan_limits: dict[int, dict[str, int]] = {}
+    team_plan_profiles: dict[int, str] = {}
     active_team_plan_revision: int | None = None
     if root is not None and (
         "team_plans" in root or "active_team_plan_revision" in root
@@ -185,7 +235,7 @@ def main() -> int:
         else:
             revisions: list[int] = []
             for index, team_plan in enumerate(team_plans):
-                validation = validate_team_plan_payload(team_plan)
+                validation = validate_team_plan_payload(team_plan, registry)
                 if not validation["team_plan_valid"]:
                     for error in validation["errors"]:
                         result["errors"].append(
@@ -197,6 +247,8 @@ def main() -> int:
                 team_plan_units[revision] = {
                     unit["unit_id"] for unit in team_plan["units"]
                 }
+                team_plan_limits[revision] = validation["limits"]
+                team_plan_profiles[revision] = validation["scale_profile"]
             if revisions and revisions != list(range(1, len(revisions) + 1)):
                 result["errors"].append(
                     "TeamPlan revisions must be ordered and contiguous from 1"
@@ -213,6 +265,12 @@ def main() -> int:
                 result["errors"].append(
                     "active_team_plan_revision must name the latest revision"
                 )
+            elif active_team_plan_revision in team_plan_limits:
+                active_limits = team_plan_limits[active_team_plan_revision]
+                max_creation_attempts = active_limits["max_worker_attempts"]
+                max_in_flight = active_limits["max_planned_workers"]
+                result["scale_profile"] = team_plan_profiles[active_team_plan_revision]
+                result["limits"] = active_limits
     surfaces = {
         record.get("surface", "app_thread")
         for record in records
@@ -243,7 +301,7 @@ def main() -> int:
         .get("enum", [])
     )
 
-    if len(records) > MAX_CREATION_ATTEMPTS:
+    if len(records) > max_creation_attempts:
         result["errors"].append("worker records exceed the root worker-attempt cap")
 
     attempts: list[int] = []
@@ -316,7 +374,7 @@ def main() -> int:
             if (
                 not isinstance(attempt, int)
                 or isinstance(attempt, bool)
-                or not 1 <= attempt <= MAX_CREATION_ATTEMPTS
+                or not 1 <= attempt <= max_creation_attempts
             ):
                 result["errors"].append(f"{prefix} has invalid worker_attempt")
             else:
@@ -397,6 +455,8 @@ def main() -> int:
                 record,
                 prefix=prefix,
                 accepted_states={"RUNNING", "COMPLETED", "CLOSED"},
+                fast_routing_models=fast_routing_models,
+                default_fast_models=default_fast_models,
                 errors=result["errors"],
             )
 
@@ -445,7 +505,11 @@ def main() -> int:
             result["errors"].append(f"{prefix} is missing required fields: {', '.join(missing)}")
 
         attempt = record.get("creation_attempt")
-        if not isinstance(attempt, int) or isinstance(attempt, bool) or not 1 <= attempt <= 8:
+        if (
+            not isinstance(attempt, int)
+            or isinstance(attempt, bool)
+            or not 1 <= attempt <= max_creation_attempts
+        ):
             result["errors"].append(f"{prefix} has invalid creation_attempt")
         else:
             attempts.append(attempt)
@@ -454,7 +518,7 @@ def main() -> int:
             if (
                 not isinstance(worker_attempt, int)
                 or isinstance(worker_attempt, bool)
-                or not 1 <= worker_attempt <= MAX_CREATION_ATTEMPTS
+                or not 1 <= worker_attempt <= max_creation_attempts
             ):
                 result["errors"].append(f"{prefix} has invalid worker_attempt")
             elif worker_attempt != attempt:
@@ -561,6 +625,8 @@ def main() -> int:
             record,
             prefix=prefix,
             accepted_states={"CONTROL_READY", "DATA_READY", "COMPLETED"},
+            fast_routing_models=fast_routing_models,
+            default_fast_models=default_fast_models,
             errors=result["errors"],
         )
 
@@ -604,7 +670,7 @@ def main() -> int:
         result["errors"].append("Worker attempt values must be unique")
     if attempts and sorted(attempts) != list(range(1, len(attempts) + 1)):
         result["errors"].append("Worker attempt values must be contiguous from 1")
-    if result["in_flight_count"] > MAX_IN_FLIGHT:
+    if result["in_flight_count"] > max_in_flight:
         result["errors"].append("in-flight records exceed the concurrency cap")
 
     if active_team_plan_revision is not None:

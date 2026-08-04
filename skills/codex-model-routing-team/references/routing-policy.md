@@ -10,7 +10,7 @@
 - 任务跨调研、写作、编码、设计、测试或审查多个领域。
 - 预计节省的时间或质量增益明显高于协调成本。
 
-典型任务创建 2–3 个 Worker；广泛调研或多模块任务创建 4–6 个。简单问答、状态查询、单文件小改、强顺序流程直接由主 Agent 完成。
+典型任务创建 2–3 个 Worker；广泛调研或多模块任务通常创建 4–6 个。只有 7–12 个独立可验收产物能产生明确净收益、所有权隔离且 live host 容量允许时才使用 TeamPlan `expanded` 档。简单问答、状态查询、单文件小改、强顺序流程直接由主 Agent 完成。
 
 ## 选择顺序
 
@@ -31,16 +31,16 @@
 
 | 路由名 | Surface | `model` | 推理强度 | 速度 | 适用工作 |
 | --- | --- | --- | --- | --- | --- |
-| Native Sol High | `native_subagent` | `gpt-5.6-sol` | `high` | Standard | 用户明确要求原生或 App 不可用时的边界清晰 fallback |
-| Native Sol X High | `native_subagent` | `gpt-5.6-sol` | `xhigh` | Standard | 显式原生高难实现与审查 |
-| Native Sol Max | `native_subagent` | `gpt-5.6-sol` | `max` | Standard | 有明确质量理由的最高强度原生任务 |
+| Native Sol High | `native_subagent` | `gpt-5.6-sol` | `high` | Standard / 显式 Fast | 用户明确要求原生或 App 不可用时的边界清晰 fallback |
+| Native Sol X High | `native_subagent` | `gpt-5.6-sol` | `xhigh` | Standard / 显式 Fast | 显式原生高难实现与审查 |
+| Native Sol Max | `native_subagent` | `gpt-5.6-sol` | `max` | Standard / 显式 Fast | 有明确质量理由的最高强度原生任务 |
 | Luna X High App | `app_thread` | `gpt-5.6-luna` | `xhigh` | Standard / Fast | 默认 Worker；调研、写作、编码、验证与审查 |
 | Luna Max App | `app_thread` | `gpt-5.6-luna` | `max` | Standard / Fast | 高歧义、高风险或边界清晰的高难深度执行 |
-| Sol High | `app_thread` | `gpt-5.6-sol` | `high` | Standard | 高歧义规划、架构、困难调试、高风险判断、关键审查 |
-| Sol X High | `app_thread` | `gpt-5.6-sol` | `xhigh` | Standard | 更深推理的关键审查与方案裁决 |
-| Sol Max | `app_thread` | `gpt-5.6-sol` | `max` | Standard | 有明确质量理由的最高强度单任务 |
+| Sol High | `app_thread` | `gpt-5.6-sol` | `high` | Standard / 显式 Fast | 高歧义规划、架构、困难调试、高风险判断、关键审查 |
+| Sol X High | `app_thread` | `gpt-5.6-sol` | `xhigh` | Standard / 显式 Fast | 更深推理的关键审查与方案裁决 |
+| Sol Max | `app_thread` | `gpt-5.6-sol` | `max` | Standard / 显式 Fast | 有明确质量理由的最高强度单任务 |
 | Grok Medium/High | 任一已确认 Surface | `xai/grok-4.5` | `medium` / `high` | Standard | 条件自动的技术分析、Agent 执行与异构复核 |
-| Terra Opt-in | 任一已确认 Surface | `gpt-5.6-terra` | `low`–`max` | Standard | 用户明确点名且 live runtime 接受时的 opt-in Worker |
+| Terra Opt-in | 任一已确认 Surface | `gpt-5.6-terra` | `low`–`max` | Standard / 显式 Fast | 用户明确点名且 live runtime 接受时的 opt-in Worker |
 | Gemini Low/Medium/High | 任一已确认 Surface | `antigravity/gemini-3.6-flash` | `low` / `medium` / `high` | Standard | blocked manual-review 模板，当前不得创建 |
 
 `gpt-5.6-terra` 默认关闭，只能作为用户明确点名的首项候选，不能静默 fallback。Grok 必须通过 runtime/provider 预检。Gemini Antigravity 当前 `terms_default: blocked`；它出现在表中用于解释显式请求和未来迁移。
@@ -49,7 +49,7 @@ Ultra 永久禁止。不得把成本比例、订阅额度或 TPS 写成未经当
 
 `thinking` 是 RoutePlan 的跨 Surface 规范字段，比较顺序为 `low < medium < high < xhigh < max`。原生 spawn 时映射到 `reasoning_effort`；App Thread 创建时映射到 `thinking`。候选必须同时满足该 Surface 的支持范围和 `minimum_thinking`。Luna 自动路由只允许 XHigh/Max；Sol 无论 Surface 都只允许 High/XHigh/Max，Medium/Low 即使用户点名也拒绝。
 
-`speed` 是与模型、推理强度分离的 RoutePlan 字段，取值为 `standard | fast`。Fast 映射为 `service_tier=priority`；Standard 不传该 tier。只有 Luna 允许 `speed=fast`，Sol、Terra 和其他模型必须写 `speed=standard`。`schema_version: "2.1"` 的 RoutePlan 必须显式填写；旧计划省略版本/速度时兼容解释为 Standard。某个 Surface 的 live schema 没有速度参数时，该 Surface 不能证明或强制 Fast，必须把精确组合视为不可用或保持 Standard。
+`speed` 是与模型、推理强度分离的 RoutePlan 字段，取值为 `standard | fast`。Fast 映射为 `service_tier=priority`；Standard 不传该 tier。registry 的 `fast_routing_models` 表示候选资格，`default_fast_models` 表示默认偏好：Luna 默认 Fast，Sol/Terra 默认 Standard，只有用户明确要求时才允许后两者 Fast。`schema_version: "2.1"` 的 RoutePlan 必须显式填写；旧计划省略版本/速度时兼容解释为 Standard。任何 Surface 缺少 tuple-bound live 速度证据时都不能声称或强制 Fast，必须保持 Standard。
 
 ## 任务画像与候选链
 
@@ -59,8 +59,8 @@ Ultra 永久禁止。不得把成本比例、订阅额度或 TPS 写成未经当
 | --- | --- | --- | --- |
 | `NATIVE_WORKER_EXPLICIT` | high | Native Sol High → Luna X High App | 仅用户明确要求原生，或预声明 App 不可用 fallback |
 | `NATIVE_SMART_WORKER_EXPLICIT` | xhigh | Native Sol X High → Luna Max App | 显式原生高难任务；失败后回到 Luna App |
-| `DEFAULT_GENERAL` | high | Luna X High App → Sol High App Thread | 通用耐久研究、写作、编码与验证；App 未暴露速度参数时保持 Standard |
-| `HIGH_RISK_GENERAL` | xhigh | Luna Max App → Sol X High App Thread | 高风险、高歧义与高难执行默认升 Luna Max |
+| `DEFAULT_GENERAL` | high | Luna X High App Fast / Standard → Sol High App Thread | 通用耐久研究、写作、编码与验证；无 live Fast 证据时保持 Standard |
+| `HIGH_RISK_GENERAL` | xhigh | Luna Max App Fast / Standard → Sol X High App Thread | 高风险、高歧义与高难执行默认升 Luna Max |
 | `FAST_MECHANICAL` | xhigh | Luna X High App Fast / Standard → Sol High App | live create schema 接受 priority 才用 Fast，否则首项直接写 Standard |
 | `DEEP_AGENTIC_CODE` | high | Grok High → Sol High App Thread | Grok/provider 通过硬门后用于复杂工程执行 |
 | `REVIEW_OPENAI_PRIMARY` | high | Grok High → Sol X High App Thread | OpenAI 主执行后的异构复核 |
@@ -93,7 +93,7 @@ fallback 必须满足最低 `thinking`。首项被静态门排除时，通知应
 }
 ```
 
-当前官方原生 V2 live schema 不开放 Luna，因此不得生成 Native Luna 候选。App Luna Fast 只有在 `create_thread` 的 live schema 明确接受速度参数时才允许，并在候选中附加：
+当前官方原生 V2 live schema 不开放 Luna，因此不得生成 Native Luna 候选。任何 App Fast 只有在 `create_thread` 的 live schema 明确接受速度参数时才允许；以下为默认 Luna 候选证据：
 
 ```json
 "speed_evidence": {
@@ -121,8 +121,8 @@ python3 scripts/validate_route_plan.py /path/to/route-plan.json
 
 ## 数量与失败升级
 
-- 跨 Surface 运行并发上限 6；root `worker_attempt` 上限 8，替换、超时歧义、未实体化和原生 spawn 失败都计数。
-- `planned_workers + reserved_slots <= 8`。reserved slots 用于上游后续阶段和失败恢复。
+- TeamPlan `standard` 档并发 6、root attempts 8、每波 3；`expanded` 档上限 12/16/6。替换、超时歧义、未实体化和原生 spawn 失败都计数，live host 更窄上限优先。
+- `planned_workers + reserved_slots` 不得超过所选档位的 attempt cap；expanded 至少保留 2 个 reserved slots，用于失败恢复。
 - Deep Research 默认预算为 `2-4 researcher + 1 verifier + 1 reviewer + 2 retry reserve`；verifier → reviewer 的阶段依赖必须保持串行。
 - 完整输出质量不足时，原 Worker 最多一次 follow-up；仍失败才进入候选链下一项。
 - 同一子任务最多两个 Worker attempt；单候选失败后由主 Agent 接管。

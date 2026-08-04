@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Separate Fast eligibility from default preference: Luna defaults to Fast when live `service_tier=priority` evidence exists, while Sol and Terra default to Standard but may use explicit Fast when the current Surface proves the exact tuple.
+- Replace the fixed 6/8/3 ceiling with registry-backed TeamPlan profiles: conservative `standard` remains the default, while justified, ownership-isolated, host-confirmed `expanded` runs may use 12 concurrent Workers, 16 root attempts, and 6 new Workers per wave with at least two reserved slots.
 - Add a lightweight TeamPlan compiler and dependency-free validator before every two-or-more-Worker dispatch, covering dependencies, same-wave ownership conflicts, budgets, integration order, and lead-only final verification.
 - Compile CE Plans, Codex Plans, and upstream Skill decompositions without rewriting them; keep two-to-three-unit micro plans in context and persist only durable four-plus-Worker or resumable runs.
 - Bind Worker ledger entries to `team_plan_revision` and `unit_id`, reject mid-wave structural revisions and plan-external Workers, and warn when valid units remain undispatched.
@@ -9,7 +11,7 @@
 - Make `speed` a versioned RoutePlan dimension with backward-compatible legacy Standard behavior.
 - Default automatic routing to Luna XHigh App Thread, raise difficult or high-risk tasks to Luna Max, and keep native V2 only for explicit requests or predeclared fallback.
 - Treat Luna as App-only while the official native V2 live schema omits it; require Sol High or stronger on every Surface and reject Sol Medium/Low even when explicitly requested.
-- Require live `create_thread` speed evidence for App Luna Fast; keep Sol, Terra, and other models on Standard while preserving separate requested/accepted/observed speed audit fields.
+- Require tuple-bound live speed evidence for every Fast route while preserving separate requested/accepted/observed speed audit fields.
 - Slim initial Skill/interface context from 1708 to 890 estimated tokens by keeping only triggers, branch selection, the shared execution skeleton, hard gates, and the output contract; defer detailed policy and lifecycle rules to existing references.
 
 ## 2.1.0 — 2026-07-27
