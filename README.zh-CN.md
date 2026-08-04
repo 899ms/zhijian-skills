@@ -1,7 +1,7 @@
 # 智见 Skills
 
 <p align="center">
-  <img src="./assets/readme/portfolio-hero.svg" width="100%" alt="智见 Skills：由一个统一源码管理十二个专注的 Agent Skill">
+  <img src="./assets/readme/portfolio-hero.svg" width="100%" alt="智见 Skills：由一个统一源码管理十六个专注的 Agent Skill">
 </p>
 
 <p align="center"><strong>从一个可信源按需安装 Agent Skill；每个安装包都完整，每次发布都独立验证。</strong></p>
@@ -12,11 +12,11 @@
   <a href="./CONTRIBUTING.md">参与贡献</a>
 </p>
 
-智见 Skills 是 13 个专注型 Agent Skill 的统一源码，覆盖 Codex 管理与体验、工作流编排、模型推理与基础设施、知识系统、内容调研、信息设计与发布流程。
+智见 Skills 是 16 个专注型 Agent Skill 的统一源码，覆盖 Codex 管理与体验、工作流编排、模型推理与基础设施、知识系统、内容调研、信息设计与发布流程。
 
 ## 30 秒开始使用
 
-查看全部 13 个 Skill：
+查看全部 16 个 Skill：
 
 ```bash
 npx skills add zjp1997720/zhijian-skills --list
@@ -54,6 +54,7 @@ npx skills add zjp1997720/zhijian-skills \
 | 发布治理 | [`skill-open-sourcer`](docs/skills/skill-open-sourcer/README.zh-CN.md) | 审计、打包、文档化、验证并发布 Agent Skill | [文档](docs/skills/skill-open-sourcer/README.zh-CN.md) |
 | 内容调研 | [`wechat-article-search`](docs/skills/wechat-article-search/README.zh-CN.md) | 把公众号关键词搜索结果输出为结构化 JSON | [文档](docs/skills/wechat-article-search/README.zh-CN.md) |
 | 内容发布 | [`wechat-styler`](docs/skills/wechat-styler/README.zh-CN.md) | 把 Markdown 转成公众号兼容的精排内联 HTML | [文档](docs/skills/wechat-styler/README.zh-CN.md) |
+| 内容归档 | [`web-clipper`](docs/skills/web-clipper/README.zh-CN.md) | 把公开文章 URL 和指定数量的归档页文章保存成结构化 Markdown | [文档](docs/skills/web-clipper/README.zh-CN.md) |
 | 模型基础设施 | [`workbuddy-cli-model-bridge`](docs/skills/workbuddy-cli-model-bridge/README.zh-CN.md) | 通过仅本机代理把已验证的 CLI 订阅模型接入 WorkBuddy | [文档](docs/skills/workbuddy-cli-model-bridge/README.zh-CN.md) |
 | 内容归档 | [`wxmp-article-harvester`](docs/skills/wxmp-article-harvester/README.zh-CN.md) | 把指定公众号导出成可信 Markdown、索引和完成度报告 | [文档](docs/skills/wxmp-article-harvester/README.zh-CN.md) |
 

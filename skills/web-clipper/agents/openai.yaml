@@ -1,0 +1,4 @@
+interface:
+  display_name: "Web Clipper"
+  short_description: "Save public articles and archive pages as structured Markdown"
+  default_prompt: "Use $web-clipper to save this public article or article index as Markdown in my local clipping directory."

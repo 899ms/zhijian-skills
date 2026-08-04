@@ -296,6 +296,29 @@
       "harnesses": ["codex", "claude-code", "agents"]
     },
     {
+      "name": "web-clipper",
+      "lifecycle": "active",
+      "version": "1.0.0",
+      "path": "skills/web-clipper",
+      "documentation": "docs/skills/web-clipper/README.md",
+      "documentation_zh": "docs/skills/web-clipper/README.zh-CN.md",
+      "changelog": "docs/changelogs/web-clipper.md",
+      "canonical_tag": "web-clipper/v1.0.0",
+      "validation": {
+        "commands": [
+          "python3 -m unittest discover -s skills/web-clipper/tests -v"
+        ],
+        "live_smoke": null
+      },
+      "capabilities": {
+        "network": "required",
+        "subprocess": "required",
+        "filesystem": "write",
+        "credentials": "required"
+      },
+      "harnesses": ["codex", "claude-code", "agents"]
+    },
+    {
       "name": "workbuddy-cli-model-bridge",
       "lifecycle": "active",
       "version": "1.1.0",

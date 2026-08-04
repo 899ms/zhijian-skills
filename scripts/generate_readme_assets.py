@@ -64,7 +64,7 @@ def portfolio() -> str:
         text(58, 62, "ZHIJIAN / OPEN AGENT SKILLS", 16, mint, 650, family=MONO, letter_spacing="2"),
         text(58, 140, "Zhijian", 58, paper, 700),
         text(58, 200, "Skills", 58, paper, 700),
-        text(58, 244, "One source. Thirteen focused capabilities.", 22, muted, 450),
+        text(58, 244, "One source. Sixteen focused capabilities.", 22, muted, 450),
         rect(58, 278, 356, 46, mint, 8),
         text(78, 308, "$ npx skills add zjp1997720/zhijian-skills", 16, bg, 700, family=MONO),
         line(478, 42, 478, 318, "#355B75", 2),
@@ -72,7 +72,7 @@ def portfolio() -> str:
     ]
     groups = [
         (520, 90, "CONTROL", ["doctor", "routing", "admin", "theme"], mint),
-        (735, 90, "CREATE", ["clone", "pro", "html", "styler"], orange),
+        (735, 90, "CREATE", ["clone", "pro", "html", "styler", "clip"], orange),
         (950, 90, "SHIP", ["plan", "release", "search", "harvest", "bridge"], "#A78BFA"),
     ]
     for x, y, label, skills, colour in groups:
@@ -80,7 +80,7 @@ def portfolio() -> str:
         for index, skill in enumerate(skills):
             yy = y + 18 + index * 42
             body += [rect(x, yy, 184, 32, "#173B57", 6), rect(x, yy, 5, 32, colour, 2), text(x + 18, yy + 22, skill, 15, paper, 600, family=MONO)]
-    return svg("Zhijian Skills", "One canonical portfolio of thirteen focused and independently verified Agent Skills.", bg, "portfolio-outcome-map", body)
+    return svg("Zhijian Skills", "One canonical portfolio of sixteen focused and independently verified Agent Skills.", bg, "portfolio-outcome-map", body)
 
 
 def codex_doctor() -> str:
@@ -297,6 +297,50 @@ def wxmp_harvester() -> str:
     return svg("WeChat Public Account Harvester", "A public-account index flows through a body quality gate into Markdown files and a truthful complete-or-partial status ledger.", bg, "article-status-ledger", body)
 
 
+def web_clipper() -> str:
+    bg, paper, cyan, amber, mint, panel, muted = "#112A33", "#F7F2E8", "#55C7D8", "#F2A65A", "#75D39B", "#193A45", "#A8C1C8"
+    body = [
+        text(48, 50, "AGENT-NATIVE WEB ARCHIVING", 15, cyan, 800, family=MONO, letter_spacing="1.8"),
+        text(48, 108, "Web", 52, paper, 760),
+        text(48, 162, "Clipper", 52, paper, 760),
+        text(48, 206, "Public pages become traceable Markdown.", 21, muted, 500),
+        rect(48, 248, 338, 48, panel, 7, cyan, 2),
+        text(68, 279, "SINGLE  •  BATCH  •  FALLBACK", 15, paper, 800, family=MONO),
+        text(48, 330, "browser finds links  →  script writes files", 15, mint, 700, family=MONO),
+        rect(450, 44, 170, 58, panel, 8, cyan, 2),
+        text(535, 69, "ARTICLE URL", 16, paper, 800, family=MONO, text_anchor="middle"),
+        text(535, 89, "single", 14, muted, 650, family=MONO, text_anchor="middle"),
+        rect(450, 124, 170, 58, panel, 8, amber, 2),
+        text(535, 149, "ARCHIVE PAGE", 16, paper, 800, family=MONO, text_anchor="middle"),
+        text(535, 169, "bounded batch", 14, muted, 650, family=MONO, text_anchor="middle"),
+        line(620, 73, 682, 146, "#456876", 3),
+        line(620, 153, 682, 146, "#456876", 3),
+        path("M668 134 L682 146 L666 155", stroke=cyan, stroke_width=3, stroke_linecap="round", stroke_linejoin="round"),
+        text(752, 62, "EXTRACTOR ROUTER", 14, muted, 800, family=MONO, text_anchor="middle"),
+    ]
+    routes = [(680, 82, "STATIC", cyan), (680, 124, "DEFUDDLE", mint), (680, 166, "JINA", amber), (680, 208, "METASO", amber), (680, 250, "BROWSER / CDP", cyan)]
+    for x, y, label, colour in routes:
+        body += [rect(x, y, 180, 32, panel, 5, colour, 2), text(x + 90, y + 22, label, 14, paper, 800, family=MONO, text_anchor="middle")]
+    body += [
+        line(860, 146, 918, 174, mint, 4),
+        path("M902 162 L918 174 L900 181", stroke=mint, stroke_width=4, stroke_linecap="round", stroke_linejoin="round"),
+        rect(936, 52, 214, 256, paper, 10),
+        rect(936, 52, 214, 38, mint, 9),
+        text(954, 78, "YYYY-MM-DD title.md", 14, bg, 850, family=MONO),
+        text(958, 118, "---", 15, bg, 750, family=MONO),
+        text(958, 145, "source: https://…", 14, bg, 650, family=MONO),
+        text(958, 170, "extractor: jina", 14, bg, 650, family=MONO),
+        text(958, 195, "status: unprocessed", 14, bg, 650, family=MONO),
+        text(958, 220, "---", 15, bg, 750, family=MONO),
+        text(958, 254, "# Article title", 18, bg, 800, family=MONO),
+        line(958, 272, 1128, 272, "#B8C4C5", 4),
+        line(958, 288, 1096, 288, "#B8C4C5", 4),
+        circle(1124, 327, 9, mint),
+        text(1104, 332, "RECORDED", 13, mint, 850, family=MONO, text_anchor="end"),
+    ]
+    return svg("Web Clipper", "Single article and archive-page inputs flow through layered extractors into source-aware Markdown.", bg, "fallback-clipping-funnel", body)
+
+
 def wechat_styler() -> str:
     bg, paper, wine, gold, ink = "#6F1D35", "#FFF8EC", "#B43E5D", "#E8B86D", "#24191D"
     body = [
@@ -344,6 +388,7 @@ HEROES = {
     ROOT / "docs/skills/skill-open-sourcer/assets/readme/hero.svg": open_sourcer,
     ROOT / "docs/skills/wechat-article-search/assets/readme/hero.svg": wechat_search,
     ROOT / "docs/skills/wechat-styler/assets/readme/hero.svg": wechat_styler,
+    ROOT / "docs/skills/web-clipper/assets/readme/hero.svg": web_clipper,
     ROOT / "docs/skills/workbuddy-cli-model-bridge/assets/readme/hero.svg": model_bridge,
     ROOT / "docs/skills/wxmp-article-harvester/assets/readme/hero.svg": wxmp_harvester,
 }
