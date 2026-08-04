@@ -52,7 +52,11 @@ class SkillContractTests(unittest.TestCase):
         models = {item["id"]: item for item in registry["models"]}
         self.assertTrue(models["gpt-5.6-luna"]["automatic"])
         self.assertTrue(models["gpt-5.6-sol"]["automatic"])
-        self.assertEqual(registry["policy"]["fast_routing_models"], ["gpt-5.6-luna"])
+        self.assertEqual(
+            registry["policy"]["fast_routing_models"],
+            ["gpt-5.6-luna", "gpt-5.6-sol", "gpt-5.6-terra"],
+        )
+        self.assertEqual(registry["policy"]["default_fast_models"], ["gpt-5.6-luna"])
         self.assertEqual(registry["policy"]["app_thread_only_models"], ["gpt-5.6-luna"])
         self.assertEqual(registry["policy"]["default_surface"], "app_thread")
         self.assertEqual(
@@ -61,6 +65,16 @@ class SkillContractTests(unittest.TestCase):
                 "surface": "app_thread",
                 "model": "gpt-5.6-luna",
                 "thinking": "xhigh",
+                "speed": "fast",
+            },
+        )
+        self.assertEqual(
+            registry["policy"]["team_limit_profiles"]["expanded"],
+            {
+                "max_planned_workers": 12,
+                "max_worker_attempts": 16,
+                "max_new_workers_per_wave": 6,
+                "min_reserved_slots": 2,
             },
         )
         self.assertEqual(models["gpt-5.6-luna"]["surface_thinking"]["native_subagent"], [])
@@ -147,6 +161,7 @@ class SkillContractTests(unittest.TestCase):
             "Regression",
             "Net-positive TeamPlan",
             "TeamPlan write collision",
+            "Expanded TeamPlan",
         ):
             self.assertIn(case, cases)
 
@@ -183,6 +198,8 @@ class SkillContractTests(unittest.TestCase):
         unit_count: int = 2,
         revision: int = 1,
         supersedes_revision: int | None = None,
+        scale_profile: str | None = None,
+        scale_reason: str | None = None,
     ) -> dict[str, object]:
         units = []
         for index in range(1, unit_count + 1):
@@ -200,7 +217,7 @@ class SkillContractTests(unittest.TestCase):
                     "done_when": f"Unit {index} evidence is reviewable",
                 }
             )
-        return {
+        plan: dict[str, object] = {
             "schema_version": "1.0",
             "revision": revision,
             "supersedes_revision": supersedes_revision,
@@ -214,6 +231,11 @@ class SkillContractTests(unittest.TestCase):
             "final_verification": "Lead verifies the integrated result",
             "revision_reason": "initial" if revision == 1 else "new dependency evidence",
         }
+        if scale_profile is not None:
+            plan["scale_profile"] = scale_profile
+        if scale_reason is not None:
+            plan["scale_reason"] = scale_reason
+        return plan
 
     def test_team_plan_validator_accepts_stdin_and_computes_waves(self) -> None:
         plan = self.team_plan(unit_count=4)
@@ -265,6 +287,45 @@ class SkillContractTests(unittest.TestCase):
         result = self.run_team_plan_validator(plan)
         self.assertEqual(result.returncode, 2, result.stdout)
         self.assertIn("requires source_refs", result.stdout)
+
+    def test_team_plan_validator_uses_expanded_profile_only_with_reason_and_reserve(self) -> None:
+        standard = self.team_plan(unit_count=7)
+        standard["reserved_slots"] = 1
+        rejected = self.run_team_plan_validator(standard)
+        self.assertEqual(rejected.returncode, 2, rejected.stdout)
+        self.assertIn("between 2 and 6", rejected.stdout)
+
+        expanded = self.team_plan(
+            unit_count=12,
+            scale_profile="expanded",
+            scale_reason="Twelve independent read-only reviews have isolated outputs.",
+        )
+        expanded["reserved_slots"] = 2
+        accepted = self.run_team_plan_validator(expanded)
+        self.assertEqual(accepted.returncode, 0, accepted.stdout)
+        payload = json.loads(accepted.stdout)
+        self.assertEqual(payload["scale_profile"], "expanded")
+        self.assertEqual(payload["dispatch_waves"], [
+            ["U1", "U2", "U3", "U4", "U5", "U6"],
+            ["U7", "U8", "U9", "U10", "U11", "U12"],
+        ])
+
+        expanded.pop("scale_reason")
+        expanded["reserved_slots"] = 1
+        invalid = self.run_team_plan_validator(expanded)
+        self.assertEqual(invalid.returncode, 2, invalid.stdout)
+        self.assertIn("requires scale_reason", invalid.stdout)
+        self.assertIn("at least 2 reserved_slots", invalid.stdout)
+
+        too_large = self.team_plan(
+            unit_count=13,
+            scale_profile="expanded",
+            scale_reason="Independent outputs still remain policy-bounded.",
+        )
+        too_large["reserved_slots"] = 2
+        oversized = self.run_team_plan_validator(too_large)
+        self.assertEqual(oversized.returncode, 2, oversized.stdout)
+        self.assertIn("between 2 and 12", oversized.stdout)
 
     def run_preflight(self, *args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
@@ -425,7 +486,31 @@ class SkillContractTests(unittest.TestCase):
         self.assertEqual(terra_explicit.returncode, 0, terra_explicit.stderr or terra_explicit.stdout)
         self.assertTrue(json.loads(terra_explicit.stdout)["route_eligible"])
 
-    def test_preflight_rejects_native_luna_and_sol_fast(self) -> None:
+        terra_fast = self.run_preflight(
+            "--surface",
+            "native_subagent",
+            "--model",
+            "gpt-5.6-terra",
+            "--thinking",
+            "low",
+            "--speed",
+            "fast",
+            "--explicit-user-request",
+            "--runtime-confirmed",
+            "--service-tier-confirmed",
+            "--host",
+            "test-host",
+            "--provider-status",
+            "allowed",
+            "--data-allowed",
+        )
+        self.assertEqual(terra_fast.returncode, 0, terra_fast.stdout)
+        self.assertEqual(
+            json.loads(terra_fast.stdout)["runtime_evidence"]["service_tier"],
+            "priority",
+        )
+
+    def test_preflight_keeps_luna_app_only_and_requires_explicit_sol_fast(self) -> None:
         native_luna = self.run_preflight(
             "--surface",
             "native_subagent",
@@ -463,7 +548,31 @@ class SkillContractTests(unittest.TestCase):
             "--data-allowed",
         )
         self.assertEqual(sol_fast.returncode, 2, sol_fast.stdout)
-        self.assertIn("Luna-only routing policy", sol_fast.stdout)
+        self.assertIn("requires an explicit user request", sol_fast.stdout)
+
+        sol_fast_explicit = self.run_preflight(
+            "--surface",
+            "native_subagent",
+            "--model",
+            "gpt-5.6-sol",
+            "--thinking",
+            "high",
+            "--speed",
+            "fast",
+            "--explicit-user-request",
+            "--runtime-confirmed",
+            "--service-tier-confirmed",
+            "--host",
+            "test-host",
+            "--provider-status",
+            "allowed",
+            "--data-allowed",
+        )
+        self.assertEqual(sol_fast_explicit.returncode, 0, sol_fast_explicit.stdout)
+        self.assertEqual(
+            json.loads(sol_fast_explicit.stdout)["runtime_evidence"]["service_tier"],
+            "priority",
+        )
 
     def test_preflight_emits_app_speed_evidence_only_when_live_schema_accepts_it(self) -> None:
         confirmed = self.run_preflight(
@@ -831,7 +940,7 @@ class SkillContractTests(unittest.TestCase):
         self.assertEqual(invalid.returncode, 2, invalid.stderr or invalid.stdout)
         self.assertIn("unsupported thinking", invalid.stdout)
 
-    def test_route_plan_validator_allows_fast_only_for_luna(self) -> None:
+    def test_route_plan_validator_defaults_fast_to_luna_and_allows_explicit_sol(self) -> None:
         plan = {
             "schema_version": "2.1",
             "task_class": "DEFAULT_GENERAL",
@@ -860,7 +969,15 @@ class SkillContractTests(unittest.TestCase):
         plan["candidates"][0]["speed_evidence"]["model"] = "gpt-5.6-sol"
         sol_fast = self.run_route_validator(plan)
         self.assertEqual(sol_fast.returncode, 2, sol_fast.stderr or sol_fast.stdout)
-        self.assertIn("Luna-only routing policy", sol_fast.stdout)
+        self.assertIn("non-default Fast requires explicit_user_request", sol_fast.stdout)
+
+        plan["explicit_user_request"] = True
+        sol_fast_explicit = self.run_route_validator(plan)
+        self.assertEqual(
+            sol_fast_explicit.returncode,
+            0,
+            sol_fast_explicit.stderr or sol_fast_explicit.stdout,
+        )
 
     def test_route_plan_validator_rejects_native_luna_even_with_runtime_evidence(self) -> None:
         plan = {
@@ -1218,9 +1335,11 @@ class SkillContractTests(unittest.TestCase):
         model: str,
         thinking: str,
         speed: str,
+        explicit_user_request: bool = False,
     ) -> dict[str, object]:
         return {
             "schema_version": "2.1",
+            "explicit_user_request": explicit_user_request,
             "candidates": [
                 {
                     "surface": surface,
@@ -1417,6 +1536,49 @@ class SkillContractTests(unittest.TestCase):
         result = self.run_ledger_validator([active])
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
+    def test_ledger_validator_applies_expanded_team_plan_limits(self) -> None:
+        plan = self.team_plan(
+            unit_count=7,
+            scale_profile="expanded",
+            scale_reason="Seven isolated outputs can be reviewed independently.",
+        )
+        plan["reserved_slots"] = 2
+        workers = []
+        for index in range(1, 8):
+            workers.append(
+                self.ledger_record(
+                    creation_attempt=index,
+                    task_id=f"task-expanded-{index}",
+                    thread_id=None,
+                    pending_worktree_id=None,
+                    control_state="PLANNED",
+                    thread_status=None,
+                    turn_status=None,
+                    last_observed_at=None,
+                    materialized=False,
+                    data_ready=False,
+                    status="planned",
+                    output=None,
+                    adopted=False,
+                    archived=False,
+                    unit_id=f"U{index}",
+                    team_plan_revision=1,
+                )
+            )
+        result = self.run_ledger_validator(
+            {
+                "creation_attempts": 7,
+                "worker_attempts": 7,
+                "team_plans": [plan],
+                "active_team_plan_revision": 1,
+                "workers": workers,
+            }
+        )
+        self.assertEqual(result.returncode, 0, result.stdout)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["scale_profile"], "expanded")
+        self.assertEqual(payload["in_flight_count"], 7)
+
     def test_ledger_validator_rejects_inspect_source_mutation(self) -> None:
         inspect = self.ledger_record(
             task_intent="inspect",
@@ -1466,7 +1628,7 @@ class SkillContractTests(unittest.TestCase):
         self.assertEqual(invalid.returncode, 2, invalid.stdout)
         self.assertIn("missing speed audit fields", invalid.stdout)
 
-    def test_ledger_validator_preserves_luna_only_fast_identity(self) -> None:
+    def test_ledger_validator_distinguishes_default_and_explicit_fast(self) -> None:
         route_plan = self.route_plan_21(
             surface="app_thread",
             model="gpt-5.6-luna",
@@ -1498,7 +1660,17 @@ class SkillContractTests(unittest.TestCase):
         )
         invalid = self.run_ledger_validator([sol_fast])
         self.assertEqual(invalid.returncode, 2, invalid.stdout)
-        self.assertIn("Luna-only routing policy", invalid.stdout)
+        self.assertIn("non-default Fast lacks explicit_user_request", invalid.stdout)
+
+        sol_fast["route_plan"] = self.route_plan_21(
+            surface="app_thread",
+            model="gpt-5.6-sol",
+            thinking="xhigh",
+            speed="fast",
+            explicit_user_request=True,
+        )
+        explicit = self.run_ledger_validator([sol_fast])
+        self.assertEqual(explicit.returncode, 0, explicit.stdout)
 
     def test_ledger_validator_accepts_native_light_ledger_from_stdin(self) -> None:
         payload = [self.native_ledger_record(worker_attempt=1)]

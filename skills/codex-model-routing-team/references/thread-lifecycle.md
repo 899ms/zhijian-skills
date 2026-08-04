@@ -67,7 +67,7 @@ python3 scripts/validate_route_plan.py /path/to/route-plan.json
 3. 返回 `threadId`、`pendingWorktreeId`、超时或未知形状时，严格按 `thread-supervision-protocol.md` 分类和恢复。
 4. `pendingWorktreeId` 不是正式 Thread id；只有唯一 task id 查询、正式读取和稳定观察通过后才进入 `CONTROL_READY`。
 5. 当前 turn 出现首个 assistant-originated reasoning/message 或模型工具调用时进入 `DATA_READY`。user message、Thread 元数据、客户端提示和 MCP 初始化错误不计入。
-6. 同组合探针通过后每波最多新增 3 个任务，防止新会话同时初始化 MCP 造成拥塞。
+6. 同组合探针通过后按 TeamPlan 档位新增任务：`standard` 每波最多 3 个，具备扩容理由且 live host 容量允许的 `expanded` 每波最多 6 个，防止新会话同时初始化 MCP 造成拥塞。
 
 `DATA_READY` 与模型/速度身份分开；没有真实回显时，`observed_runtime_model` 与 `observed_runtime_speed` 保持 `unknown`。
 

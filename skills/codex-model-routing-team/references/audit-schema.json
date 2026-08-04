@@ -30,7 +30,7 @@
     "archived"
   ],
   "properties": {
-    "creation_attempt": {"type": "integer", "minimum": 1, "maximum": 8},
+    "creation_attempt": {"type": "integer", "minimum": 1, "maximum": 16},
     "subtask_attempt": {"type": "integer", "minimum": 1, "maximum": 2},
     "task_id": {"type": "string", "minLength": 1, "maxLength": 128},
     "thread_id": {"type": ["string", "null"]},

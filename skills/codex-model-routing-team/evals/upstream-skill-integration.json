@@ -19,7 +19,7 @@
     {
       "id": "pure-chat-projectless",
       "prompt": "并行查询三个独立事实，只在聊天中返回结果，不写任何工作区文件。",
-      "expected_output": "允许 projectless；仍执行实体化健康探针、6/8 上限和禁止递归。"
+      "expected_output": "允许 projectless；仍执行实体化健康探针、默认 6/8/3 或经扩容门的 12/16/6 上限，以及禁止递归。"
     },
     {
       "id": "durable-resume-no-duplicate",

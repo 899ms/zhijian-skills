@@ -12,6 +12,9 @@
   "max_concurrent_workers": 6,
   "max_total_workers": 8,
   "max_new_threads_per_wave_after_probe": 3,
+  "expanded_max_concurrent_workers": 12,
+  "expanded_max_total_workers": 16,
+  "expanded_max_new_workers_per_wave": 6,
   "forbidden_worker_thinking": ["ultra"],
   "required_thread_audit_fields": [
     "creation_attempt",

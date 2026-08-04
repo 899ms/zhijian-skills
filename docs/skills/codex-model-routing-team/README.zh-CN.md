@@ -58,8 +58,8 @@ find ~/.agents/skills/codex-model-routing-team -maxdepth 2 -type f | sort
 - 准备创建两个以上 Worker 时，主 Agent 必须先生成轻量 TeamPlan；已有 CE Plan、Codex Plan 或上游 Skill 计划时只编译、不重写。TeamPlan 默认不创建独立 Planner、不进入重型规划流程、不写持久文件。
 - 主 Agent 保持当前模型，负责规划、文件所有权、集成、验证和最终交付。
 - 默认使用 App Thread。当前官方 V2 live schema 不开放 Luna，原生 Subagent 只用于用户明确点名或预声明 fallback。
-- 跨 Surface 同时运行最多 6 个 Worker；单个根任务累计最多 8 次 Worker attempt，失败、未实体化和 fallback 都计数。Worker 不得继续创建任何后台任务或子 Agent。
-- Worker 禁止使用 Ultra；Terra 为 opt-in，默认不参与自动路由。Luna 只走 App Thread 且最低 XHigh，Sol 在任一 Surface 都最低 High。只有 App Luna 可在 live schema 接受 `service_tier=priority` 时请求 Fast，Sol/Terra 保持 Standard。不可用时只走预声明 fallback 或由主 Agent 接管。
+- 默认使用 TeamPlan `standard` 档：跨 Surface 并发 6、根任务累计 8 次 attempts、每波新增 3。只有 7–12 个独立可验收产物、所有权隔离且 live host 容量允许时，才显式使用 `expanded` 12/16/6，并至少保留 2 个 reserved slots。Worker 不得继续创建任何后台任务或子 Agent。
+- Worker 禁止使用 Ultra；Terra 为 opt-in，默认不参与自动路由。Luna 只走 App Thread 且最低 XHigh；有 live `service_tier=priority` 证据时默认 Fast。Sol 在任一 Surface 都最低 High，Sol/Terra 默认 Standard，仅在用户明确要求且 live schema 接受精确组合时使用 Fast。不可用时只走预声明 fallback 或由主 Agent 接管。
 - 简单问答、状态查询、单文件小改、强顺序任务以及发布、发送、付款、删除、账户或生产操作不自动派遣。
 ```
 
@@ -77,10 +77,10 @@ find ~/.agents/skills/codex-model-routing-team -maxdepth 2 -type f | sort
 
 - 用净收益门判断是否派遣：至少两个单元拥有独立交付物与完成条件，且节省高于协调成本；否则由主 Agent 直接完成。
 - 两个以上 Worker 必须先编译并校验轻量 TeamPlan，明确依赖、写入所有权、交付物、验收和集成顺序；已有计划只编译、不重写。
-- 默认使用 Luna XHigh App Thread，高难或高风险任务升 Luna Max。Native Luna 静态拒绝；Sol 仅允许 High/XHigh/Max 且始终 Standard。App Luna 只有在 live create schema 接受 `service_tier=priority` 时才使用 Fast；Grok 4.5 在 runtime/provider 预检后承担复杂执行和异构审查。
+- 默认使用 Luna XHigh App Fast，高难或高风险任务升 Luna Max Fast；缺少 live priority 证据时改为 Standard。Native Luna 静态拒绝；Sol 仅允许 High/XHigh/Max，默认 Standard，显式 Fast 必须有匹配的 live 证据。Grok 4.5 在 runtime/provider 预检后承担复杂执行和异构审查。
 - `gpt-5.6-terra` 为 opt-in，只能作为用户明确点名的首项候选；unknown model 只判定该精确原生组合失败，禁止静默继承父模型。
 - Gemini 3.6 Flash 保留显式路由模板，但当前 Antigravity 第三方登录路径受官方条款阻断；正式 API/Vertex 路径需要新的 registry entry。
-- 每波最多新增 3 个 Worker，跨 Surface 同时运行最多 6 个，单个根任务累计最多 8 次 Worker attempt。
+- 保留稳健的默认 6/8/3 档；大量互斥交付物可在写入隔离、扩容理由和 live host 容量门通过后使用 12/16/6。实际运行时上限更窄时，以更窄上限为准。
 - 每个新模型/推理强度/速度/工具签名组合的首个真实业务任务充当健康探针；HTTP 成功、Thread 实体化、模型数据事件和交付质量分别验收。
 - 区分正式 `threadId`、排队 `pendingWorktreeId`、超时和歧义状态；用唯一 task id 恢复排队任务，`UNKNOWN` 状态禁止追问、归档、fallback 和重复创建。
 - 以最新官方 Thread/turn 读取作为当前状态真相，通过最小 ledger validator 检查 attempt、实体化、DATA_READY 与归档不变量。
@@ -112,7 +112,7 @@ printf '%s' "$TEAM_LEDGER_JSON" | python3 scripts/validate_team_ledger.py -
 
 上游 Skill 已经完成任务拆分时，本 Skill把现有单元编译为 TeamPlan，保留其阶段顺序、产物和质量门，不再猜一套计划。声明工作区输出路径的任务始终绑定项目；只有纯聊天交付才能使用 projectless。
 
-Deep Research 默认预算为 `2-4 个 researcher + 1 个 verifier + 1 个 reviewer + 2 个重试位`，总数不超过 8 个。
+Deep Research 默认仍使用 `2-4 个 researcher + 1 个 verifier + 1 个 reviewer + 2 个重试位` 的 standard 档；普通调研广度不自动触发 expanded。
 
 ## 使用示例
 
@@ -158,7 +158,7 @@ Agent 的完整工作流见 [SKILL.md](../../../skills/codex-model-routing-team/
 
 ## 验证情况
 
-工作流已经覆盖净收益判断、TeamPlan 依赖层、同波写冲突、预算、修订和计划外 Worker 校验，以及 App-first Luna XHigh/Max、Native Luna 与 Sol Medium/Low 的静态拒绝、速度审计、pending worktree 恢复、混合 ledger 和隔离 `npx skills` 安装。
+工作流已经覆盖净收益判断、standard/expanded 档位、TeamPlan 依赖层、同波写冲突、预算、修订和计划外 Worker 校验，以及默认 Luna Fast 与显式 Sol/Terra Fast、Native Luna 与 Sol Medium/Low 的静态拒绝、速度审计、pending worktree 恢复、混合 ledger 和隔离 `npx skills` 安装。
 
 ## 许可证
 

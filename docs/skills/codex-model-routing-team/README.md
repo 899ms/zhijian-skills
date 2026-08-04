@@ -58,8 +58,8 @@ To let Codex activate the Skill automatically for suitable complex work, add the
 - Before creating two or more Workers, the lead must compile a lightweight TeamPlan. Existing CE Plans, Codex Plans, and upstream Skill plans are compiled rather than rewritten. TeamPlan does not create a separate Planner, enter a heavyweight planning flow, or persist files by default.
 - The lead agent keeps its current model and owns planning, file ownership, integration, verification, and final delivery.
 - Use App threads by default. Native subagents are explicit-request or predeclared-fallback only because the current official V2 live schema does not expose Luna.
-- Run at most 6 Workers concurrently and make at most 8 Worker attempts for one root task; failures, non-materialized calls, and fallbacks count. Workers must not create more Workers or subagents.
-- Workers must not use Ultra. Terra is opt-in and excluded from automatic routing. Luna is App-only and starts at XHigh; Sol starts at High on every surface. Only App Luna may request Fast, with live `service_tier=priority` evidence; Sol and Terra remain Standard. Unavailable combinations follow only a predeclared fallback or return to the lead agent.
+- Use the Standard TeamPlan profile by default: at most 6 concurrent Workers, 8 root attempts, and 3 new Workers per wave. For 7–12 independently verifiable outputs with isolated ownership and confirmed host capacity, an explicit `expanded` profile may use 12/16/6 and must retain at least two reserved slots. Workers must not create more Workers or subagents.
+- Workers must not use Ultra. Terra is opt-in and excluded from automatic routing. Luna is App-only and starts at XHigh. Luna defaults to Fast when live `service_tier=priority` evidence exists; Sol and Terra default to Standard and may use Fast only on explicit user request with matching live evidence. Unavailable combinations follow only a predeclared fallback or return to the lead agent.
 - Do not auto-dispatch simple questions, status checks, small single-file edits, strongly sequential work, publishing, sending, payment, deletion, account, or production operations.
 ```
 
@@ -77,10 +77,10 @@ Ordinary automatic groups use the governed App-thread path. `native-light` is re
 
 - Uses a net-benefit gate: at least two independently verifiable deliverables, with expected savings greater than coordination cost; otherwise the lead executes directly.
 - Requires and validates a lightweight TeamPlan before dispatching two or more Workers, while compiling existing plans without rewriting them.
-- Defaults to Luna XHigh App threads and raises difficult or high-risk work to Luna Max. Native Luna is rejected; Sol is High/XHigh/Max only and remains Standard. App Luna may use Fast only when the live create schema accepts `service_tier=priority`; Grok 4.5 stays conditional on runtime/provider preflight.
+- Defaults to Luna XHigh App Fast and raises difficult or high-risk work to Luna Max Fast; either becomes Standard when live priority evidence is absent. Native Luna is rejected. Sol is High/XHigh/Max only, defaults to Standard, and accepts explicit Fast only with matching live evidence. Grok 4.5 stays conditional on runtime/provider preflight.
 - Keeps `gpt-5.6-terra` opt-in and first-candidate-only. An unknown-model response fails that exact native route and never silently inherits the parent model.
 - Retains explicit Gemini 3.6 Flash route templates while blocking the current third-party Antigravity login path; an official API/Vertex path needs a separate registry entry.
-- Limits fan-out to three new Workers per wave, six concurrent Workers, and eight Worker attempts per root request across both surfaces.
+- Keeps a conservative Standard 6/8/3 profile, with a justified Expanded 12/16/6 profile for many isolated deliverables. The narrower live host limit always wins.
 - Uses the first business task for each model/reasoning/speed/tool signature as its final health probe, separating HTTP, thread materialization, model data, and delivery quality.
 - Separates formal `threadId`, queued `pendingWorktreeId`, transport timeout, and ambiguous state; a unique task id recovers queued work, while `UNKNOWN` blocks follow-up, archival, fallback, and duplicate creation.
 - Treats the latest official Thread/turn read as current truth and uses a minimal ledger validator for attempt, materialization, DATA_READY, and archive invariants.
@@ -112,7 +112,7 @@ printf '%s' "$TEAM_LEDGER_JSON" | python3 scripts/validate_team_ledger.py -
 
 When an upstream Skill already owns decomposition, this Skill compiles those units into TeamPlan while preserving stages, artifacts, and quality gates. It does not invent a second domain plan. Any task with a workspace output path is project-bound; only chat-only work may be projectless.
 
-The default Deep Research budget is `2-4 researchers + 1 verifier + 1 reviewer + 2 retry slots`, within the cumulative eight-task cap.
+The default Deep Research budget remains `2-4 researchers + 1 verifier + 1 reviewer + 2 retry slots` in the Standard profile. Expanded routing is reserved for genuinely independent outputs, not ordinary research breadth.
 
 ## Example requests
 
@@ -158,7 +158,7 @@ The agent workflow lives in [SKILL.md](../../../skills/codex-model-routing-team/
 
 ## Validation
 
-The workflow covers net-benefit selection; TeamPlan dependency layers, same-wave write conflicts, budget, revisions, and unplanned Worker detection; App-first Luna XHigh/Max routing; Native Luna and Sol Medium/Low rejection; speed audit; queued-worktree recovery; mixed ledgers; and isolated `npx skills` installation.
+The workflow covers net-benefit selection; Standard/Expanded TeamPlan limits, dependency layers, same-wave write conflicts, budgets, revisions, and unplanned Worker detection; default Luna Fast versus explicit Sol/Terra Fast; Native Luna and Sol Medium/Low rejection; speed audit; queued-worktree recovery; mixed ledgers; and isolated `npx skills` installation.
 
 ## License
 

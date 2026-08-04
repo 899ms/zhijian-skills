@@ -19,7 +19,7 @@
 - RoutePlan、Provider allowlist、模型预检与 deterministic fallback
 - 原生 Subagent 的 fresh-context spawn、等待、follow-up 与关闭
 - App Thread 的 project / projectless 选择、创建、实体化、读取、追问与归档
-- 跨 Surface 并发 6、worker attempts 8、reserved slots 与升级次数
+- TeamPlan 默认 6/8/3，或经扩容理由、所有权隔离和 live host 容量门启用 12/16/6；同时保留 reserved slots 与升级次数
 - 单写者和禁止下级派遣等安全边界
 
 遇到冲突时，上游业务流程优先，路由安全上限保持强制。预算不足时收敛 Worker 数量并报告，禁止跳过上游验证阶段。
@@ -42,7 +42,7 @@
 ## Deep Research 预设
 
 ```text
-researcher_count + 1 verifier + 1 reviewer + retry_reserve <= 8
+standard: researcher_count + 1 verifier + 1 reviewer + retry_reserve <= 8
 ```
 
 - researcher：默认 2–4 个，使用 Luna X High App；高难主题升 Luna Max。live create schema 接受 priority 时可用 Fast，否则保持 Standard。公开技术研究可在 Provider 门通过后使用 Grok Medium。
