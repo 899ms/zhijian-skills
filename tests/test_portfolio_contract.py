@@ -21,6 +21,7 @@ EXPECTED_SKILLS = {
     "skill-open-sourcer",
     "wechat-article-search",
     "wechat-styler",
+    "web-clipper",
     "workbuddy-cli-model-bridge",
     "wxmp-article-harvester",
 }
