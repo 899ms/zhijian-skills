@@ -51,17 +51,17 @@
     {
       "name": "codex-model-routing-team",
       "lifecycle": "active",
-      "version": "2.2.0",
+      "version": "3.0.0",
       "path": "skills/codex-model-routing-team",
       "documentation": "docs/skills/codex-model-routing-team/README.md",
       "documentation_zh": "docs/skills/codex-model-routing-team/README.zh-CN.md",
       "changelog": "docs/changelogs/codex-model-routing-team.md",
-      "canonical_tag": "codex-model-routing-team/v2.2.0",
+      "canonical_tag": "codex-model-routing-team/v3.0.0",
       "validation": {
         "commands": [
           "python3 -m unittest tests.skills.test_codex_model_routing_team -v"
         ],
-        "live_smoke": "Validate both a standard two-unit TeamPlan and a justified expanded TeamPlan; run one Luna XHigh App Fast canary with live priority evidence, confirm native V2 rejects or omits Luna, confirm Sol Medium is rejected, and confirm Sol Fast requires explicit request plus tuple-bound live evidence; record TeamPlan profile/unit/revision and requested, accepted, and observed model and speed identity separately"
+        "live_smoke": "Validate a standard TeamPlan; use the live spawn schema to confirm native gpt-5.6-luna with xhigh or max and fork_turns=none; keep Standard when service_tier is absent; confirm Luna is a leaf Worker, Sol Medium is rejected, durable_app stays on App Thread, and adopted native output reaches RELEASED through close or completed_idle; record requested, accepted, and observed identity separately"
       },
       "capabilities": {
         "network": "required",

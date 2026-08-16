@@ -1,6 +1,6 @@
 # Worker 任务包
 
-每个 Worker 的初始提示词必须独立可执行，不能依赖完整聊天记录。原生 Subagent 默认使用 fresh context，App Thread 也不能假设拥有主任务隐式历史。包含以下字段：
+每个 Worker 的初始提示词必须独立可执行，不能依赖完整聊天记录。原生 Subagent 默认 `fork_turns="none"`；即使继承最近 N 轮，也不能把父任务隐式历史当作任务合同。App Thread 同样必须自包含。包含以下字段：
 
 ```markdown
 # 任务身份
@@ -10,6 +10,7 @@
 - unit_id（TeamPlan 模式必填）：
 - team_plan_revision（TeamPlan 模式必填）：
 - surface：`native_subagent | app_thread`
+- fork_turns（v3 原生必填）：`none | 正整数字符串`
 - task_intent：`mutate | inspect | verify`
 - mutation_authority：`none | declared-output-only | declared-workspace | isolated-worktree`
 - result_correlation_id（可选）：
@@ -52,9 +53,9 @@
 
 每次 Worker attempt 使用唯一 task id。fallback Worker 使用新 task id；App Thread 由此避免 `list_threads(query=task_id)` 匹配旧 Thread，原生 Worker 由此关联 agent id 与输出。`result_correlation_id` 只用于结果关联，不代表任务正确完成。
 
-主 Agent 另外记录所选 Surface、`model`、`thinking`、`speed` 与选择理由。任务包中严禁声称 Worker 已加载某个预制 Agent Type。
+主 Agent 另外记录所选 Surface、`model`、`thinking`、`speed`、`fork_turns` 与选择理由。任务包中严禁声称 Worker 已加载某个预制 Agent Type。
 
-主 Agent 还要在任务包之外保存 `schema_version: "2.1"` 的 RoutePlan：任务画像、精确候选链、最低 `thinking`、速度、Provider 策略、健康证据和 fallback 条件。Worker 不自行选择或切换模型/速度，也不需要看到其他候选的凭证与配额信息。
+主 Agent 还要在任务包之外保存 `schema_version: "3.0"` 的 RoutePlan：任务画像、精确候选链、最低 `thinking`、速度、上下文范围、Provider 策略、健康证据和 fallback 条件。Worker 不自行选择或切换模型、速度或上下文范围，也不需要看到其他候选的凭证与配额信息。
 
 准备创建两个及以上 Worker 时，任务包必须来自已通过 `scripts/validate_team_plan.py` 的 [TeamPlan](team-plan.md)。每个 Worker unit 恰好生成一份初始任务包和一份 RoutePlan；fallback attempt 沿用相同 `unit_id/team_plan_revision`，但必须使用新的 `task_id`。
 

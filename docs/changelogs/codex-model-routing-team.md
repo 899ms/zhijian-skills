@@ -2,15 +2,22 @@
 
 ## Unreleased
 
-- Separate Fast eligibility from default preference: Luna defaults to Fast when live `service_tier=priority` evidence exists, while Sol and Terra default to Standard but may use explicit Fast when the current Surface proves the exact tuple.
+## 3.0.0 - 2026-08-16
+
+- Change the automatic route from Luna App threads to native Multi-Agent V2 Luna leaf Workers: XHigh Standard by default, Max for high-risk or high-ambiguity units.
+- Add RoutePlan v3 with `surface_intent`, explicit native `fork_turns`, tuple-bound context evidence, and completion-only compatibility for v2.1 runs.
+- Reserve App threads for worktrees, sidebar visibility, cross-task recovery, and durable supervision; durable fallback chains cannot leave the App surface.
+- Replace mandatory native close with the `RELEASED` lifecycle, using live close when available or verified completed-idle release when it is not.
+- Keep Fast live-gated: Standard native evidence does not invent speed/service-tier fields; Fast requires explicit priority capability evidence.
+- Document the official Codex leaf-model support source and deliberately keep the orchestrator free of `model: luna` frontmatter.
+
+- Separate Fast eligibility from model policy: Standard remains the default without live priority evidence; Sol and Terra also require an explicit user request for Fast.
 - Replace the fixed 6/8/3 ceiling with registry-backed TeamPlan profiles: conservative `standard` remains the default, while justified, ownership-isolated, host-confirmed `expanded` runs may use 12 concurrent Workers, 16 root attempts, and 6 new Workers per wave with at least two reserved slots.
 - Add a lightweight TeamPlan compiler and dependency-free validator before every two-or-more-Worker dispatch, covering dependencies, same-wave ownership conflicts, budgets, integration order, and lead-only final verification.
 - Compile CE Plans, Codex Plans, and upstream Skill decompositions without rewriting them; keep two-to-three-unit micro plans in context and persist only durable four-plus-Worker or resumable runs.
 - Bind Worker ledger entries to `team_plan_revision` and `unit_id`, reject mid-wave structural revisions and plan-external Workers, and warn when valid units remain undispatched.
 - Replace vague complexity activation with a net-benefit gate that preserves the quality floor and compares expected time or model-cost savings against coordination cost.
 - Make `speed` a versioned RoutePlan dimension with backward-compatible legacy Standard behavior.
-- Default automatic routing to Luna XHigh App Thread, raise difficult or high-risk tasks to Luna Max, and keep native V2 only for explicit requests or predeclared fallback.
-- Treat Luna as App-only while the official native V2 live schema omits it; require Sol High or stronger on every Surface and reject Sol Medium/Low even when explicitly requested.
 - Require tuple-bound live speed evidence for every Fast route while preserving separate requested/accepted/observed speed audit fields.
 - Slim initial Skill/interface context from 1708 to 890 estimated tokens by keeping only triggers, branch selection, the shared execution skeleton, hard gates, and the output contract; defer detailed policy and lifecycle rules to existing references.
 

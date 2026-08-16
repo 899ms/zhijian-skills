@@ -107,15 +107,24 @@ def routing_team() -> str:
     body = [
         text(52, 55, "CODEX ORCHESTRATION", 15, cyan, 700, family=MONO, letter_spacing="2"),
         text(52, 118, "Model Routing", 48, white, 720), text(52, 168, "Team", 48, white, 720),
-        text(52, 212, "One lead. Bounded workers. Explicit routes.", 21, "#A8B5C7", 450),
-        rect(52, 253, 358, 48, panel, 8, cyan, 2), text(72, 284, "PLAN  /  DELEGATE  /  VERIFY", 17, white, 700, family=MONO),
-        circle(760, 178, 58, orange), text(760, 173, "LEAD", 19, bg, 800, family=MONO, text_anchor="middle"), text(760, 198, "integrates", 14, bg, 650, family=MONO, text_anchor="middle"),
+        text(52, 212, "Native leaf work. Durable App workspaces.", 21, "#A8B5C7", 450),
+        rect(52, 253, 358, 48, panel, 8, cyan, 2), text(72, 284, "PLAN  /  ROUTE  /  VERIFY", 17, white, 700, family=MONO),
+        circle(548, 178, 54, orange), text(548, 173, "LEAD", 18, bg, 800, family=MONO, text_anchor="middle"), text(548, 197, "TeamPlan", 13, bg, 650, family=MONO, text_anchor="middle"),
+        line(602, 178, 690, 178, "#3B5975", 3),
+        rect(690, 139, 150, 78, panel, 10, white, 2),
+        text(765, 170, "SURFACE", 15, white, 700, family=MONO, text_anchor="middle"),
+        text(765, 194, "INTENT", 15, white, 700, family=MONO, text_anchor="middle"),
+        line(840, 178, 884, 92, "#3B5975", 3),
+        line(840, 178, 884, 264, "#3B5975", 3),
+        rect(884, 50, 264, 84, panel, 10, cyan, 2),
+        text(904, 82, "NATIVE V2", 16, cyan, 750, family=MONO),
+        text(904, 108, "LUNA LEAF  ·  XHIGH / MAX", 14, white, 650, family=MONO),
+        rect(884, 222, 264, 84, panel, 10, orange, 2),
+        text(904, 254, "APP THREAD", 16, orange, 750, family=MONO),
+        text(904, 280, "WORKTREE  ·  RECOVERY", 14, white, 650, family=MONO),
+        text(765, 338, "provider gate  •  child capacity  •  final evidence", 15, "#8EA4B8", 500, family=MONO, text_anchor="middle"),
     ]
-    nodes = [(560, 86, "RESEARCH", "LUNA"), (980, 86, "REVIEW", "SOL"), (560, 270, "BUILD", "GROK"), (980, 270, "VERIFY", "LUNA")]
-    for x, y, job, model in nodes:
-        body += [line(760, 178, x, y, "#3B5975", 3), rect(x - 92, y - 36, 184, 72, panel, 10, cyan if model == "LUNA" else orange, 2), text(x, y - 5, job, 16, white, 700, family=MONO, text_anchor="middle"), text(x, y + 20, model, 14, cyan if model == "LUNA" else orange, 700, family=MONO, text_anchor="middle")]
-    body += [text(760, 338, "provider gate  •  file ownership  •  final evidence", 15, "#8EA4B8", 500, family=MONO, text_anchor="middle")]
-    return svg("Codex Model Routing Team", "A lead Codex task routes bounded background work to explicit models and verifies the result.", bg, "radial-routing-control", body)
+    return svg("Codex Model Routing Team", "A Codex lead routes parent-integrated leaf work to native Luna and durable workspace work to App threads.", bg, "native-leaf-durable-split", body)
 
 
 def skill_admin() -> str:

@@ -5,6 +5,7 @@ import argparse
 import json
 import re
 import sys
+from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -40,6 +41,19 @@ def nonempty_string(value: Any) -> bool:
 
 def valid_int(value: Any, *, minimum: int = 0) -> bool:
     return isinstance(value, int) and not isinstance(value, bool) and value >= minimum
+
+
+def parse_timestamp(value: Any) -> datetime | None:
+    if not nonempty_string(value):
+        return None
+    candidate = value.strip().replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(candidate)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return None
+    return parsed.astimezone(timezone.utc)
 
 
 def normalize_scope_path(value: Any) -> tuple[str | None, str | None]:
@@ -122,6 +136,82 @@ def validate_team_plan_payload(
         payload.get("scale_reason")
     ):
         errors.append("non-default scale_profile requires scale_reason")
+    runtime_worker_capacity = payload.get("runtime_worker_capacity")
+    if runtime_worker_capacity is not None and not valid_int(
+        runtime_worker_capacity, minimum=1
+    ):
+        errors.append("runtime_worker_capacity must be a positive integer")
+        runtime_worker_capacity = None
+    if scale_profile != default_profile and runtime_worker_capacity is None:
+        errors.append("non-default scale_profile requires runtime_worker_capacity")
+    capacity_policy = policy.get("native_capacity_policy", {})
+    capacity_evidence = payload.get("runtime_capacity_evidence")
+    if runtime_worker_capacity is not None and not isinstance(capacity_evidence, dict):
+        errors.append("runtime_worker_capacity requires runtime_capacity_evidence")
+    if isinstance(capacity_evidence, dict):
+        evidence_kind = capacity_evidence.get("kind")
+        if evidence_kind not in {"live_tool_contract", "live_collaboration_status"}:
+            errors.append("runtime_capacity_evidence has unsupported kind")
+        if not nonempty_string(capacity_evidence.get("host")):
+            errors.append("runtime_capacity_evidence requires host")
+        captured_at = parse_timestamp(capacity_evidence.get("captured_at"))
+        if captured_at is None:
+            errors.append("runtime_capacity_evidence requires a timezone-aware captured_at")
+        else:
+            ttl_seconds = (
+                capacity_policy.get("capacity_evidence_ttl_seconds", 600)
+                if isinstance(capacity_policy, dict)
+                else 600
+            )
+            if not valid_int(ttl_seconds, minimum=1):
+                ttl_seconds = 600
+            age_seconds = (datetime.now(timezone.utc) - captured_at).total_seconds()
+            if age_seconds < -60 or age_seconds > ttl_seconds:
+                errors.append("runtime_capacity_evidence is stale or from the future")
+        total_slots = capacity_evidence.get("total_concurrency_slots")
+        coordinator_slots = capacity_evidence.get("coordinator_slots")
+        active_worker_slots = capacity_evidence.get("active_worker_slots")
+        available_child_slots = capacity_evidence.get("available_child_slots")
+        if not valid_int(total_slots, minimum=1):
+            errors.append("runtime_capacity_evidence has invalid total_concurrency_slots")
+        if not valid_int(coordinator_slots):
+            errors.append("runtime_capacity_evidence has invalid coordinator_slots")
+        if not valid_int(active_worker_slots):
+            errors.append("runtime_capacity_evidence has invalid active_worker_slots")
+        if not valid_int(available_child_slots, minimum=1):
+            errors.append("runtime_capacity_evidence has invalid available_child_slots")
+        if all(
+            valid_int(value)
+            for value in (total_slots, coordinator_slots, active_worker_slots)
+        ):
+            computed_available = total_slots - coordinator_slots - active_worker_slots
+            if computed_available < 1 or available_child_slots != computed_available:
+                errors.append("runtime_capacity_evidence slot arithmetic does not balance")
+        if runtime_worker_capacity is not None and available_child_slots != runtime_worker_capacity:
+            errors.append("runtime_worker_capacity does not match live capacity evidence")
+        reserve_coordinator = (
+            capacity_policy.get("reserve_coordinator_slot", True)
+            if isinstance(capacity_policy, dict)
+            else True
+        )
+        if reserve_coordinator and not valid_int(coordinator_slots, minimum=1):
+            errors.append("runtime_capacity_evidence must reserve a coordinator slot")
+    unknown_capacity = (
+        capacity_policy.get("default_child_capacity_when_unknown", 3)
+        if isinstance(capacity_policy, dict)
+        else 3
+    )
+    if not valid_int(unknown_capacity, minimum=1):
+        unknown_capacity = 3
+    conservative_capacity = min(
+        limits["max_new_workers_per_wave"],
+        runtime_worker_capacity
+        if isinstance(runtime_worker_capacity, int)
+        else unknown_capacity,
+    )
+    result["runtime_worker_capacity"] = runtime_worker_capacity
+    result["runtime_capacity_evidence"] = capacity_evidence
+    result["effective_worker_capacity"] = conservative_capacity
 
     schema_version = payload.get("schema_version")
     revision = payload.get("revision")
@@ -281,9 +371,9 @@ def validate_team_plan_payload(
                                 errors.append(
                                     f"ready units {left_id} and {right_id} have overlapping write scope"
                                 )
-            for start in range(0, len(layer), max_new_workers_per_wave):
+            for start in range(0, len(layer), conservative_capacity):
                 result["dispatch_waves"].append(
-                    layer[start : start + max_new_workers_per_wave]
+                    layer[start : start + conservative_capacity]
                 )
 
         integration_order = payload.get("integration_order")

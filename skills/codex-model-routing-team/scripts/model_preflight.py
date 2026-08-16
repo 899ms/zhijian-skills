@@ -6,6 +6,7 @@ import hashlib
 import ipaddress
 import json
 import os
+import re
 import secrets
 import sys
 import time
@@ -225,7 +226,11 @@ def parse_args() -> argparse.Namespace:
         "--surface",
         choices=("native_subagent", "app_thread"),
         default="app_thread",
-        help="Execution surface; omitted legacy calls default to app_thread.",
+        help="Execution surface; omitted legacy CLI calls default to app_thread. New RoutePlans declare it explicitly.",
+    )
+    parser.add_argument(
+        "--fork-turns",
+        help="Native V2 context scope: 'none' for fresh context or a positive turn count. 'all' is forbidden with an explicit model override.",
     )
     parser.add_argument("--registry", type=Path, default=DEFAULT_REGISTRY)
     parser.add_argument("--catalog", type=Path)
@@ -255,6 +260,11 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    fork_turns = (
+        args.fork_turns
+        if args.fork_turns is not None
+        else ("none" if args.surface == "native_subagent" else None)
+    )
     result: dict[str, Any] = {
         "checked_at": datetime.now(timezone.utc).isoformat(),
         "model": args.model,
@@ -262,6 +272,7 @@ def main() -> int:
         "speed": args.speed,
         "service_tier": "priority" if args.speed == "fast" else None,
         "surface": args.surface,
+        "fork_turns": fork_turns,
         "registry_eligible": False,
         "runtime_status": "unknown",
         "runtime_evidence": None,
@@ -295,8 +306,8 @@ def main() -> int:
     fast_routing_models = set(
         registry.get("policy", {}).get("fast_routing_models", [])
     )
-    default_fast_models = set(
-        registry.get("policy", {}).get("default_fast_models", [])
+    fast_requires_explicit_models = set(
+        registry.get("policy", {}).get("fast_requires_explicit_models", [])
     )
     app_thread_only_models = set(
         registry.get("policy", {}).get("app_thread_only_models", [])
@@ -304,6 +315,15 @@ def main() -> int:
     registry_thinking = supported_thinking(entry, args.surface)
     if args.surface == "native_subagent" and args.model in app_thread_only_models:
         result["errors"].append("model is App Thread only in the current routing policy")
+    if args.surface == "native_subagent":
+        if not isinstance(fork_turns, str) or not (
+            fork_turns == "none" or re.fullmatch(r"[1-9][0-9]*", fork_turns)
+        ):
+            result["errors"].append(
+                "native V2 confirmation requires --fork-turns none or a positive turn count"
+            )
+    elif args.fork_turns is not None:
+        result["errors"].append("App Thread preflight must not declare --fork-turns")
     if args.thinking in forbidden:
         result["errors"].append("thinking is forbidden by registry policy")
     elif args.thinking not in registry_thinking:
@@ -312,11 +332,11 @@ def main() -> int:
         result["errors"].append("Fast is not eligible for this model in registry policy")
     if (
         args.speed == "fast"
-        and args.model not in default_fast_models
+        and args.model in fast_requires_explicit_models
         and not args.explicit_user_request
     ):
         result["errors"].append(
-            "non-default Fast requires an explicit user request"
+            "this model requires an explicit user request for Fast"
         )
     if args.service_tier_confirmed and args.speed != "fast":
         result["errors"].append("--service-tier-confirmed requires --speed fast")
@@ -332,11 +352,13 @@ def main() -> int:
         "automatic": bool(entry.get("automatic")),
         "provider": entry.get("provider"),
         "terms_default": entry.get("terms_default", "unknown"),
+        "multi_agent_version": entry.get("multi_agent_version", "unknown"),
+        "native_role": entry.get("native_role", "unknown"),
         "surface": args.surface,
         "thinking_supported": args.thinking in registry_thinking,
         "speed": args.speed,
         "fast_policy_allowed": args.model in fast_routing_models,
-        "fast_by_default": args.model in default_fast_models,
+        "fast_requires_explicit_request": args.model in fast_requires_explicit_models,
     }
 
     if entry.get("terms_default") == "blocked":
@@ -402,17 +424,20 @@ def main() -> int:
     if args.runtime_confirmed and not result["errors"]:
         result["runtime_status"] = "pass"
         if args.surface == "native_subagent":
-            result["runtime_evidence"] = {
+            runtime_evidence = {
                 "kind": "live_spawn_schema",
                 "surface": args.surface,
                 "model": args.model,
                 "thinking": args.thinking,
-                "speed": args.speed,
-                "service_tier": "priority" if args.speed == "fast" else None,
+                "fork_turns": fork_turns,
                 "accepted": True,
                 "host": args.host,
                 "checked_at": result["checked_at"],
             }
+            if args.speed == "fast":
+                runtime_evidence["speed"] = "fast"
+                runtime_evidence["service_tier"] = "priority"
+            result["runtime_evidence"] = runtime_evidence
         elif args.speed == "fast":
             result["speed_evidence"] = {
                 "kind": "live_create_schema",
