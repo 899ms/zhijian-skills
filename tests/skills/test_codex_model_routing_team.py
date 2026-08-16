@@ -56,16 +56,21 @@ class SkillContractTests(unittest.TestCase):
             registry["policy"]["fast_routing_models"],
             ["gpt-5.6-luna", "gpt-5.6-sol", "gpt-5.6-terra"],
         )
-        self.assertEqual(registry["policy"]["default_fast_models"], ["gpt-5.6-luna"])
-        self.assertEqual(registry["policy"]["app_thread_only_models"], ["gpt-5.6-luna"])
-        self.assertEqual(registry["policy"]["default_surface"], "app_thread")
+        self.assertEqual(registry["policy"]["default_fast_models"], [])
+        self.assertEqual(
+            registry["policy"]["fast_requires_explicit_models"],
+            ["gpt-5.6-sol", "gpt-5.6-terra"],
+        )
+        self.assertEqual(registry["policy"]["app_thread_only_models"], [])
+        self.assertEqual(registry["policy"]["default_surface"], "native_subagent")
         self.assertEqual(
             registry["policy"]["default_openai_route"],
             {
-                "surface": "app_thread",
+                "surface": "native_subagent",
                 "model": "gpt-5.6-luna",
                 "thinking": "xhigh",
-                "speed": "fast",
+                "speed": "standard",
+                "fork_turns": "none",
             },
         )
         self.assertEqual(
@@ -77,7 +82,12 @@ class SkillContractTests(unittest.TestCase):
                 "min_reserved_slots": 2,
             },
         )
-        self.assertEqual(models["gpt-5.6-luna"]["surface_thinking"]["native_subagent"], [])
+        self.assertEqual(
+            models["gpt-5.6-luna"]["surface_thinking"]["native_subagent"],
+            ["xhigh", "max"],
+        )
+        self.assertEqual(models["gpt-5.6-luna"]["multi_agent_version"], "v1")
+        self.assertEqual(models["gpt-5.6-luna"]["native_role"], "leaf")
         self.assertEqual(models["gpt-5.6-luna"]["thinking"], ["xhigh", "max"])
         self.assertEqual(models["gpt-5.6-sol"]["thinking"], ["high", "xhigh", "max"])
         self.assertEqual(models["gpt-5.6-terra"]["status"], "opt_in")
@@ -106,6 +116,9 @@ class SkillContractTests(unittest.TestCase):
         for field in contract["team_plan_audit_fields"]:
             self.assertIn(field, audit_schema["properties"])
             self.assertIn(field, native_schema["properties"])
+        for field in contract["required_native_audit_fields"]:
+            self.assertIn(field, native_schema["properties"])
+            self.assertIn(field, native_schema["allOf"][0]["then"]["required"])
 
     def test_dual_surface_support_files_are_self_contained(self) -> None:
         required = (
@@ -124,10 +137,11 @@ class SkillContractTests(unittest.TestCase):
         body = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
         for marker in (
             "native_subagent",
-            "app_thread",
-            'schema_version: "2.1"',
+            "App Thread",
+            'schema_version: "3.0"',
+            "surface_intent",
+            "fork_turns",
             "runtime_evidence",
-            "speed_evidence",
             "service_tier=priority",
             "Luna",
             "Sol",
@@ -140,7 +154,8 @@ class SkillContractTests(unittest.TestCase):
             "TeamPlan",
             "scripts/validate_team_plan.py",
             "reserved slots",
-            "单写者",
+            "同波写冲突",
+            "RELEASED",
             "scripts/validate_route_plan.py",
             "scripts/validate_team_ledger.py",
         ):
@@ -148,20 +163,24 @@ class SkillContractTests(unittest.TestCase):
                 self.assertIn(marker, body)
         self.assertLessEqual(len(body), 3_000)
 
+    def test_orchestrator_does_not_pin_itself_to_luna(self) -> None:
+        skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        frontmatter = skill.split("---", 2)[1]
+        self.assertNotRegex(frontmatter, r"(?m)^model\s*:")
+        self.assertNotIn("model: luna", (SKILL_ROOT / "agents/openai.yaml").read_text())
+
     def test_validation_cases_cover_slimming_replay_set(self) -> None:
         cases = (SKILL_ROOT / "references/validation-cases.md").read_text(
             encoding="utf-8"
         )
         for case in (
-            "Default App Luna happy path",
-            "Native Luna rejected",
-            "Sol Medium rejected",
-            "Surface selection",
-            "Adjacent non-goal",
-            "Regression",
-            "Net-positive TeamPlan",
+            "默认 Native Luna",
+            "Native Luna Fast 缺少 schema",
+            "Sol thinking 与 Fast",
+            "Durable App",
+            "上游 Skill",
             "TeamPlan write collision",
-            "Expanded TeamPlan",
+            "Expanded capacity",
         ):
             self.assertIn(case, cases)
 
@@ -237,6 +256,25 @@ class SkillContractTests(unittest.TestCase):
             plan["scale_reason"] = scale_reason
         return plan
 
+    def capacity_evidence(
+        self,
+        *,
+        total: int = 6,
+        coordinator: int = 1,
+        active: int = 0,
+        available: int = 5,
+        captured_at: str | None = None,
+    ) -> dict[str, object]:
+        return {
+            "kind": "live_tool_contract",
+            "host": "test-host",
+            "captured_at": captured_at or datetime.now(timezone.utc).isoformat(),
+            "total_concurrency_slots": total,
+            "coordinator_slots": coordinator,
+            "active_worker_slots": active,
+            "available_child_slots": available,
+        }
+
     def test_team_plan_validator_accepts_stdin_and_computes_waves(self) -> None:
         plan = self.team_plan(unit_count=4)
         plan["reserved_slots"] = 4
@@ -301,14 +339,56 @@ class SkillContractTests(unittest.TestCase):
             scale_reason="Twelve independent read-only reviews have isolated outputs.",
         )
         expanded["reserved_slots"] = 2
+        expanded["runtime_worker_capacity"] = 5
+        expanded["runtime_capacity_evidence"] = self.capacity_evidence()
         accepted = self.run_team_plan_validator(expanded)
         self.assertEqual(accepted.returncode, 0, accepted.stdout)
         payload = json.loads(accepted.stdout)
         self.assertEqual(payload["scale_profile"], "expanded")
         self.assertEqual(payload["dispatch_waves"], [
-            ["U1", "U2", "U3", "U4", "U5", "U6"],
-            ["U7", "U8", "U9", "U10", "U11", "U12"],
+            ["U1", "U2", "U3", "U4", "U5"],
+            ["U6", "U7", "U8", "U9", "U10"],
+            ["U11", "U12"],
         ])
+        self.assertEqual(payload["effective_worker_capacity"], 5)
+
+        no_capacity = self.team_plan(
+            unit_count=7,
+            scale_profile="expanded",
+            scale_reason="Capacity must be live-confirmed.",
+        )
+        no_capacity["reserved_slots"] = 2
+        missing_capacity = self.run_team_plan_validator(no_capacity)
+        self.assertEqual(missing_capacity.returncode, 2, missing_capacity.stdout)
+        self.assertIn(
+            "requires runtime_worker_capacity",
+            missing_capacity.stdout,
+        )
+
+        no_evidence = self.team_plan(
+            unit_count=7,
+            scale_profile="expanded",
+            scale_reason="Capacity must include current live evidence.",
+        )
+        no_evidence["reserved_slots"] = 2
+        no_evidence["runtime_worker_capacity"] = 5
+        missing_evidence = self.run_team_plan_validator(no_evidence)
+        self.assertEqual(missing_evidence.returncode, 2, missing_evidence.stdout)
+        self.assertIn("requires runtime_capacity_evidence", missing_evidence.stdout)
+
+        forged_capacity = json.loads(json.dumps(expanded))
+        forged_capacity["runtime_capacity_evidence"]["active_worker_slots"] = 2
+        forged = self.run_team_plan_validator(forged_capacity)
+        self.assertEqual(forged.returncode, 2, forged.stdout)
+        self.assertIn("slot arithmetic does not balance", forged.stdout)
+
+        stale_capacity = json.loads(json.dumps(expanded))
+        stale_capacity["runtime_capacity_evidence"]["captured_at"] = (
+            datetime.now(timezone.utc) - timedelta(minutes=11)
+        ).isoformat()
+        stale = self.run_team_plan_validator(stale_capacity)
+        self.assertEqual(stale.returncode, 2, stale.stdout)
+        self.assertIn("is stale or from the future", stale.stdout)
 
         expanded.pop("scale_reason")
         expanded["reserved_slots"] = 1
@@ -323,6 +403,8 @@ class SkillContractTests(unittest.TestCase):
             scale_reason="Independent outputs still remain policy-bounded.",
         )
         too_large["reserved_slots"] = 2
+        too_large["runtime_worker_capacity"] = 5
+        too_large["runtime_capacity_evidence"] = self.capacity_evidence()
         oversized = self.run_team_plan_validator(too_large)
         self.assertEqual(oversized.returncode, 2, oversized.stdout)
         self.assertIn("between 2 and 12", oversized.stdout)
@@ -510,7 +592,7 @@ class SkillContractTests(unittest.TestCase):
             "priority",
         )
 
-    def test_preflight_keeps_luna_app_only_and_requires_explicit_sol_fast(self) -> None:
+    def test_preflight_allows_native_luna_leaf_and_requires_explicit_sol_fast(self) -> None:
         native_luna = self.run_preflight(
             "--surface",
             "native_subagent",
@@ -518,8 +600,6 @@ class SkillContractTests(unittest.TestCase):
             "gpt-5.6-luna",
             "--thinking",
             "xhigh",
-            "--speed",
-            "fast",
             "--runtime-confirmed",
             "--host",
             "test-host",
@@ -527,8 +607,11 @@ class SkillContractTests(unittest.TestCase):
             "allowed",
             "--data-allowed",
         )
-        self.assertEqual(native_luna.returncode, 2, native_luna.stdout)
-        self.assertIn("App Thread only", native_luna.stdout)
+        self.assertEqual(native_luna.returncode, 0, native_luna.stdout)
+        native_payload = json.loads(native_luna.stdout)
+        self.assertEqual(native_payload["fork_turns"], "none")
+        self.assertEqual(native_payload["checks"]["registry"]["native_role"], "leaf")
+        self.assertNotIn("service_tier", native_payload["runtime_evidence"])
 
         sol_fast = self.run_preflight(
             "--surface",
@@ -833,6 +916,7 @@ class SkillContractTests(unittest.TestCase):
             "surface": "native_subagent",
             "model": model,
             "thinking": thinking,
+            "fork_turns": "none",
             "accepted": True,
             "host": "test-host",
             "checked_at": datetime.now(timezone.utc).isoformat(),
@@ -873,6 +957,8 @@ class SkillContractTests(unittest.TestCase):
             "surface": "native_subagent",
             "model": model,
             "thinking": thinking,
+            "speed": "standard",
+            "fork_turns": "none",
             "runtime_evidence": self.live_spawn_evidence(model, thinking),
         }
         candidate.update(overrides)
@@ -940,7 +1026,7 @@ class SkillContractTests(unittest.TestCase):
         self.assertEqual(invalid.returncode, 2, invalid.stderr or invalid.stdout)
         self.assertIn("unsupported thinking", invalid.stdout)
 
-    def test_route_plan_validator_defaults_fast_to_luna_and_allows_explicit_sol(self) -> None:
+    def test_route_plan_validator_live_gates_luna_fast_and_requires_explicit_sol(self) -> None:
         plan = {
             "schema_version": "2.1",
             "task_class": "DEFAULT_GENERAL",
@@ -969,7 +1055,7 @@ class SkillContractTests(unittest.TestCase):
         plan["candidates"][0]["speed_evidence"]["model"] = "gpt-5.6-sol"
         sol_fast = self.run_route_validator(plan)
         self.assertEqual(sol_fast.returncode, 2, sol_fast.stderr or sol_fast.stdout)
-        self.assertIn("non-default Fast requires explicit_user_request", sol_fast.stdout)
+        self.assertIn("model requires explicit_user_request for Fast", sol_fast.stdout)
 
         plan["explicit_user_request"] = True
         sol_fast_explicit = self.run_route_validator(plan)
@@ -979,33 +1065,59 @@ class SkillContractTests(unittest.TestCase):
             sol_fast_explicit.stderr or sol_fast_explicit.stdout,
         )
 
-    def test_route_plan_validator_rejects_native_luna_even_with_runtime_evidence(self) -> None:
+    def test_route_plan_validator_accepts_native_luna_with_v3_context_evidence(self) -> None:
         plan = {
-            "schema_version": "2.1",
-            "task_class": "NATIVE_WORKER_EXPLICIT",
+            "schema_version": "3.0",
+            "surface_intent": "parent_integrated",
+            "task_class": "DEFAULT_GENERAL",
             "minimum_thinking": "high",
             "provider_allowlist": ["openai"],
             "provider_status": {"openai": "allowed"},
             "data_allowed_providers": ["openai"],
-            "explicit_user_request": True,
+            "explicit_user_request": False,
             "risk_acknowledged": False,
             "candidates": [
                 {
                     "surface": "native_subagent",
                     "model": "gpt-5.6-luna",
                     "thinking": "xhigh",
-                    "speed": "fast",
+                    "speed": "standard",
+                    "fork_turns": "none",
                     "runtime_evidence": self.live_spawn_evidence(
-                        model="gpt-5.6-luna", thinking="xhigh", speed="fast"
+                        model="gpt-5.6-luna", thinking="xhigh"
                     ),
                 }
             ],
             "max_worker_threads": 1,
             "max_followups_per_thread": 1,
         }
+        valid = self.run_route_validator(plan)
+        self.assertEqual(valid.returncode, 0, valid.stdout)
+
+        plan["candidates"][0]["runtime_evidence"]["speed"] = "fast"
+        plan["candidates"][0]["runtime_evidence"]["service_tier"] = "priority"
+        mismatched_speed = self.run_route_validator(plan)
+        self.assertEqual(mismatched_speed.returncode, 2, mismatched_speed.stdout)
+        self.assertIn("contains mismatched Fast fields", mismatched_speed.stdout)
+        plan["candidates"][0]["runtime_evidence"].pop("speed")
+        plan["candidates"][0]["runtime_evidence"].pop("service_tier")
+
+        plan["candidates"][0]["fork_turns"] = "all"
         invalid = self.run_route_validator(plan)
         self.assertEqual(invalid.returncode, 2, invalid.stdout)
-        self.assertIn("App Thread only", invalid.stdout)
+        self.assertIn("requires fork_turns='none' or a positive turn count", invalid.stdout)
+
+        legacy = json.loads(json.dumps(plan))
+        legacy["schema_version"] = "2.1"
+        legacy["candidates"][0]["fork_turns"] = "none"
+        legacy["candidates"][0]["runtime_evidence"]["fork_turns"] = "none"
+        rejected_legacy_native_luna = self.run_route_validator(legacy)
+        self.assertEqual(
+            rejected_legacy_native_luna.returncode,
+            2,
+            rejected_legacy_native_luna.stdout,
+        )
+        self.assertIn("v2.1 cannot authorize native Luna", rejected_legacy_native_luna.stdout)
 
     def test_route_plan_validator_rejects_app_fast_without_live_speed_evidence(self) -> None:
         plan = {
@@ -1053,6 +1165,8 @@ class SkillContractTests(unittest.TestCase):
 
     def test_route_plan_validator_accepts_native_sol_high_with_live_evidence(self) -> None:
         plan = {
+            "schema_version": "3.0",
+            "surface_intent": "parent_integrated",
             "task_class": "NATIVE_WORKER_EXPLICIT",
             "minimum_thinking": "high",
             "provider_allowlist": ["openai"],
@@ -1066,7 +1180,10 @@ class SkillContractTests(unittest.TestCase):
         }
         automatic_native = self.run_route_validator(plan)
         self.assertEqual(automatic_native.returncode, 2, automatic_native.stdout)
-        self.assertIn("automatic routes default to App Thread", automatic_native.stdout)
+        self.assertIn(
+            "requires explicit_user_request",
+            automatic_native.stdout,
+        )
 
         plan["explicit_user_request"] = True
         valid = self.run_route_validator(plan)
@@ -1543,8 +1660,15 @@ class SkillContractTests(unittest.TestCase):
             scale_reason="Seven isolated outputs can be reviewed independently.",
         )
         plan["reserved_slots"] = 2
+        plan["runtime_worker_capacity"] = 7
+        plan["runtime_capacity_evidence"] = self.capacity_evidence(
+            total=8,
+            coordinator=1,
+            active=0,
+            available=7,
+        )
         workers = []
-        for index in range(1, 8):
+        for index in range(1, 7):
             workers.append(
                 self.ledger_record(
                     creation_attempt=index,
@@ -1567,8 +1691,8 @@ class SkillContractTests(unittest.TestCase):
             )
         result = self.run_ledger_validator(
             {
-                "creation_attempts": 7,
-                "worker_attempts": 7,
+                "creation_attempts": 6,
+                "worker_attempts": 6,
                 "team_plans": [plan],
                 "active_team_plan_revision": 1,
                 "workers": workers,
@@ -1577,7 +1701,7 @@ class SkillContractTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout)
         payload = json.loads(result.stdout)
         self.assertEqual(payload["scale_profile"], "expanded")
-        self.assertEqual(payload["in_flight_count"], 7)
+        self.assertEqual(payload["in_flight_count"], 6)
 
     def test_ledger_validator_rejects_inspect_source_mutation(self) -> None:
         inspect = self.ledger_record(
@@ -1660,7 +1784,7 @@ class SkillContractTests(unittest.TestCase):
         )
         invalid = self.run_ledger_validator([sol_fast])
         self.assertEqual(invalid.returncode, 2, invalid.stdout)
-        self.assertIn("non-default Fast lacks explicit_user_request", invalid.stdout)
+        self.assertIn("model requires explicit_user_request for Fast", invalid.stdout)
 
         sol_fast["route_plan"] = self.route_plan_21(
             surface="app_thread",
@@ -1698,6 +1822,66 @@ class SkillContractTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2, result.stderr or result.stdout)
         self.assertIn("adopted native output must be closed", result.stdout)
 
+    def test_native_v3_ledger_accepts_completed_idle_release(self) -> None:
+        route_plan = {
+            "schema_version": "3.0",
+            "surface_intent": "parent_integrated",
+            "explicit_user_request": False,
+            "candidates": [
+                {
+                    "surface": "native_subagent",
+                    "model": "gpt-5.6-sol",
+                    "thinking": "high",
+                    "speed": "standard",
+                    "fork_turns": "none",
+                    "runtime_evidence": self.live_spawn_evidence(),
+                }
+            ],
+        }
+        released = self.native_ledger_record(
+            worker_attempt=1,
+            control_state="RELEASED",
+            fork_turns="none",
+            requested_speed="standard",
+            platform_accepted_speed="standard",
+            observed_runtime_speed="unknown",
+            route_plan=route_plan,
+            closed=False,
+            released=True,
+            release_method="completed_idle",
+        )
+        valid = self.run_ledger_validator([released])
+        self.assertEqual(valid.returncode, 0, valid.stderr or valid.stdout)
+
+        running_release = dict(released)
+        running_release["agent_status"] = "running"
+        still_running = self.run_ledger_validator([running_release])
+        self.assertEqual(still_running.returncode, 2, still_running.stdout)
+        self.assertIn(
+            "completed_idle release requires completed or idle agent_status",
+            still_running.stdout,
+        )
+
+        no_evidence = json.loads(json.dumps(released))
+        no_evidence["route_plan"]["candidates"][0].pop("runtime_evidence")
+        missing_evidence = self.run_ledger_validator([no_evidence])
+        self.assertEqual(
+            missing_evidence.returncode,
+            2,
+            missing_evidence.stderr or missing_evidence.stdout,
+        )
+        self.assertIn("lacks matching native runtime evidence", missing_evidence.stdout)
+
+        unreleased = dict(released)
+        unreleased.update(
+            control_state="COMPLETED",
+            released=False,
+            release_method=None,
+        )
+        invalid = self.run_ledger_validator([unreleased])
+        self.assertEqual(invalid.returncode, 2, invalid.stderr or invalid.stdout)
+        self.assertIn("adopted native output must be released", invalid.stdout)
+
     def test_native_ledger_rejects_inherited_or_mismatched_route_identity(self) -> None:
         for override, message in (
             ({"fork_mode": "inherited"}, "must use fresh context"),
@@ -1729,12 +1913,14 @@ class SkillContractTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2, result.stdout)
         self.assertIn("in-flight records exceed the concurrency cap", result.stdout)
 
-    def test_native_policy_maps_v1_v2_fresh_context_without_silent_inheritance(self) -> None:
+    def test_native_policy_requires_v3_context_and_release_without_silent_inheritance(self) -> None:
         policy = (SKILL_ROOT / "references/native-subagent-lifecycle.md").read_text(
             encoding="utf-8"
         )
-        self.assertIn("fork_context=false", policy)
         self.assertIn('fork_turns="none"', policy)
+        self.assertIn('fork_turns="all"', policy)
+        self.assertIn("RELEASED", policy)
+        self.assertIn("completed_idle", policy)
         self.assertIn("禁止静默继承父模型", policy)
         self.assertIn("observed_runtime_model", policy)
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -41,7 +42,8 @@ def valid_runtime_evidence(
     model: str,
     thinking: str,
     speed: str,
-    strict_speed: bool,
+    fork_turns: str | None,
+    strict_context: bool,
     now: datetime,
 ) -> tuple[bool, str | None]:
     if not isinstance(evidence, dict):
@@ -52,9 +54,16 @@ def valid_runtime_evidence(
         "model": model,
         "thinking": thinking,
     }
-    if strict_speed or speed == "fast":
+    if speed == "fast":
         expected["speed"] = speed
-        expected["service_tier"] = "priority" if speed == "fast" else None
+        expected["service_tier"] = "priority"
+    if strict_context:
+        expected["fork_turns"] = fork_turns
+    if speed == "standard" and (
+        evidence.get("speed") == "fast"
+        or evidence.get("service_tier") == "priority"
+    ):
+        return False, "Standard native runtime evidence contains mismatched Fast fields"
     if (
         any(evidence.get(key) != value for key, value in expected.items())
         or evidence.get("accepted") is not True
@@ -155,8 +164,8 @@ def main() -> int:
     speed_modes = set(registry.get("policy", {}).get("speed_modes", []))
     default_speed = registry.get("policy", {}).get("default_speed", "standard")
     fast_routing_models = set(registry.get("policy", {}).get("fast_routing_models", []))
-    default_fast_models = set(
-        registry.get("policy", {}).get("default_fast_models", [])
+    fast_requires_explicit_models = set(
+        registry.get("policy", {}).get("fast_requires_explicit_models", [])
     )
     app_thread_only_models = set(
         registry.get("policy", {}).get("app_thread_only_models", [])
@@ -164,14 +173,32 @@ def main() -> int:
     native_first_requires_explicit = registry.get("policy", {}).get(
         "native_first_candidate_requires_explicit_request", True
     )
+    automatic_native_first_models = set(
+        registry.get("policy", {}).get("automatic_native_first_models", [])
+    )
     current_schema_version = registry.get("policy", {}).get(
-        "current_route_plan_schema_version", "2.1"
+        "current_route_plan_schema_version", "3.0"
+    )
+    supported_schema_versions = set(
+        registry.get("policy", {}).get(
+            "supported_route_plan_schema_versions", [current_schema_version]
+        )
     )
     plan_schema_version = plan.get("schema_version")
-    strict_route_plan = plan_schema_version == current_schema_version
-    if plan_schema_version is not None and not strict_route_plan:
+    structured_route_plan = plan_schema_version in supported_schema_versions
+    current_route_plan = plan_schema_version == current_schema_version
+    if plan_schema_version is not None and not structured_route_plan:
         result["errors"].append("schema_version is unsupported")
     result["schema_version"] = plan_schema_version or "legacy"
+    surface_intent = plan.get("surface_intent")
+    if current_route_plan and surface_intent not in {
+        "parent_integrated",
+        "durable_app",
+    }:
+        result["errors"].append(
+            "surface_intent must be parent_integrated or durable_app for schema 3.0"
+        )
+    result["surface_intent"] = surface_intent
 
     for field in ("explicit_user_request", "risk_acknowledged"):
         if not isinstance(plan.get(field), bool):
@@ -215,13 +242,25 @@ def main() -> int:
         thinking = candidate.get("thinking")
         speed = candidate.get("speed", default_speed)
         surface = candidate.get("surface", "app_thread")
-        if strict_route_plan and "surface" not in candidate:
+        fork_turns = candidate.get("fork_turns")
+        if structured_route_plan and "surface" not in candidate:
             result["errors"].append(f"candidate {index} must declare surface")
-        if strict_route_plan and "speed" not in candidate:
+        if structured_route_plan and "speed" not in candidate:
             result["errors"].append(f"candidate {index} must declare speed")
         if surface not in KNOWN_SURFACES:
             result["errors"].append(f"candidate {index} uses an unknown execution surface")
             continue
+        if current_route_plan and surface == "native_subagent":
+            if not isinstance(fork_turns, str) or not (
+                fork_turns == "none" or re.fullmatch(r"[1-9][0-9]*", fork_turns)
+            ):
+                result["errors"].append(
+                    f"candidate {index} native route requires fork_turns='none' or a positive turn count"
+                )
+        elif current_route_plan and surface == "app_thread" and fork_turns is not None:
+            result["errors"].append(
+                f"candidate {index} App Thread route must not declare fork_turns"
+            )
         if not isinstance(model_id, str) or model_id not in models:
             result["errors"].append(f"candidate {index} uses an unknown model")
             continue
@@ -234,24 +273,35 @@ def main() -> int:
             )
         if (
             speed == "fast"
-            and model_id not in default_fast_models
+            and model_id in fast_requires_explicit_models
             and plan.get("explicit_user_request") is not True
         ):
             result["errors"].append(
-                f"candidate {index} non-default Fast requires explicit_user_request"
+                f"candidate {index} model requires explicit_user_request for Fast"
             )
         if surface == "native_subagent" and model_id in app_thread_only_models:
             result["errors"].append(
                 f"candidate {index} model is App Thread only in the current routing policy"
             )
         if (
+            plan_schema_version == "2.1"
+            and surface == "native_subagent"
+            and model_id == "gpt-5.6-luna"
+        ):
+            result["errors"].append(
+                f"candidate {index} v2.1 cannot authorize native Luna; migrate this run to schema 3.0"
+            )
+        if (
             surface == "native_subagent"
             and index == 0
-            and native_first_requires_explicit
+            and (
+                native_first_requires_explicit
+                or model_id not in automatic_native_first_models
+            )
             and plan.get("explicit_user_request") is not True
         ):
             result["errors"].append(
-                "native first candidate requires explicit_user_request; automatic routes default to App Thread"
+                "this native first model requires explicit_user_request under current registry policy"
             )
         entry = models[model_id]
         surface_thinking = supported_thinking(entry, surface)
@@ -266,7 +316,8 @@ def main() -> int:
                 model=model_id,
                 thinking=thinking,
                 speed=speed,
-                strict_speed=strict_route_plan,
+                fork_turns=fork_turns if isinstance(fork_turns, str) else None,
+                strict_context=current_route_plan,
                 now=now,
             )
             if not evidence_valid:
@@ -294,6 +345,7 @@ def main() -> int:
                 "model": model_id,
                 "thinking": thinking,
                 "speed": speed,
+                "fork_turns": fork_turns,
                 "runtime_evidence": runtime_evidence,
                 "speed_evidence": speed_evidence,
             }
@@ -326,6 +378,30 @@ def main() -> int:
                 result["errors"].append("opt-in model requires explicit_user_request")
         elif not entry.get("automatic"):
             result["errors"].append(f"candidate {index} is disabled for automatic routing")
+
+    if candidates and current_route_plan:
+        first_surface = (
+            candidates[0].get("surface")
+            if isinstance(candidates[0], dict)
+            else None
+        )
+        if surface_intent == "parent_integrated" and first_surface != "native_subagent":
+            result["errors"].append(
+                "parent_integrated plans must start with a native_subagent candidate"
+            )
+        if surface_intent == "durable_app":
+            if first_surface != "app_thread":
+                result["errors"].append(
+                    "durable_app plans must start with an app_thread candidate"
+                )
+            if any(
+                isinstance(candidate, dict)
+                and candidate.get("surface") != "app_thread"
+                for candidate in candidates
+            ):
+                result["errors"].append(
+                    "durable_app plans cannot fall back to a non-App surface"
+                )
 
     if result["errors"]:
         result["status"] = "fail"

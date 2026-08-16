@@ -1,118 +1,91 @@
 # Codex Model Routing Team
 
 <p align="center">
-  <img src="./assets/readme/hero.svg" width="100%" alt="A lead Codex task routes bounded background work to explicit models">
+  <img src="./assets/readme/hero.svg" width="100%" alt="A Codex lead routes leaf work to Luna through native V2 and durable work to App threads">
 </p>
 
-<p align="center"><strong>Default complex work to Luna XHigh/Max App threads while one lead owns integration and verification.</strong></p>
+<p align="center"><strong>The lead owns TeamPlan, file ownership, integration, and verification; ordinary Workers default to native V2 Luna XHigh/Max.</strong></p>
 
 <p align="center"><a href="./README.zh-CN.md">简体中文</a> · <a href="https://github.com/zjp1997720/zhijian-skills/tree/main/skills/codex-model-routing-team">Canonical source</a></p>
 
-Use it when parallel execution has a clear net benefit: the lead compiles a lightweight TeamPlan, bounded Workers own independent deliverables, and explicit RoutePlans choose their models, reasoning levels, and speeds.
+Use it when parallel execution has a clear net benefit. It compiles work into a lightweight TeamPlan, freezes each unit's surface, model, reasoning, speed, and context scope, then returns integration and final verification to the lead.
 
 ## Install
-
-The standard `skills` CLI shorthand is valid:
 
 ```bash
 npx skills add zjp1997720/zhijian-skills
 ```
 
-For a global Codex installation without symlinks:
+For a global Codex installation using copied files:
 
 ```bash
 npx skills add zjp1997720/zhijian-skills \
   -g -a codex --skill codex-model-routing-team --copy -y
 ```
 
-The full canonical GitHub URL works too:
-
-```bash
-npx skills add https://github.com/zjp1997720/zhijian-skills \
-  -g -a codex --skill codex-model-routing-team --copy -y
-```
-
-Verify that the installed package contains both the entrypoint and its supporting policies:
+Verify the payload:
 
 ```bash
 npx skills ls -g -a codex
 find ~/.agents/skills/codex-model-routing-team -maxdepth 2 -type f | sort
 ```
 
-The file list must include `SKILL.md`, `references/team-plan.md`, `references/model-registry.json`, `references/audit-schema.json`, `references/native-audit-schema.json`, `references/surface-selection-policy.md`, `references/native-subagent-lifecycle.md`, `references/routing-policy.md`, `references/provider-policy.md`, `references/recovery-policy.md`, `references/task-packet.md`, `references/thread-lifecycle.md`, `references/thread-supervision-protocol.md`, `scripts/route_policy.py`, `scripts/model_preflight.py`, `scripts/validate_team_plan.py`, `scripts/validate_route_plan.py`, and `scripts/validate_team_ledger.py`. If only `SKILL.md` appears, remove that incomplete installation and install the current release again.
+## Requirements
+
+- Codex native Multi-Agent V2, Codex App thread tools, or both.
+- A live schema that confirms the exact model, reasoning, context, and optional speed fields in each RoutePlan.
+- Provider terms, credential paths, and project data boundaries that allow every candidate.
 
 ## Activate it
 
-Explicit activation works immediately after installation:
+Invoke it directly:
 
 ```text
-Use $codex-model-routing-team to research these six independent topics in parallel, then verify and synthesize the findings.
+Use $codex-model-routing-team to research these six independent topics in parallel, then verify the synthesis.
 ```
 
-To let Codex activate the Skill automatically for suitable complex work, add the following standing authorization to `~/.codex/AGENTS.md`. Put it in a project-level `AGENTS.md` instead when the authorization should apply only to that project.
+To allow automatic activation, add this block to a user- or project-level `AGENTS.md`:
 
 ```markdown
 ## Codex background model-routing authorization
 
-- The user authorizes Codex to use `$codex-model-routing-team` automatically when work can be safely split into at least two independently verifiable deliverables and the expected time or model-cost savings exceed creation, supervision, and integration cost without lowering the quality floor. Before dispatch, briefly state the Worker count, surface, exact model, reasoning level, speed, and responsibility. No additional confirmation is required.
-- Before creating two or more Workers, the lead must compile a lightweight TeamPlan. Existing CE Plans, Codex Plans, and upstream Skill plans are compiled rather than rewritten. TeamPlan does not create a separate Planner, enter a heavyweight planning flow, or persist files by default.
-- The lead agent keeps its current model and owns planning, file ownership, integration, verification, and final delivery.
-- Use App threads by default. Native subagents are explicit-request or predeclared-fallback only because the current official V2 live schema does not expose Luna.
-- Use the Standard TeamPlan profile by default: at most 6 concurrent Workers, 8 root attempts, and 3 new Workers per wave. For 7–12 independently verifiable outputs with isolated ownership and confirmed host capacity, an explicit `expanded` profile may use 12/16/6 and must retain at least two reserved slots. Workers must not create more Workers or subagents.
-- Workers must not use Ultra. Terra is opt-in and excluded from automatic routing. Luna is App-only and starts at XHigh. Luna defaults to Fast when live `service_tier=priority` evidence exists; Sol and Terra default to Standard and may use Fast only on explicit user request with matching live evidence. Unavailable combinations follow only a predeclared fallback or return to the lead agent.
-- Do not auto-dispatch simple questions, status checks, small single-file edits, strongly sequential work, publishing, sending, payment, deletion, account, or production operations.
+- Automatically use `$codex-model-routing-team` when work can be split into at least two independent deliverables with positive net parallel benefit. Brief the Worker count, surface, model, reasoning, speed, and responsibility before dispatch.
+- Compile a lightweight TeamPlan before creating two or more Workers. Compile existing upstream plans instead of rewriting them. The lead keeps its model and owns file ownership, integration, and verification.
+- Default to native Luna XHigh leaf Workers and raise high-risk units to Max. Use App threads for worktrees, sidebar visibility, cross-task recovery, and durable supervision.
+- Workers may not use Ultra, delegate again, or perform irreversible external actions. Reserve live collaboration capacity for the coordinator.
 ```
 
-This is user-configured Codex instruction, not a hidden OpenAI system prompt. Explicit `$codex-model-routing-team` requests remain available without the standing authorization.
+## Why v3 exists
 
-## Why this exists
+OpenAI Codex added V2 leaf-model support in [PR #36892](https://github.com/openai/codex/pull/36892) and [rust-v0.147.0](https://github.com/openai/codex/releases/tag/rust-v0.147.0). A V2 parent can now create picker-visible, non-disabled leaf models. Luna remains a leaf and cannot collaborate further, but it can execute native V2 Worker units.
 
-Current official Codex native V2 spawn schemas can expose per-worker model and reasoning controls, but the live schema does not expose Luna. Support remains runtime- and surface-specific, and a proxy catalog cannot be treated as evidence of official native support.
-
-This Skill therefore defaults to App threads so Luna remains available. Ordinary work starts at Luna XHigh and difficult or high-risk work rises to Luna Max. Before dispatch, TeamPlan fixes units, dependencies, ownership, outputs, acceptance, and integration order; RoutePlan separately controls model routing. Native Sol remains available only for explicit requests or predeclared fallback.
-
-Ordinary automatic groups use the governed App-thread path. `native-light` is retained only for explicit native requests or predeclared fallback; it validates RoutePlans and ledgers through stdin and avoids creating `agent_team/`. Both profiles keep the same safety gates.
+Version 3 therefore changes the default from Luna App threads to native Luna leaf Workers. App threads remain the right surface for worktrees, sidebar visibility, cross-task recovery, and durable supervision. The Skill deliberately does not add `model: luna` frontmatter because the orchestrator must remain on a collaboration-capable parent model.
 
 ## What it does
 
-- Uses a net-benefit gate: at least two independently verifiable deliverables, with expected savings greater than coordination cost; otherwise the lead executes directly.
-- Requires and validates a lightweight TeamPlan before dispatching two or more Workers, while compiling existing plans without rewriting them.
-- Defaults to Luna XHigh App Fast and raises difficult or high-risk work to Luna Max Fast; either becomes Standard when live priority evidence is absent. Native Luna is rejected. Sol is High/XHigh/Max only, defaults to Standard, and accepts explicit Fast only with matching live evidence. Grok 4.5 stays conditional on runtime/provider preflight.
-- Keeps `gpt-5.6-terra` opt-in and first-candidate-only. An unknown-model response fails that exact native route and never silently inherits the parent model.
-- Retains explicit Gemini 3.6 Flash route templates while blocking the current third-party Antigravity login path; an official API/Vertex path needs a separate registry entry.
-- Keeps a conservative Standard 6/8/3 profile, with a justified Expanded 12/16/6 profile for many isolated deliverables. The narrower live host limit always wins.
-- Uses the first business task for each model/reasoning/speed/tool signature as its final health probe, separating HTTP, thread materialization, model data, and delivery quality.
-- Separates formal `threadId`, queued `pendingWorktreeId`, transport timeout, and ambiguous state; a unique task id recovers queued work, while `UNKNOWN` blocks follow-up, archival, fallback, and duplicate creation.
-- Treats the latest official Thread/turn read as current truth and uses a minimal ledger validator for attempt, materialization, DATA_READY, and archive invariants.
-- Uses `task_intent` and `mutation_authority` to keep inspection and verification Workers from expanding their write scope.
-- Freezes fallback before dispatch, allows at most two Worker attempts per subtask, and permits one quality follow-up on the original Worker.
-- Uses one Worker slot for a one-candidate plan and two only when a fallback candidate is declared.
-- Acts as a dual-surface Orchestrator for upstream workflows such as Deep Research while preserving their stages, artifacts, and quality gates.
-- Keeps publishing, payments, deletion, account changes, and production mutations in the lead task.
+- Uses a net-benefit gate; the lead executes directly without two independent, verifiable deliverables.
+- Validates TeamPlan dependencies, same-wave write conflicts, attempts, reserved slots, and integration order.
+- Uses RoutePlan v3 to distinguish `parent_integrated` from `durable_app`; native candidates declare `fork_turns`.
+- Defaults to native Luna XHigh Standard and raises high-risk units to Max. Fast requires live `service_tier=priority` evidence.
+- Releases native results through live close or confirmed completed-idle state; App threads retain pending, UNKNOWN, recovery, and archive gates.
+- Keeps Terra explicit-first-only, Grok preflight-gated, and the current Gemini Antigravity path blocked.
+- Keeps publishing, sending, payment, deletion, account, and production mutations in the lead task.
 
 ## How it works
 
-1. The lead passes the net-benefit gate, compiles two or three TeamPlan units, and validates their graph and ownership before dispatch.
-2. Each unit receives one Task Packet and one RoutePlan with a Provider allowlist, surface, and ordered candidate chain.
-3. Registry and Provider policy are validated; native `model/reasoning_effort/speed` combinations also need live schema evidence, and Fast must accept `service_tier=priority`.
-4. Automatic work uses governed Luna App threads. `native-light` is explicit-request or predeclared-fallback only, with Sol High or stronger.
-5. Native V1 uses `fork_context=false`; V2 uses `fork_turns="none"`. App threads keep unique task ids and recover queued worktrees through official reads.
-6. Requested, platform-accepted, and observed identities remain separate; failures advance only through the predeclared chain.
-7. The lead verifies and integrates in TeamPlan order, closes adopted native Workers, and applies App completion and archival gates.
+1. The lead checks net parallel benefit, then compiles and validates TeamPlan.
+2. Each unit receives one Task Packet and one `schema_version: "3.0"` RoutePlan.
+3. Ordinary work uses `surface_intent=parent_integrated` and native Luna; durable workspace work uses `durable_app`.
+4. Native fresh context uses `fork_turns="none"`; a positive string inherits the last N turns. Explicit model overrides reject `all`.
+5. Failures advance only through the predeclared chain. The lead verifies real artifacts in integration order.
 
-The lightweight path can validate in-memory JSON without leaving coordination files:
+The lightweight path leaves no coordination files:
 
 ```bash
 printf '%s' "$TEAM_PLAN_JSON" | python3 scripts/validate_team_plan.py -
 printf '%s' "$ROUTE_PLAN_JSON" | python3 scripts/validate_route_plan.py -
 printf '%s' "$TEAM_LEDGER_JSON" | python3 scripts/validate_team_ledger.py -
 ```
-
-`max_worker_threads` equals the candidate-chain length. A single candidate with lead-agent takeover uses `1`; a declared fallback chain uses `2`.
-
-When an upstream Skill already owns decomposition, this Skill compiles those units into TeamPlan while preserving stages, artifacts, and quality gates. It does not invent a second domain plan. Any task with a workspace output path is project-bound; only chat-only work may be projectless.
-
-The default Deep Research budget remains `2-4 researchers + 1 verifier + 1 reviewer + 2 retry slots` in the Standard profile. Expanded routing is reserved for genuinely independent outputs, not ordinary research breadth.
 
 ## Example requests
 
@@ -121,44 +94,24 @@ Use $codex-model-routing-team to implement, test, and review three independent m
 ```
 
 ```text
-Use $codex-model-routing-team to prepare a training deck with separate research, writing, and review tasks.
+Use native Luna Max to audit three high-risk modules in parallel; put the implementation unit that needs a worktree in an App thread.
 ```
 
 ```text
-Use $codex-model-routing-team as the routing Orchestrator for $deep-research. Preserve its verifier and reviewer stages.
+Use $codex-model-routing-team as the routing orchestrator for $deep-research while preserving verifier and reviewer stages.
 ```
 
-## Requirements and boundaries
+## Safety and limitations
 
-- Codex with a native subagent spawn surface that can confirm exact model/reasoning/speed combinations, Codex App thread tools, or both. If one declared surface is unavailable, only a predeclared fallback may use the other.
-- Access to the models, reasoning levels, and speeds selected by the lead agent. If App `create_thread` has no speed parameter, that route remains Standard.
-- Luna routes require XHigh or Max and use App threads. Sol routes require High, XHigh, or Max on every surface; Medium and Low are rejected even when explicitly requested.
-- Provider terms, credential paths, and data boundaries must allow each cross-provider route. A working consumer subscription does not by itself authorize a third-party proxy.
-- Worker creation must be verifiable. Native model acceptance and observed identity are recorded separately; App Thread materialization remains mandatory.
-- Terra remains opt-in because live availability can differ from policy declaration. Ultra remains forbidden.
-
-## Repository layout
-
-```text
-.
-├── README.md
-├── README.zh-CN.md
-├── LICENSE
-├── skills/
-│   └── codex-model-routing-team/
-│       ├── SKILL.md
-│       ├── agents/
-│       ├── evals/
-│       ├── references/
-│       └── scripts/
-└── tests/
-```
-
-The agent workflow lives in [SKILL.md](../../../skills/codex-model-routing-team/SKILL.md). Supporting policies live in [references](../../../skills/codex-model-routing-team/references/).
+- Luna is XHigh/Max only; Sol is High/XHigh/Max only; Ultra is forbidden.
+- Picker or catalog eligibility is not live runtime evidence. Do not dispatch an unconfirmed tuple.
+- Standard native evidence does not invent speed or service-tier fields; only Fast binds priority evidence.
+- RoutePlan v2.1 is completion-only compatibility. All new plans use v3.
+- Durable App fallback remains on the App surface so worktree and recovery semantics are preserved.
 
 ## Validation
 
-The workflow covers net-benefit selection; Standard/Expanded TeamPlan limits, dependency layers, same-wave write conflicts, budgets, revisions, and unplanned Worker detection; default Luna Fast versus explicit Sol/Terra Fast; Native Luna and Sol Medium/Low rejection; speed audit; queued-worktree recovery; mixed ledgers; and isolated `npx skills` installation.
+Deterministic tests cover native Luna, leaf boundaries, fork scope, the Fast live gate, durable App routing, RELEASED lifecycle, TeamPlan profiles, Provider gates, pending/UNKNOWN recovery, and isolated installation.
 
 ## License
 

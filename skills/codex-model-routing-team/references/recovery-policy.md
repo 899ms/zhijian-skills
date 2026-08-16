@@ -8,7 +8,8 @@ fallback 的目标是让任务可恢复，同时保持模型、数据边界和�
 
 ```json
 {
-  "schema_version": "2.1",
+  "schema_version": "3.0",
+  "surface_intent": "parent_integrated",
   "task_class": "DEEP_AGENTIC_CODE",
   "risk": "medium",
   "minimum_thinking": "high",
@@ -18,17 +19,17 @@ fallback 的目标是让任务可恢复，同时保持模型、数据边界和�
   "explicit_user_request": false,
   "risk_acknowledged": false,
   "candidates": [
-    {"surface": "app_thread", "model": "gpt-5.6-luna", "thinking": "xhigh", "speed": "standard"},
-    {"surface": "app_thread", "model": "gpt-5.6-sol", "thinking": "high", "speed": "standard"}
+    {"surface": "native_subagent", "model": "gpt-5.6-luna", "thinking": "xhigh", "speed": "standard", "fork_turns": "none"},
+    {"surface": "native_subagent", "model": "gpt-5.6-sol", "thinking": "high", "speed": "standard", "fork_turns": "none"}
   ],
   "max_worker_threads": 2,
   "max_followups_per_thread": 1
 }
 ```
 
-`max_worker_threads` 必须等于已声明候选数：只有一个候选且失败后由主 Agent 接管时写 `1`；声明一个 fallback 候选时写 `2`。它不能为未来未声明的模型预留空位。旧计划省略版本/`surface/speed` 时兼容解释为 legacy App Thread Standard；新计划必须显式写 `schema_version: "2.1"`、Surface 和 speed。
+`max_worker_threads` 必须等于已声明候选数：只有一个候选且失败后由主 Agent 接管时写 `1`；声明一个 fallback 候选时写 `2`。它不能为未来未声明的模型预留空位。v3 原生候选必须显式写 `fork_turns="none"` 或正整数字符串；显式模型覆盖禁止 `all`。v2.1 计划仍可完成既有 run；省略版本/`surface/speed` 时兼容解释为 legacy App Thread Standard。
 
-候选链不能包含循环、Ultra、低于 `minimum_thinking` 的降级，或 Provider 策略不允许的目标。非 blocked 的 manual-only 模型只能出现在用户明确点名的 RoutePlan 首项，不能作为静默 fallback；当前 Gemini Antigravity registry entry 因 terms blocked 会被 validator 拒绝。
+候选链不能包含循环、Ultra、低于 `minimum_thinking` 的降级，或 Provider 策略不允许的目标。`surface_intent=parent_integrated` 必须从 Native 开始；`durable_app` 的所有候选都必须留在 App Thread，避免 fallback 丢失 worktree 或恢复语义。非 blocked 的 manual-only 模型只能出现在用户明确点名的 RoutePlan 首项，不能作为静默 fallback；当前 Gemini Antigravity registry entry 因 terms blocked 会被 validator 拒绝。
 
 concrete RoutePlan 必须通过 `scripts/validate_route_plan.py`。画像名不是执行依据；真正派遣使用验证后的有序 `candidates` 数组。
 
@@ -48,7 +49,7 @@ App Thread 健康判断分为五层：
 
 成功缓存只参与候选排序，不保证下一次调用成功。建议在当前 run ledger 中对精确 `account-scope/host/surface/model/thinking/speed/tool-signature/App-version` 保存 10 分钟正向证据；不要为此创建新的全局状态事实源。
 
-原生 Subagent 使用更短的控制面：`PLANNED → SPAWN_PENDING → RUNNING → COMPLETED/FAILED → CLOSED`。它只用于显式请求或预声明 fallback，live spawn schema 必须接受精确 `model/reasoning_effort/speed`。当前 Luna 不在官方原生 V2 live schema 中；Sol 必须 High 以上，默认 Standard，用户明确请求 Fast 时还必须有 `service_tier=priority` 的 tuple-bound live 证据。V1 使用 `fork_context=false`，V2 使用 `fork_turns="none"`。返回 agent id 只证明 Worker 已创建；平台未回显实际模型或速度时，对应 observed 字段仍写 `unknown`。详见 [原生 Subagent 生命周期](native-subagent-lifecycle.md)。
+原生 Subagent 使用更短的控制面：`PLANNED → SPAWN_PENDING → RUNNING → COMPLETED/FAILED → RELEASED`。Luna 可作为 V2 父 Agent 的 leaf Worker；live spawn schema 必须接受精确 `model/reasoning_effort/speed/fork_turns`。返回 agent id 只证明 Worker 已创建；平台未回显实际模型或速度时 observed 字段仍写 `unknown`。live schema 有 close 时正式关闭；没有 close 时只有官方状态确认 completed/idle 才能标记释放。详见 [原生 Subagent 生命周期](native-subagent-lifecycle.md)。
 
 ## 错误分类
 
@@ -77,7 +78,7 @@ App Thread 健康判断分为五层：
 - 完整输出需要纠正时复用原 Worker，最多发送一次 follow-up。
 - Surface、模型、Provider、`thinking` 或 `speed` 改变时创建新 Worker，并使用候选链中的下一项。
 - 第二 Worker 仍失败时由主 Agent 接管或明确报告阻塞，禁止继续试第三个模型。
-- 原生结果被采纳前必须确认完整输出；采纳后必须关闭 agent 并写 `CLOSED`。App Thread 的采纳、保留与归档仍遵守 Thread 监督协议。
+- 原生结果被采纳前必须确认完整输出；采纳后按 live 能力 close 或确认 completed/idle，并写 `RELEASED`。App Thread 的采纳、保留与归档仍遵守 Thread 监督协议。
 
 ## 禁止行为
 

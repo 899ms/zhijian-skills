@@ -1,34 +1,45 @@
 {
-  "schema_version": "2.1.0",
-  "updated_at": "2026-08-04",
+  "schema_version": "3.0.0",
+  "updated_at": "2026-08-16",
   "policy": {
     "runtime_metadata_role": "validate_only",
     "unknown_model_action": "reject",
     "unknown_thinking_action": "reject",
     "thinking_order": ["low", "medium", "high", "xhigh", "max"],
     "forbidden_thinking": ["ultra"],
-    "current_route_plan_schema_version": "2.1",
+    "current_route_plan_schema_version": "3.0",
+    "supported_route_plan_schema_versions": ["2.1", "3.0"],
     "speed_modes": ["standard", "fast"],
     "default_speed": "standard",
     "service_tier_by_speed": {"standard": null, "fast": "priority"},
     "fast_routing_models": ["gpt-5.6-luna", "gpt-5.6-sol", "gpt-5.6-terra"],
-    "default_fast_models": ["gpt-5.6-luna"],
-    "app_thread_only_models": ["gpt-5.6-luna"],
-    "native_first_candidate_requires_explicit_request": true,
-    "default_surface": "app_thread",
+    "default_fast_models": [],
+    "fast_requires_explicit_models": ["gpt-5.6-sol", "gpt-5.6-terra"],
+    "app_thread_only_models": [],
+    "native_leaf_models": ["gpt-5.6-luna"],
+    "automatic_native_first_models": ["gpt-5.6-luna"],
+    "native_first_candidate_requires_explicit_request": false,
+    "default_surface": "native_subagent",
     "default_openai_route": {
-      "surface": "app_thread",
+      "surface": "native_subagent",
       "model": "gpt-5.6-luna",
       "thinking": "xhigh",
-      "speed": "fast"
+      "speed": "standard",
+      "fork_turns": "none"
     },
     "high_risk_openai_route": {
-      "surface": "app_thread",
+      "surface": "native_subagent",
       "model": "gpt-5.6-luna",
       "thinking": "max",
-      "speed": "fast"
+      "speed": "standard",
+      "fork_turns": "none"
     },
     "default_team_limit_profile": "standard",
+    "native_capacity_policy": {
+      "reserve_coordinator_slot": true,
+      "default_child_capacity_when_unknown": 3,
+      "capacity_evidence_ttl_seconds": 600
+    },
     "team_limit_profiles": {
       "standard": {
         "max_planned_workers": 6,
@@ -62,11 +73,13 @@
       "status": "baseline",
       "automatic": true,
       "thinking": ["xhigh", "max"],
+      "multi_agent_version": "v1",
+      "native_role": "leaf",
       "surface_thinking": {
-        "native_subagent": [],
+        "native_subagent": ["xhigh", "max"],
         "app_thread": ["xhigh", "max"]
       },
-      "roles": ["general_worker", "fast_baseline", "research", "draft", "routine_code", "verification"],
+      "roles": ["native_leaf_worker", "general_worker", "fast_baseline", "research", "draft", "routine_code", "verification"],
       "provider_policy": "openai_baseline",
       "terms_default": "allowed"
     },
@@ -76,6 +89,8 @@
       "status": "baseline",
       "automatic": true,
       "thinking": ["high", "xhigh", "max"],
+      "multi_agent_version": "v2",
+      "native_role": "collaborative",
       "surface_thinking": {
         "native_subagent": ["high", "xhigh", "max"],
         "app_thread": ["high", "xhigh", "max"]
@@ -90,6 +105,8 @@
       "status": "opt_in",
       "automatic": false,
       "thinking": ["low", "medium", "high", "xhigh", "max"],
+      "multi_agent_version": "v2",
+      "native_role": "collaborative",
       "surface_thinking": {
         "native_subagent": ["low", "medium", "high", "xhigh", "max"],
         "app_thread": ["low", "medium", "high", "xhigh", "max"]

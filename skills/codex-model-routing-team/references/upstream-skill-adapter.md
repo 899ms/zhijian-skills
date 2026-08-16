@@ -17,7 +17,7 @@
 - 把上游单元编译成轻量 TeamPlan 的 Worker、依赖、所有权、预算与集成顺序；不重写业务语义
 - Worker Surface、`model`、`thinking` 与 `speed`
 - RoutePlan、Provider allowlist、模型预检与 deterministic fallback
-- 原生 Subagent 的 fresh-context spawn、等待、follow-up 与关闭
+- 原生 Subagent 的 context-scoped spawn、等待、follow-up 与释放
 - App Thread 的 project / projectless 选择、创建、实体化、读取、追问与归档
 - TeamPlan 默认 6/8/3，或经扩容理由、所有权隔离和 live host 容量门启用 12/16/6；同时保留 reserved slots 与升级次数
 - 单写者和禁止下级派遣等安全边界
@@ -32,10 +32,10 @@
 4. 计算当前阶段 Worker、后续阶段和重试的 reserved slots。
 5. 输出派遣通知，列明当前 Worker 的 Surface、模型、thinking、speed 与保留额度。
 6. 把验证后的 unit 转换成 `references/task-packet.md`，保留原始验收标准与 `unit_id/team_plan_revision`。
-7. 自动路由阶段默认使用 Luna XHigh/Max App Thread；只有用户明确要求原生，或 App 路径不可用且已预声明 fallback 时才使用原生 Subagent。
+7. 自动路由默认使用 Native Luna XHigh/Max leaf Worker；需要 worktree、侧栏、跨任务恢复或耐久监督时，RoutePlan 写 `surface_intent=durable_app` 并留在 App Thread。
 8. 原生候选按 `references/native-subagent-lifecycle.md` 执行；App Thread 有工作区输出时绑定匹配 project local，并按 `references/thread-lifecycle.md` 与 `references/thread-supervision-protocol.md` 执行。
 9. 主 Agent 验证输出文件并更新上游账本。
-10. 只有上游阶段完成且结果采纳后，才关闭原生 Worker 或归档满足收尾门的 App Thread。
+10. 只有上游阶段完成且结果采纳后，才按 live 能力 close 或 completed-idle 释放原生 Worker；App Thread 满足收尾门后才归档。
 
 上游 run summary 的 Worker 记录按 Surface 分别遵守 [原生审计 schema](native-audit-schema.json) 或 [Thread 审计 schema](audit-schema.json)。每次创建使用唯一 task id 并递增 worker/subtask attempt；每次调用 `create_thread` 前另外写兼容字段 creation attempt，返回正式 id 或 pending id 后写入对应字段。`model` 继续作为 `requested_model` 的兼容别名。平台视图不保证返回模型字段，禁止依赖事后反查恢复路由信息。
 
@@ -45,9 +45,9 @@
 standard: researcher_count + 1 verifier + 1 reviewer + retry_reserve <= 8
 ```
 
-- researcher：默认 2–4 个，使用 Luna X High App；高难主题升 Luna Max。live create schema 接受 priority 时可用 Fast，否则保持 Standard。公开技术研究可在 Provider 门通过后使用 Grok Medium。
-- verifier：1 个，默认 Luna X High App，在 draft 存在后创建；高风险核验升 Luna Max。显式原生 fallback 只能用 Sol High 以上。
-- reviewer：1 个，Sol High App，在 cited 存在并通过检查后创建；需要异构工程复核时可按 RoutePlan 使用 Grok High。
+- researcher：默认 2–4 个 Native Luna XHigh leaf Worker；高难主题升 Max。live spawn schema 接受 priority 时可用 Fast，否则保持 Standard。公开技术研究可在 Provider 门通过后使用 Grok Medium。
+- verifier：1 个 Native Luna XHigh，在 draft 存在后创建；高风险核验升 Max。
+- reviewer：1 个 Native Sol High，在 cited 存在并通过检查后创建；需要异构工程复核时可按 RoutePlan 使用 Grok High。
 - FATAL 复审：最多一次 Sol X High，使用 retry reserve。
 - 所有任务绑定包含 `01_项目/调研` 的 vault project。
 - 每个 researcher 写唯一的 T1/T2/T3/T4 文件。
@@ -80,7 +80,7 @@ standard: researcher_count + 1 verifier + 1 reviewer + retry_reserve <= 8
   "requested_speed": "standard",
   "platform_accepted_speed": null,
   "observed_runtime_speed": "unknown",
-  "route_plan": {"schema_version": "2.1", "candidates": [{"surface": "app_thread", "model": "gpt-5.6-luna", "thinking": "xhigh", "speed": "standard"}]},
+  "route_plan": {"schema_version": "3.0", "surface_intent": "durable_app", "candidates": [{"surface": "app_thread", "model": "gpt-5.6-luna", "thinking": "xhigh", "speed": "standard"}]},
   "provider_policy": {},
   "materialized": false,
   "data_ready": false,

@@ -35,11 +35,12 @@
     "agent_id": {"type": ["string", "null"]},
     "control_state": {
       "type": "string",
-      "enum": ["PLANNED", "SPAWN_PENDING", "RUNNING", "COMPLETED", "UNKNOWN", "FAILED", "CLOSED"]
+      "enum": ["PLANNED", "SPAWN_PENDING", "RUNNING", "COMPLETED", "UNKNOWN", "FAILED", "RELEASED", "CLOSED"]
     },
     "agent_status": {"type": ["string", "null"]},
     "last_observed_at": {"type": ["string", "null"], "format": "date-time"},
-    "fork_mode": {"const": "fresh"},
+    "fork_mode": {"type": "string", "enum": ["fresh", "recent"]},
+    "fork_turns": {"type": "string", "pattern": "^(none|[1-9][0-9]*)$"},
     "unit_id": {"type": "string", "pattern": "^U[1-9][0-9]*$"},
     "team_plan_revision": {"type": "integer", "minimum": 1},
     "role": {"type": "string", "minLength": 1},
@@ -57,6 +58,53 @@
     "output": {"type": ["string", "null"]},
     "adopted": {"type": "boolean"},
     "fallback_reason": {"type": ["string", "null"]},
-    "closed": {"type": "boolean"}
-  }
+    "closed": {"type": "boolean"},
+    "released": {"type": "boolean"},
+    "release_method": {"type": ["string", "null"], "enum": ["close", "completed_idle", null]}
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "route_plan": {
+            "type": "object",
+            "properties": {"schema_version": {"const": "3.0"}},
+            "required": ["schema_version"]
+          }
+        },
+        "required": ["route_plan"]
+      },
+      "then": {
+        "required": ["fork_turns", "released", "release_method"],
+        "allOf": [
+          {
+            "if": {
+              "properties": {"control_state": {"const": "RELEASED"}},
+              "required": ["control_state"]
+            },
+            "then": {
+              "properties": {
+                "released": {"const": true},
+                "release_method": {"enum": ["close", "completed_idle"]}
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {"release_method": {"const": "completed_idle"}},
+              "required": ["release_method"]
+            },
+            "then": {
+              "properties": {
+                "control_state": {"const": "RELEASED"},
+                "released": {"const": true},
+                "agent_status": {"type": "string", "enum": ["completed", "idle"]}
+              },
+              "required": ["control_state", "released", "agent_status"]
+            }
+          }
+        ]
+      }
+    }
+  ]
 }

@@ -1,6 +1,10 @@
 {
   "skill": "codex-model-routing-team",
   "required_tools": [
+    "spawn_agent",
+    "wait_agent",
+    "send_message",
+    "list_agents",
     "codex_app__list_projects",
     "codex_app__create_thread",
     "codex_app__list_threads",
@@ -9,6 +13,8 @@
     "codex_app__set_thread_archived"
   ],
   "execution_surfaces": ["native_subagent", "app_thread"],
+  "default_surface": "native_subagent",
+  "current_route_plan_schema_version": "3.0",
   "max_concurrent_workers": 6,
   "max_total_workers": 8,
   "max_new_threads_per_wave_after_probe": 3,
@@ -50,6 +56,11 @@
   "team_plan_audit_fields": [
     "unit_id",
     "team_plan_revision"
+  ],
+  "required_native_audit_fields": [
+    "fork_turns",
+    "released",
+    "release_method"
   ],
   "deep_research_budget": {
     "max_default_researchers": 4,

@@ -2,104 +2,79 @@
   "skill_name": "codex-model-routing-team",
   "evals": [
     {
-      "id": "grok-agentic-code",
-      "prompt": "把复杂编码任务优先交给 Grok 4.5；它不可用时由最稳的模型接管。",
-      "expected_output": "选择 DEEP_AGENTIC_CODE，预声明 xai/grok-4.5 high → gpt-5.6-sol high；先过 runtime/provider 门；每子任务最多两个 Worker Thread。"
-    },
-    {
-      "id": "gemini-manual-only",
-      "prompt": "没有指定模型，把所有高速资料扫描任务自动交给 Gemini 3.6 Flash。",
-      "expected_output": "拒绝自动使用 antigravity/gemini-3.6-flash；说明 manual-only 且当前 terms blocked；使用 Luna 基线或主任务。"
-    },
-    {
-      "id": "gemini-explicit",
-      "prompt": "我明确要求 Gemini 3.6 Flash 高速扫描这批公开文档，失败后用 Luna。",
-      "expected_output": "记录显式用户请求、风险确认和 public 数据；识别当前 antigravity 第三方登录 terms blocked；不创建 Gemini Thread；建议配置正式 Gemini API/Vertex registry entry，或从 Luna 开始。"
-    },
-    {
-      "id": "semantic-canary-transient",
-      "prompt": "Gemini canary 第一次 HTTP 200 但返回了无关答案，第二次精确回显 nonce。",
-      "expected_output": "第一次记 transient 并复测一次；第二次通过后可继续但保留异常记录；不因一次语义失败打开熔断。"
-    },
-    {
-      "id": "provider-quota-fallback",
-      "prompt": "Grok 返回 429 和 Retry-After=600，当前任务候选链是 Grok high → Sol high。",
-      "expected_output": "记录 10 分钟负向 TTL；当前任务进入 Sol high；同批跳过 Grok；不在 Grok 内部换 thinking 重试。"
-    },
-    {
-      "id": "mcp-not-model-failure",
-      "prompt": "三个不同模型的新 Thread 都在 MCP 初始化时失败。",
-      "expected_output": "按 workspace/tool signature 归类 MCP 故障；停止换模型；修复/禁用 MCP、走预声明无 MCP 路径或主 Agent 接管。"
-    },
-    {
-      "id": "pending-worktree-resolution",
-      "prompt": "create_thread 只返回 pendingWorktreeId，稍后 list_threads 用唯一 task_id 找到一个 worktree Thread。",
-      "expected_output": "pending id 只进审计；验证初始 task_id；两次连续官方观察的 thread id/cwd 一致后进入 CONTROL_READY；pending id 不传给 read/send/archive。"
-    },
-    {
-      "id": "creation-timeout-ambiguous",
-      "prompt": "create_thread 超时，按 task_id 查询得到零个或两个候选。",
-      "expected_output": "记录 UNKNOWN 而非确定未创建；禁止 follow-up、archive、fallback 和重复创建；继续官方查证或主 Agent 接管。"
-    },
-    {
-      "id": "official-read-overrides-event",
-      "prompt": "旧 ledger status 写着 done，但最新 read_thread 显示 turn 仍在 inProgress。",
-      "expected_output": "以最新官方 read_thread 为当前状态真相，继续监督原 Thread；旧 status 只作诊断，不创建替代 Worker。"
-    },
-    {
-      "id": "native-sol-exact-routing",
-      "prompt": "明确派两个原生 Sol Worker：一个 High 快速扫描，一个 XHigh 完成实现，结果回到父任务集成。",
-      "expected_output": "因显式请求选择 native-light/native_subagent；分别 live 确认 gpt-5.6-sol/high 与 gpt-5.6-sol/xhigh；显式传 model、reasoning_effort 和 fresh-context 参数；RoutePlan 与 ledger 可从 stdin 校验，不创建 agent_team；采纳后关闭 agent。"
-    },
-    {
-      "id": "default-app-luna-xhigh",
+      "id": "default-native-luna-xhigh",
       "prompt": "并行完成三个普通复杂子任务，没有点名 Surface 或模型。",
-      "expected_output": "默认使用 app_thread/gpt-5.6-luna/xhigh；高风险任务升级 max；live create schema 接受 priority 才使用 Fast，否则显式写 Standard；fallback 为 Sol High App Standard。"
+      "expected_output": "默认使用 parent_integrated 的 native_subagent/gpt-5.6-luna/xhigh/standard；高风险升 max；fork_turns=none；fallback 为预声明 Sol Native Standard。"
     },
     {
-      "id": "native-luna-unsupported",
-      "prompt": "使用官方原生 MultiAgent V2 创建 Luna XHigh Worker。",
-      "expected_output": "静态拒绝 native_subagent/gpt-5.6-luna；CLIProxyAPI catalog 能力不能替代官方 live schema；改用 Luna XHigh App Thread，或沿预声明 fallback 使用 Sol High Standard。"
+      "id": "native-luna-leaf",
+      "prompt": "使用官方 Multi-Agent V2 创建 Luna Max Worker。",
+      "expected_output": "live spawn schema 接受精确 Luna/max/fork_turns 后创建 Native leaf Worker；任务包禁止下级派遣；主 Agent 集成。"
+    },
+    {
+      "id": "native-luna-fast-missing-tier",
+      "prompt": "创建 Luna XHigh Native Fast Worker，但 spawn schema 没有 service_tier 字段。",
+      "expected_output": "保持 Standard；强制 Fast 的 RoutePlan 因缺少 tuple-bound priority evidence 被拒绝。"
+    },
+    {
+      "id": "native-context-scope",
+      "prompt": "Luna Worker 只继承最近三轮并覆盖模型。",
+      "expected_output": "v3 候选与 runtime evidence 写 fork_turns=3；禁止 all；不静默继承父模型。"
+    },
+    {
+      "id": "durable-app-surface",
+      "prompt": "任务需要独立 worktree、侧栏可见并跨任务恢复。",
+      "expected_output": "surface_intent=durable_app；候选链全部使用 App Thread；保持 pending、UNKNOWN 与归档门。"
+    },
+    {
+      "id": "native-release-completed-idle",
+      "prompt": "原生 Worker 已完成且被采纳，但 live tools 没有 close_agent。",
+      "expected_output": "官方状态确认 completed/idle 后写 RELEASED、released=true、release_method=completed_idle；不把 interrupt 当 close。"
     },
     {
       "id": "sol-medium-rejected",
-      "prompt": "创建一个 Sol Medium Worker，我认为 Medium 已经够用。",
-      "expected_output": "无论 App 还是原生都静态拒绝；Sol 最低 High，改用 Sol High 或默认 Luna XHigh/Max。"
-    },
-    {
-      "id": "app-luna-fast-missing-speed-schema",
-      "prompt": "创建 Luna XHigh App Thread；当前 create_thread 只有 model 和 thinking，没有速度参数。",
-      "expected_output": "App Thread 保持 Standard；不得声称 Fast。强制 App Fast 的 RoutePlan 因缺少 tuple-bound speed_evidence 被拒绝。"
+      "prompt": "创建 Sol Medium Worker，我认为 Medium 足够。",
+      "expected_output": "无论 App 或 Native 都拒绝；Sol 最低 High。"
     },
     {
       "id": "sol-fast-explicit-gate",
       "prompt": "让 Sol XHigh 使用原生 Fast。",
-      "expected_output": "自动 RoutePlan 静态拒绝，因为 Sol 默认 Standard；只有用户明确要求且当前原生 live schema 接受 service_tier=priority 时才允许 Sol XHigh Fast。"
+      "expected_output": "需要显式用户请求和 service_tier=priority live evidence；否则 Standard 或拒绝。"
     },
     {
-      "id": "native-light-four-short-outputs",
-      "prompt": "四个互斥的小文件预计十分钟完成，明确交给三个 Sol High 原生 Worker，结果回到父任务集成。",
-      "expected_output": "因显式原生请求选择 native-light；不创建 agent_team；仍执行 Provider、Sol High 下限、默认 6/8/3、单写者、fresh-context 和关闭门。"
+      "id": "terra-first-only",
+      "prompt": "没有点名 Terra，把它作为 Sol 失败后的备用。",
+      "expected_output": "拒绝；Terra 只能作为用户点名的首项候选。"
     },
     {
-      "id": "native-terra-rejected",
-      "prompt": "我明确要求 Terra low 原生 Worker，但 V2 spawn 返回 Unknown model gpt-5.6-terra。",
-      "expected_output": "熔断精确 native_subagent/gpt-5.6-terra/low 组合；不静默继承父 Agent；只走派遣前声明的 Sol 或 app_thread fallback，否则主 Agent 接管。"
+      "id": "grok-provider-fallback",
+      "prompt": "Grok 返回 429 Retry-After=600，候选链是 Grok high 到 Sol high。",
+      "expected_output": "记录精确负向 TTL，当前任务进入 Sol；不在 Grok 内换 thinking 重试。"
     },
     {
-      "id": "surface-selection-durable",
-      "prompt": "并行做一个五分钟只读检查，以及一个需要独立 worktree、跨会话恢复的实现任务。",
-      "expected_output": "两个任务默认都选 app_thread；普通检查使用 Luna XHigh，worktree 实现按风险使用 Luna XHigh/Max；使用标准 6/8/3 档并保持单写者。"
+      "id": "gemini-blocked",
+      "prompt": "明确要求 Gemini Antigravity 扫描公开文档。",
+      "expected_output": "识别当前 terms blocked，不创建；建议正式 API/Vertex registry path 或从 Luna 开始。"
     },
     {
-      "id": "expanded-team-plan",
-      "prompt": "12 个互不依赖的审核对象，各自产出独立报告，主 Agent 统一汇总；当前 host 能承载 6 个并发 Worker。",
-      "expected_output": "记录 scale_reason，验证所有权隔离，选择 expanded 12/16/6 并保留至少两个 reserved slots；实际 host 上限更窄时降低每波数量。"
+      "id": "mcp-not-model-failure",
+      "prompt": "多个模型都在相同 MCP 初始化阶段失败。",
+      "expected_output": "按 workspace/tool signature 归类 MCP 故障，停止换模型。"
     },
     {
-      "id": "terra-cannot-be-fallback",
-      "prompt": "没有点名 Terra，把它作为 Sol 失败后的备用 Worker。",
-      "expected_output": "拒绝 RoutePlan；gpt-5.6-terra 是 opt-in，只能在用户明确点名时作为首项候选。"
+      "id": "pending-worktree-resolution",
+      "prompt": "create_thread 只返回 pending id，稍后 task_id 唯一匹配正式 worktree Thread。",
+      "expected_output": "pending id 只进审计；稳定正式身份后进入 CONTROL_READY；pending id 不传给管理工具。"
+    },
+    {
+      "id": "creation-ambiguity",
+      "prompt": "create_thread 超时，按 task_id 查询得到零个或两个候选。",
+      "expected_output": "记录 UNKNOWN；禁止 follow-up、archive、fallback 和重复创建。"
+    },
+    {
+      "id": "expanded-capacity",
+      "prompt": "12 个独立审核对象，host 有 6 个 collaboration slots。",
+      "expected_output": "使用 expanded 12/16/6 与 reserved slots；波次先扣除协调者和活动 Worker。"
     }
   ]
 }

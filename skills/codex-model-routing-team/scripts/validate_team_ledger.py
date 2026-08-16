@@ -17,7 +17,8 @@ DEFAULT_NATIVE_SCHEMA = SKILL_ROOT / "references" / "native-audit-schema.json"
 DEFAULT_REGISTRY = SKILL_ROOT / "references" / "model-registry.json"
 FALLBACK_MAX_CREATION_ATTEMPTS = 8
 FALLBACK_MAX_IN_FLIGHT = 6
-CURRENT_ROUTE_PLAN_SCHEMA_VERSION = "2.1"
+CURRENT_ROUTE_PLAN_SCHEMA_VERSION = "3.0"
+SUPPORTED_ROUTE_PLAN_SCHEMA_VERSIONS = {"2.1", "3.0"}
 SPEED_MODES = {"standard", "fast"}
 
 
@@ -92,7 +93,7 @@ def validate_speed_identity(
     prefix: str,
     accepted_states: set[str],
     fast_routing_models: set[str],
-    default_fast_models: set[str],
+    fast_requires_explicit_models: set[str],
     errors: list[str],
 ) -> None:
     route_plan = record.get("route_plan")
@@ -101,12 +102,12 @@ def validate_speed_identity(
     )
     if (
         route_plan_schema_version is not None
-        and route_plan_schema_version != CURRENT_ROUTE_PLAN_SCHEMA_VERSION
+        and route_plan_schema_version not in SUPPORTED_ROUTE_PLAN_SCHEMA_VERSIONS
     ):
         errors.append(f"{prefix} uses an unsupported RoutePlan schema_version")
     strict = (
         isinstance(route_plan, dict)
-        and route_plan_schema_version == CURRENT_ROUTE_PLAN_SCHEMA_VERSION
+        and route_plan_schema_version in SUPPORTED_ROUTE_PLAN_SCHEMA_VERSIONS
     )
     fields = (
         "requested_speed",
@@ -133,13 +134,13 @@ def validate_speed_identity(
         errors.append(f"{prefix} requests Fast for a registry-ineligible model")
     if (
         requested == "fast"
-        and requested_model not in default_fast_models
+        and requested_model in fast_requires_explicit_models
         and not (
             isinstance(route_plan, dict)
             and route_plan.get("explicit_user_request") is True
         )
     ):
-        errors.append(f"{prefix} non-default Fast lacks explicit_user_request")
+        errors.append(f"{prefix} model requires explicit_user_request for Fast")
     if accepted is not None and accepted not in SPEED_MODES:
         errors.append(f"{prefix} has invalid platform_accepted_speed")
     if observed not in {None, "unknown", *SPEED_MODES}:
@@ -214,7 +215,9 @@ def main() -> int:
     ):
         max_in_flight = FALLBACK_MAX_IN_FLIGHT
     fast_routing_models = set(policy.get("fast_routing_models", []))
-    default_fast_models = set(policy.get("default_fast_models", []))
+    fast_requires_explicit_models = set(
+        policy.get("fast_requires_explicit_models", [])
+    )
     result["scale_profile"] = default_profile
     result["limits"] = {
         "max_worker_attempts": max_creation_attempts,
@@ -223,6 +226,7 @@ def main() -> int:
     result["record_count"] = len(records)
     team_plan_units: dict[int, set[str]] = {}
     team_plan_limits: dict[int, dict[str, int]] = {}
+    team_plan_capacities: dict[int, int] = {}
     team_plan_profiles: dict[int, str] = {}
     active_team_plan_revision: int | None = None
     if root is not None and (
@@ -248,6 +252,9 @@ def main() -> int:
                     unit["unit_id"] for unit in team_plan["units"]
                 }
                 team_plan_limits[revision] = validation["limits"]
+                team_plan_capacities[revision] = validation[
+                    "effective_worker_capacity"
+                ]
                 team_plan_profiles[revision] = validation["scale_profile"]
             if revisions and revisions != list(range(1, len(revisions) + 1)):
                 result["errors"].append(
@@ -268,9 +275,15 @@ def main() -> int:
             elif active_team_plan_revision in team_plan_limits:
                 active_limits = team_plan_limits[active_team_plan_revision]
                 max_creation_attempts = active_limits["max_worker_attempts"]
-                max_in_flight = active_limits["max_planned_workers"]
+                max_in_flight = min(
+                    active_limits["max_planned_workers"],
+                    team_plan_capacities[active_team_plan_revision],
+                )
                 result["scale_profile"] = team_plan_profiles[active_team_plan_revision]
-                result["limits"] = active_limits
+                result["limits"] = {
+                    **active_limits,
+                    "effective_worker_capacity": max_in_flight,
+                }
     surfaces = {
         record.get("surface", "app_thread")
         for record in records
@@ -428,20 +441,94 @@ def main() -> int:
                 result["errors"].append(f"{prefix} PLANNED native state contains runtime evidence")
             elif state == "SPAWN_PENDING" and closed is True:
                 result["errors"].append(f"{prefix} SPAWN_PENDING native state is closed")
-            elif state in {"RUNNING", "COMPLETED", "CLOSED"} and not nonempty_string(agent_id):
+            elif state in {"RUNNING", "COMPLETED", "RELEASED", "CLOSED"} and not nonempty_string(agent_id):
                 result["errors"].append(f"{prefix} native state lacks an agent_id")
-            if state == "CLOSED" and closed is not True:
-                result["errors"].append(f"{prefix} violates the native close gate")
-            if closed is True and state != "CLOSED":
-                result["errors"].append(f"{prefix} closes a non-CLOSED native state")
+            route_plan = record.get("route_plan")
+            route_schema_version = (
+                route_plan.get("schema_version")
+                if isinstance(route_plan, dict)
+                else None
+            )
+            is_v3 = route_schema_version == CURRENT_ROUTE_PLAN_SCHEMA_VERSION
+            released = record.get("released")
+            release_method = record.get("release_method")
+            if is_v3:
+                if not isinstance(released, bool):
+                    result["errors"].append(f"{prefix} has non-boolean released")
+                if release_method not in {None, "close", "completed_idle"}:
+                    result["errors"].append(f"{prefix} has invalid release_method")
+                if state == "RELEASED":
+                    if released is not True or release_method not in {"close", "completed_idle"}:
+                        result["errors"].append(f"{prefix} violates the native release gate")
+                    if release_method == "completed_idle":
+                        agent_status = record.get("agent_status")
+                        normalized_agent_status = (
+                            agent_status.strip().lower()
+                            if isinstance(agent_status, str)
+                            else None
+                        )
+                        if normalized_agent_status not in {"completed", "idle"}:
+                            result["errors"].append(
+                                f"{prefix} completed_idle release requires completed or idle agent_status"
+                            )
+                elif released is True or release_method is not None:
+                    result["errors"].append(f"{prefix} releases a non-RELEASED native state")
+            else:
+                if state == "CLOSED" and closed is not True:
+                    result["errors"].append(f"{prefix} violates the native close gate")
+                if closed is True and state != "CLOSED":
+                    result["errors"].append(f"{prefix} closes a non-CLOSED native state")
 
-            if record.get("fork_mode") != "fresh":
-                result["errors"].append(f"{prefix} native worker must use fresh context")
+            fork_turns = record.get("fork_turns")
+            if is_v3:
+                if not isinstance(fork_turns, str) or not (
+                    fork_turns == "none"
+                    or (fork_turns.isdigit() and not fork_turns.startswith("0"))
+                ):
+                    result["errors"].append(f"{prefix} has invalid native fork_turns")
+                expected_fork_mode = "fresh" if fork_turns == "none" else "recent"
+                if record.get("fork_mode") != expected_fork_mode:
+                    result["errors"].append(f"{prefix} fork_mode does not match fork_turns")
+                candidates = route_plan.get("candidates") if isinstance(route_plan, dict) else None
+                selected_candidate = (
+                    next(
+                        (
+                            candidate
+                            for candidate in candidates
+                            if isinstance(candidate, dict)
+                            and candidate.get("surface") == "native_subagent"
+                            and candidate.get("model") == record.get("requested_model")
+                            and candidate.get("thinking") == record.get("thinking")
+                            and candidate.get("fork_turns") == fork_turns
+                        ),
+                        None,
+                    )
+                    if isinstance(candidates, list)
+                    else None
+                )
+                if selected_candidate is None:
+                    result["errors"].append(f"{prefix} context identity does not match RoutePlan")
+                else:
+                    evidence = selected_candidate.get("runtime_evidence")
+                    if not isinstance(evidence, dict) or any(
+                        (
+                            evidence.get("surface") != "native_subagent",
+                            evidence.get("model") != record.get("requested_model"),
+                            evidence.get("thinking") != record.get("thinking"),
+                            evidence.get("fork_turns") != fork_turns,
+                            evidence.get("accepted") is not True,
+                        )
+                    ):
+                        result["errors"].append(
+                            f"{prefix} lacks matching native runtime evidence"
+                        )
+            elif record.get("fork_mode") != "fresh":
+                result["errors"].append(f"{prefix} legacy native worker must use fresh context")
             requested_model = record.get("requested_model")
             if not nonempty_string(requested_model) or record.get("model") != requested_model:
                 result["errors"].append(f"{prefix} requested model mismatch")
             accepted_model = record.get("platform_accepted_model")
-            if state in {"RUNNING", "COMPLETED", "FAILED", "CLOSED"}:
+            if state in {"RUNNING", "COMPLETED", "FAILED", "RELEASED", "CLOSED"}:
                 if not nonempty_string(accepted_model) or accepted_model != requested_model:
                     result["errors"].append(f"{prefix} accepted model mismatch")
             observed_model = record.get("observed_runtime_model")
@@ -454,15 +541,15 @@ def main() -> int:
             validate_speed_identity(
                 record,
                 prefix=prefix,
-                accepted_states={"RUNNING", "COMPLETED", "CLOSED"},
+                accepted_states={"RUNNING", "COMPLETED", "RELEASED", "CLOSED"},
                 fast_routing_models=fast_routing_models,
-                default_fast_models=default_fast_models,
+                fast_requires_explicit_models=fast_requires_explicit_models,
                 errors=result["errors"],
             )
 
             if not valid_timestamp(record.get("last_observed_at")):
                 result["errors"].append(f"{prefix} has invalid last_observed_at")
-            if state in {"RUNNING", "COMPLETED", "UNKNOWN", "FAILED", "CLOSED"}:
+            if state in {"RUNNING", "COMPLETED", "UNKNOWN", "FAILED", "RELEASED", "CLOSED"}:
                 if record.get("last_observed_at") is None:
                     result["errors"].append(
                         f"{prefix} lacks an official native observation timestamp"
@@ -471,10 +558,11 @@ def main() -> int:
             output = record.get("output")
             if adopted is True and not nonempty_string(output):
                 result["errors"].append(f"{prefix} is adopted without a recorded output")
-            if adopted is True and (state != "CLOSED" or closed is not True):
-                result["errors"].append(
-                    f"{prefix} adopted native output must be closed"
-                )
+            if adopted is True:
+                if is_v3 and (state != "RELEASED" or released is not True):
+                    result["errors"].append(f"{prefix} adopted native output must be released")
+                elif not is_v3 and (state != "CLOSED" or closed is not True):
+                    result["errors"].append(f"{prefix} adopted native output must be closed")
 
             task_intent = record.get("task_intent")
             mutation_authority = record.get("mutation_authority")
@@ -626,7 +714,7 @@ def main() -> int:
             prefix=prefix,
             accepted_states={"CONTROL_READY", "DATA_READY", "COMPLETED"},
             fast_routing_models=fast_routing_models,
-            default_fast_models=default_fast_models,
+            fast_requires_explicit_models=fast_requires_explicit_models,
             errors=result["errors"],
         )
 

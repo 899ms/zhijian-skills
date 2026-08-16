@@ -77,10 +77,11 @@ printf '%s' "$TEAM_PLAN_JSON" | python3 scripts/validate_team_plan.py -
 - 同一就绪层出现相同或父子写入路径时拒绝，主 Agent 必须增加依赖、串行化或重分所有权。
 - 文件不重叠不等于语义独立；共享 API、schema、migration、lockfile、生成物、服务、数据库、浏览器会话和限流仍由主 Agent 判断。
 - `standard` 是默认档：最多 6 个 Worker、累计 8 次 attempts、每波 3 个。
-- 只有大量独立可验收产物带来明确净收益、写入完全隔离且 live host 容量允许时，主 Agent 才写 `scale_profile: "expanded"` 和具体 `scale_reason`：最多 12 个 Worker、累计 16 次 attempts、每波 6 个，并至少保留 2 个 `reserved_slots`。更窄的 host/runtime 上限优先，禁止把策略上限当成平台保证。
+- 只有大量独立可验收产物带来明确净收益、写入完全隔离且 live host 容量允许时，主 Agent 才写 `scale_profile: "expanded"`、`scale_reason`、`runtime_worker_capacity` 与 `runtime_capacity_evidence`：最多 12 个 Worker、累计 16 次 attempts、每波策略上限 6，并至少保留 2 个 `reserved_slots`。
+- 容量证据必须来自当前 host 的 live tool contract 或 collaboration status，记录 `host / captured_at / total_concurrency_slots / coordinator_slots / active_worker_slots / available_child_slots`。`captured_at` 最多 10 分钟；`available_child_slots = total - coordinator - active` 且必须等于 `runtime_worker_capacity`。validator 以该值与策略波次上限的较小值切波。
 - `integration_order` 必须覆盖全部单元并尊重依赖；`integration_owner` 固定为 `lead`。
 
-验证通过后，每个 unit 恰好生成一份 Task Packet 和一份 RoutePlan。派遣简报只展示 Worker 数、精确路由和职责，不向用户倾倒 TeamPlan JSON。
+验证通过后，每个 unit 恰好生成一份 Task Packet 和一份 RoutePlan。派遣简报展示 Worker 数、精确路由、职责和有效 child capacity，不向用户倾倒 TeamPlan JSON。
 
 ## Revision
 
