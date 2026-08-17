@@ -49,6 +49,29 @@
       "harnesses": ["codex"]
     },
     {
+      "name": "codex-image-gen",
+      "lifecycle": "active",
+      "version": "1.0.0",
+      "path": "skills/codex-image-gen",
+      "documentation": "docs/skills/codex-image-gen/README.md",
+      "documentation_zh": "docs/skills/codex-image-gen/README.zh-CN.md",
+      "changelog": "docs/changelogs/codex-image-gen.md",
+      "canonical_tag": "codex-image-gen/v1.0.0",
+      "validation": {
+        "commands": [
+          "python3 -m unittest discover -s skills/codex-image-gen/tests -v"
+        ],
+        "live_smoke": null
+      },
+      "capabilities": {
+        "network": "required",
+        "subprocess": "required",
+        "filesystem": "write",
+        "credentials": "required"
+      },
+      "harnesses": ["codex", "claude-code", "agents"]
+    },
+    {
       "name": "codex-model-routing-team",
       "lifecycle": "active",
       "version": "3.0.0",

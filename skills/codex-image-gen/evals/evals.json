@@ -1,0 +1,23 @@
+{
+  "skill_name": "codex-image-gen",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "帮我用本机 Codex 登录态生成一张蓝白色 AI 课程封面图，16:9，无文字，保存到 outputs/。",
+      "expected_output": "Agent 应调用 scripts/codex_image.py，使用 landscape/high 或 medium，输出 PNG 文件路径，并说明依赖 ~/.codex/auth.json。",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "这台机器没有 OpenAI API Key，但 Codex CLI 已经登录了。能不能画一张极简科技插图？",
+      "expected_output": "Agent 应识别可以复用 Codex OAuth，不要求 API Key，调用脚本生成图片。",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "把 draft.png 这张草图改成干净的白板商业插图风格。",
+      "expected_output": "Agent 应使用 --image draft.png 做 image-to-image/editing；若文件不存在，应先检查并报清楚。",
+      "files": ["draft.png"]
+    }
+  ]
+}
