@@ -1,7 +1,7 @@
 # 智见 Skills
 
 <p align="center">
-  <img src="./assets/readme/portfolio-hero.svg" width="100%" alt="智见 Skills：由一个统一源码管理十六个专注的 Agent Skill">
+  <img src="./assets/readme/portfolio-hero.svg" width="100%" alt="智见 Skills：由一个统一源码管理十七个专注的 Agent Skill">
 </p>
 
 <p align="center"><strong>从一个可信源按需安装 Agent Skill；每个安装包都完整，每次发布都独立验证。</strong></p>
@@ -12,11 +12,11 @@
   <a href="./CONTRIBUTING.md">参与贡献</a>
 </p>
 
-智见 Skills 是 16 个专注型 Agent Skill 的统一源码，覆盖 Codex 管理与体验、工作流编排、模型推理与基础设施、知识系统、内容调研、信息设计与发布流程。
+智见 Skills 是 17 个专注型 Agent Skill 的统一源码，覆盖 Codex 管理与体验、工作流编排、模型推理与基础设施、知识系统、内容调研、信息设计与发布流程。
 
 ## 30 秒开始使用
 
-查看全部 16 个 Skill：
+查看全部 17 个 Skill：
 
 ```bash
 npx skills add zjp1997720/zhijian-skills --list
@@ -43,6 +43,7 @@ npx skills add zjp1997720/zhijian-skills \
 | --- | --- | --- | --- |
 | Codex 管理 | [`codex-doctor`](docs/skills/codex-doctor/README.zh-CN.md) | 只读诊断上下文、配置和工作区漂移 | [文档](docs/skills/codex-doctor/README.zh-CN.md) |
 | Codex 管理 | [`codex-handoff`](docs/skills/codex-handoff/README.zh-CN.md) | 把历史过大、响应变慢的 Codex task 换到一个紧凑的新 task 继续 | [文档](docs/skills/codex-handoff/README.zh-CN.md) |
+| 图像生成 | [`codex-image-gen`](docs/skills/codex-image-gen/README.zh-CN.md) | 复用已登录 Codex CLI 的 OAuth 登录态，无 API Key 生成与编辑图片 | [文档](docs/skills/codex-image-gen/README.zh-CN.md) |
 | Codex 管理 | [`codex-model-routing-team`](docs/skills/codex-model-routing-team/README.zh-CN.md) | 把并行工作编译成 TeamPlan，并将 Worker 路由到明确模型 | [文档](docs/skills/codex-model-routing-team/README.zh-CN.md) |
 | Codex 管理 | [`codex-skill-admin`](docs/skills/codex-skill-admin/README.zh-CN.md) | 审计、关闭、恢复并验证本地 Codex Skill | [文档](docs/skills/codex-skill-admin/README.zh-CN.md) |
 | Codex 体验 | [`codex-theme-studio`](docs/skills/codex-theme-studio/README.zh-CN.md) | 设计、注入、验证并恢复可逆的 Codex Desktop 主题 | [文档](docs/skills/codex-theme-studio/README.zh-CN.md) |

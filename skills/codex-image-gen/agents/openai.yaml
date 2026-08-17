@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Image Gen"
+  short_description: "Reuse the local Codex CLI OAuth login to generate and edit images from any Agent"
+  default_prompt: "Use $codex-image-gen to generate or edit an image with my logged-in Codex CLI."

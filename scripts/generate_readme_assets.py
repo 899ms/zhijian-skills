@@ -64,7 +64,7 @@ def portfolio() -> str:
         text(58, 62, "ZHIJIAN / OPEN AGENT SKILLS", 16, mint, 650, family=MONO, letter_spacing="2"),
         text(58, 140, "Zhijian", 58, paper, 700),
         text(58, 200, "Skills", 58, paper, 700),
-        text(58, 244, "One source. Sixteen focused capabilities.", 22, muted, 450),
+        text(58, 244, "One source. Seventeen focused capabilities.", 22, muted, 450),
         rect(58, 278, 356, 46, mint, 8),
         text(78, 308, "$ npx skills add zjp1997720/zhijian-skills", 16, bg, 700, family=MONO),
         line(478, 42, 478, 318, "#355B75", 2),
@@ -72,15 +72,15 @@ def portfolio() -> str:
     ]
     groups = [
         (520, 90, "CONTROL", ["doctor", "routing", "admin", "theme"], mint),
-        (735, 90, "CREATE", ["clone", "pro", "html", "styler", "clip"], orange),
+        (735, 90, "CREATE", ["clone", "pro", "html", "image", "styler", "clip"], orange),
         (950, 90, "SHIP", ["plan", "release", "search", "harvest", "bridge"], "#A78BFA"),
     ]
     for x, y, label, skills, colour in groups:
         body += [text(x, y, label, 14, colour, 700, family=MONO, letter_spacing="1.5")]
         for index, skill in enumerate(skills):
-            yy = y + 18 + index * 42
+            yy = y + 14 + index * 40
             body += [rect(x, yy, 184, 32, "#173B57", 6), rect(x, yy, 5, 32, colour, 2), text(x + 18, yy + 22, skill, 15, paper, 600, family=MONO)]
-    return svg("Zhijian Skills", "One canonical portfolio of sixteen focused and independently verified Agent Skills.", bg, "portfolio-outcome-map", body)
+    return svg("Zhijian Skills", "One canonical portfolio of seventeen focused and independently verified Agent Skills.", bg, "portfolio-outcome-map", body)
 
 
 def codex_doctor() -> str:
@@ -384,9 +384,51 @@ def model_bridge() -> str:
     return svg("WorkBuddy CLI Model Bridge", "A verified loopback route connects CLI subscription models through a proxy to WorkBuddy.", bg, "verified-loopback-route", body)
 
 
+def codex_image_gen() -> str:
+    bg, paper, violet, muted, green, orange = "#191B2E", "#F4F2EC", "#8B7CF7", "#A9ADD3", "#75D39B", "#F2A65A"
+    panel, link, divider = "#242748", "#454A6E", "#343858"
+    body = [
+        text(48, 55, "LOCAL OAUTH → IMAGE GENERATION", 15, violet, 700, family=MONO, letter_spacing="1.8"),
+        text(48, 118, "Codex", 52, paper, 760), text(48, 170, "Image Gen", 52, paper, 760),
+        text(48, 212, "One login. Every Agent. No API key.", 20, muted, 480),
+        rect(48, 250, 352, 46, panel, 7, violet, 2), text(68, 280, "TEXT-TO-IMAGE • EDIT • SSE → PNG", 15, paper, 700, family=MONO),
+        text(48, 334, "uses your existing codex account quota", 14, green, 650, family=MONO),
+        line(432, 42, 432, 318, divider, 2),
+        text(460, 46, "OAUTH-REUSE PIPELINE", 14, muted, 700, family=MONO, letter_spacing="1.5"),
+    ]
+    nodes = [
+        (460, 205, "AUTH FILE", "~/.codex/auth.json", "access + refresh", "JWT exp → auto-refresh", orange),
+        (700, 205, "CODEX SSE", "POST /codex/responses", "image_generation tool", "UA · originator · ID", violet),
+        (940, 212, "EXTRACT", "image_generation_call", "base64 → bytes", "partial-image fallback", muted),
+    ]
+    for x, width, label, detail, footer, pill, pill_colour in nodes:
+        body += [
+            rect(x, 64, width, 88, panel, 9, violet, 2),
+            text(x + width / 2, 90, label, 15, paper, 750, family=MONO, text_anchor="middle"),
+            text(x + width / 2, 114, detail, 13, muted, 650, family=MONO, text_anchor="middle"),
+            text(x + width / 2, 138, footer, 13, muted, 600, family=MONO, text_anchor="middle"),
+            rect(x, 170, width, 30, panel, 6, pill_colour, 2),
+            text(x + width / 2, 190, pill, 13, pill_colour, 650, family=MONO, text_anchor="middle"),
+        ]
+    for x in (665, 905):
+        body += [line(x, 108, x + 35, 108, link, 3), path(f"M{x + 21} 96 L{x + 35} 108 L{x + 21} 120", stroke=violet, stroke_width=3, stroke_linecap="round", stroke_linejoin="round")]
+    body += [
+        rect(460, 218, 692, 100, paper, 10),
+        rect(478, 234, 148, 68, "#DCE6F4", 6),
+        circle(596, 254, 9, "#F2A65A"),
+        path("M478 302 L516 270 L542 291 L572 260 L626 302 Z", fill="#43507A"),
+        text(650, 258, "codex-image-20260818-1010-9f2c1a7b.png", 14, "#23263B", 700, family=MONO),
+        text(650, 284, '{"success": true, "image": "…/cover.png"}', 13, "#4A4E6A", 650, family=MONO),
+        circle(659, 303, 7, green),
+        text(676, 308, "NO API KEY  •  ACCOUNT QUOTA", 13, "#2F8F5B", 750, family=MONO),
+    ]
+    return svg("Codex Image Gen", "A logged-in Codex CLI OAuth file streams image_generation results into local PNG files for any Agent.", bg, "oauth-sse-image-pipeline", body)
+
+
 HEROES = {
     ROOT / "assets/readme/portfolio-hero.svg": portfolio,
     ROOT / "docs/skills/codex-doctor/assets/readme/hero.svg": codex_doctor,
+    ROOT / "docs/skills/codex-image-gen/assets/readme/hero.svg": codex_image_gen,
     ROOT / "docs/skills/codex-model-routing-team/assets/readme/hero.svg": routing_team,
     ROOT / "docs/skills/codex-skill-admin/assets/readme/hero.svg": skill_admin,
     ROOT / "docs/skills/codex-theme-studio/assets/readme/hero.svg": theme_studio,
