@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 GENERATOR = ROOT / "scripts/generate_readme_assets.py"
 SKILLS = (
     "codex-doctor",
+    "codex-external-handoff",
     "codex-image-gen",
     "codex-model-routing-team",
     "codex-skill-admin",
@@ -48,7 +49,7 @@ class ReadmeAssetTests(unittest.TestCase):
 
     def test_assets_are_safe_accessible_and_brand_aligned(self) -> None:
         assets = self.expected_assets()
-        self.assertEqual(len(assets), 16)
+        self.assertEqual(len(assets), 17)
         compositions: set[str] = set()
         for asset in assets:
             content = asset.read_text(encoding="utf-8")

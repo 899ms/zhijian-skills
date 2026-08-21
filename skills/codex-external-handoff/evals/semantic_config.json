@@ -1,0 +1,158 @@
+{
+  "optimizer_hints": {
+    "capability": "Create and supervise persistent named Codex App Server threads from an external local agent",
+    "inputs": [
+      "task package",
+      "project cwd",
+      "job ID",
+      "thread ID",
+      "任务包",
+      "项目目录",
+      "外援任务"
+    ],
+    "trigger_actions": [
+      "delegate to Codex from WorkBuddy",
+      "create persistent Codex thread",
+      "continue Codex thread",
+      "check Codex background status",
+      "retrieve Codex result",
+      "cancel Codex task",
+      "open Codex thread",
+      "调用 Codex 外援",
+      "创建可见 Codex Thread",
+      "继续追问 Codex",
+      "查看外援状态",
+      "取回 Codex 结果"
+    ],
+    "exclusions": [
+      "one-shot codex exec",
+      "Codex internal subagents",
+      "read WorkBuddy history",
+      "edit files directly",
+      "一次性简单任务",
+      "Codex 内部组队",
+      "读取 WorkBuddy 对话"
+    ],
+    "artifacts": [
+      "job receipt",
+      "threadId",
+      "structured result",
+      "Codex URL",
+      "后台任务回执",
+      "结构化结果"
+    ]
+  },
+  "fallback_positive_concepts": [
+    "external_codex_handoff",
+    "persistent_thread",
+    "thread_lifecycle"
+  ],
+  "positive_concepts": {
+    "external_codex_handoff": {
+      "weight": 0.46,
+      "phrases": [
+        "codex external handoff",
+        "delegate to codex",
+        "codex helper",
+        "codex thread",
+        "codex 审稿任务",
+        "外援任务",
+        "codex 外援",
+        "交给 codex",
+        "调用 codex"
+      ]
+    },
+    "persistent_thread": {
+      "weight": 0.38,
+      "phrases": [
+        "persistent codex thread",
+        "visible codex thread",
+        "app-server",
+        "thread id",
+        "持久 codex thread",
+        "可见 thread",
+        "threadId"
+      ]
+    },
+    "thread_lifecycle": {
+      "weight": 0.34,
+      "phrases": [
+        "continue codex thread",
+        "codex background status",
+        "retrieve codex result",
+        "cancel codex task",
+        "open codex thread",
+        "继续追问",
+        "后台状态",
+        "取回结果",
+        "取回证据",
+        "取消任务",
+        "取消正在后台运行",
+        "打开 thread",
+        "跑到哪",
+        "亲自接管",
+        "刚创建"
+      ]
+    },
+    "external_host": {
+      "weight": 0.2,
+      "phrases": [
+        "from workbuddy",
+        "from claude code",
+        "external agent",
+        "从 workbuddy",
+        "从 claude code",
+        "外部 agent"
+      ]
+    }
+  },
+  "negative_concepts": {
+    "ephemeral_one_shot": {
+      "weight": 0.6,
+      "exclusive": true,
+      "phrases": [
+        "codex exec --ephemeral",
+        "one-shot extraction",
+        "do not retain",
+        "一次性格式检查",
+        "结果不用保留",
+        "简单提取"
+      ]
+    },
+    "internal_team": {
+      "weight": 0.55,
+      "exclusive": true,
+      "phrases": [
+        "codex internal subagent",
+        "codex model routing team",
+        "当前 codex 任务里派",
+        "codex 内部组队",
+        "子 agent 并行"
+      ]
+    },
+    "other_workbuddy_actions": {
+      "weight": 0.5,
+      "exclusive": true,
+      "phrases": [
+        "read workbuddy messages",
+        "create workbuddy test thread",
+        "edit book chapter",
+        "读取 workbuddy 消息",
+        "新建测试线程",
+        "修改正文",
+        "打开图书看板"
+      ]
+    },
+    "read_existing_history_only": {
+      "weight": 0.55,
+      "exclusive": true,
+      "phrases": [
+        "view existing codex thread history only",
+        "read codex thread chat history",
+        "只想查看已有 codex thread",
+        "查看已有 codex thread 的聊天记录",
+        "不运行或接管任务"
+      ]
+    }
+  }
+}
