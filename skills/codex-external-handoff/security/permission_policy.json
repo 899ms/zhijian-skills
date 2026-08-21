@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0",
+  "reviewed_at": "2026-08-21",
+  "owner": "朱金鹏（智见AI-大鹏）",
+  "review_cadence": "quarterly",
+  "input_files": [
+    "file-backed fixture: optional UTF-8 task package supplied through --task-file"
+  ],
+  "output_contract": [
+    "local job receipt",
+    "persistent Codex threadId",
+    "structured result",
+    "Codex App URL and CLI resume command"
+  ],
+  "allowed_writes": [
+    "job receipts and logs under CODEX_EXTERNAL_HANDOFF_HOME or CODEX_HOME/external-handoff",
+    "temporary request file under the same local state root, deleted immediately after worker startup",
+    "workspace files only when the caller explicitly selects workspace-write and the task package names the permitted paths"
+  ],
+  "forbidden_writes": [
+    "danger-full-access execution",
+    "canonical project state during default read-only research or review",
+    "paths outside an explicitly authorized workspace-write task package",
+    "remote inline code or downloaded executables"
+  ],
+  "rollback_boundary": "Remove the installed skill directory; local Codex threads and rollout history remain untouched.",
+  "capabilities": {
+    "file_write": {
+      "decision": "approved",
+      "reviewer": "朱金鹏（2026-08-21 explicit implementation approval）",
+      "scope": "Local job receipts, logs, one transient request file, and explicitly authorized workspace-write task targets.",
+      "reason": "Background supervision requires recoverable local receipts; the request file prevents task text from appearing in process arguments.",
+      "expires_at": "2026-11-21",
+      "evidence": [
+        "security/permission_policy.json",
+        "tests/test_codex_external_handoff.py"
+      ],
+      "target_enforcement": {
+        "openai": "Not a packaged target; the local CLI wrapper still enforces the same sandbox enum and task contract",
+        "claude": "Skill contract plus CLI sandbox enum",
+        "generic": "CLI sandbox enum and task-package permission contract",
+        "vscode": "Not a packaged target; the local CLI wrapper still enforces the same sandbox enum and task contract"
+      }
+    },
+    "subprocess": {
+      "decision": "approved",
+      "reviewer": "朱金鹏（2026-08-21 explicit implementation approval）",
+      "scope": "Launch local Python worker, local codex app-server, and macOS open for codex:// URLs.",
+      "reason": "Persistent background Codex Threads require a supervised local App Server process and optional App handoff.",
+      "expires_at": "2026-11-21",
+      "evidence": [
+        "security/permission_policy.json",
+        "tests/test_codex_external_handoff.py"
+      ],
+      "target_enforcement": {
+        "openai": "Not a packaged target; fixed local executable allowlist remains enforced by the wrapper",
+        "claude": "Only fixed local executables are launched; task text is never used as a shell command",
+        "generic": "Only fixed local executables are launched; task text is passed through App Server JSONL",
+        "vscode": "Not a packaged target; fixed local executable allowlist remains enforced by the wrapper"
+      }
+    }
+  }
+}

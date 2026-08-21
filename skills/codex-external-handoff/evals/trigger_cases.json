@@ -1,0 +1,27 @@
+{
+  "recommended_threshold": 0.24,
+  "should_trigger": [
+    "让 WorkBuddy 把这个复杂调研交给 Codex，后台跑完后把 threadId 给我。",
+    "给架构设计开一个可见的 Codex 外援 Thread，做全库只读素材检索。",
+    "继续追问刚才那个 Codex handoff，不要新开一次性任务。",
+    "查一下外援任务现在跑到哪了，完成后取回证据和风险。",
+    "取消正在后台运行的 Codex 审稿任务。",
+    "打开 WorkBuddy 刚创建的那个 Codex Thread，我要亲自接管。",
+    "从 Claude Code 无头调用 app-server 创建一个持久 Codex 会话。",
+    "把这个模块交给 Codex 做独立审校，并返回可恢复的 Thread ID。"
+  ],
+  "should_not_trigger": [
+    "用 codex exec 做一次 JSON 格式检查，结果不用保留。",
+    "在当前 Codex 任务里派两个子 Agent 并行检查代码。",
+    "读取 WorkBuddy 测试线程刚才的消息和工具调用。",
+    "直接在 WorkBuddy 里修改正文。",
+    "帮我打开项目看板。",
+    "搜索 Nowledge Mem 里以前做过的决定。"
+  ],
+  "near_neighbor": [
+    "用 Codex 做一个很小的单次文本提取。",
+    "Codex 当前线程内部需要一个独立 reviewer。",
+    "只想查看已有 Codex Thread 的聊天记录，不运行或接管任务。",
+    "让 WorkBuddy 新建测试线程复跑产品案例。"
+  ]
+}

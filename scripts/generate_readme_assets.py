@@ -64,14 +64,14 @@ def portfolio() -> str:
         text(58, 62, "ZHIJIAN / OPEN AGENT SKILLS", 16, mint, 650, family=MONO, letter_spacing="2"),
         text(58, 140, "Zhijian", 58, paper, 700),
         text(58, 200, "Skills", 58, paper, 700),
-        text(58, 244, "One source. Seventeen focused capabilities.", 22, muted, 450),
+        text(58, 244, "One source. Eighteen focused capabilities.", 22, muted, 450),
         rect(58, 278, 356, 46, mint, 8),
         text(78, 308, "$ npx skills add zjp1997720/zhijian-skills", 16, bg, 700, family=MONO),
         line(478, 42, 478, 318, "#355B75", 2),
         text(530, 62, "CHOOSE BY OUTCOME", 15, muted, 650, family=MONO, letter_spacing="2"),
     ]
     groups = [
-        (520, 90, "CONTROL", ["doctor", "routing", "admin", "theme"], mint),
+        (520, 90, "CONTROL", ["doctor", "routing", "external", "admin", "theme"], mint),
         (735, 90, "CREATE", ["clone", "pro", "html", "image", "styler", "clip"], orange),
         (950, 90, "SHIP", ["plan", "release", "search", "harvest", "bridge"], "#A78BFA"),
     ]
@@ -80,7 +80,7 @@ def portfolio() -> str:
         for index, skill in enumerate(skills):
             yy = y + 14 + index * 40
             body += [rect(x, yy, 184, 32, "#173B57", 6), rect(x, yy, 5, 32, colour, 2), text(x + 18, yy + 22, skill, 15, paper, 600, family=MONO)]
-    return svg("Zhijian Skills", "One canonical portfolio of seventeen focused and independently verified Agent Skills.", bg, "portfolio-outcome-map", body)
+    return svg("Zhijian Skills", "One canonical portfolio of eighteen focused and independently verified Agent Skills.", bg, "portfolio-outcome-map", body)
 
 
 def codex_doctor() -> str:
@@ -425,7 +425,62 @@ def codex_image_gen() -> str:
     return svg("Codex Image Gen", "A logged-in Codex CLI OAuth file streams image_generation results into local PNG files for any Agent.", bg, "oauth-sse-image-pipeline", body)
 
 
+
+
+def external_handoff() -> str:
+    bg, paper, cyan, violet, green, panel = "#0B1528", "#F5F8FA", "#38BDF8", "#A78BFA", "#4ADE80", "#13233D"
+    body = [
+        text(52, 55, "CROSS-AGENT / APP SERVER", 15, cyan, 700, family=MONO, letter_spacing="2"),
+        text(52, 118, "Codex External", 46, paper, 720),
+        text(52, 168, "Handoff", 46, paper, 720),
+        text(52, 212, "Launch & supervise persistent threads.", 20, "#94A3B8", 450),
+        rect(52, 254, 370, 48, panel, 8, cyan, 2),
+        text(70, 284, "WORKBUDDY / CLAUDE  →  CODEX", 15, paper, 700, family=MONO),
+        # Node 1: External Agent
+        rect(490, 48, 185, 118, panel, 10, "#334155", 2),
+        rect(490, 48, 185, 28, "#1E293B", 10),
+        text(582, 67, "EXTERNAL AGENT", 12, cyan, 700, family=MONO, text_anchor="middle"),
+        text(505, 96, "• WorkBuddy / Claude", 13, paper, 500),
+        text(505, 118, "• ask --task-file ...", 12, "#94A3B8", 500, family=MONO),
+        text(505, 140, "• sandbox=read-only", 12, green, 600, family=MONO),
+        # Transport arrow
+        line(675, 107, 720, 107, cyan, 2),
+        text(697, 98, "stdio", 11, cyan, 600, family=MONO, text_anchor="middle"),
+        # Node 2: Codex App Server
+        rect(720, 48, 195, 118, panel, 10, cyan, 2),
+        rect(720, 48, 195, 28, "#1E293B", 10),
+        text(817, 67, "CODEX APP SERVER", 12, cyan, 700, family=MONO, text_anchor="middle"),
+        text(735, 96, "→ thread/start", 12, paper, 600, family=MONO),
+        text(735, 118, "→ thread/name/set", 12, paper, 600, family=MONO),
+        text(735, 140, "→ turn/start", 12, paper, 600, family=MONO),
+        # Create thread arrow
+        line(915, 107, 955, 107, violet, 2),
+        # Node 3: Persistent Thread
+        rect(955, 48, 195, 118, panel, 10, violet, 2),
+        rect(955, 48, 195, 28, "#2E1065", 10),
+        text(1052, 67, "PERSISTENT THREAD", 12, violet, 700, family=MONO, text_anchor="middle"),
+        text(970, 96, "✓ codex://threads/...", 11, "#E2E8F0", 500, family=MONO),
+        text(970, 118, "✓ codex resume ...", 11, "#E2E8F0", 500, family=MONO),
+        text(970, 140, "✓ Desktop Takeover", 11, violet, 600, family=MONO),
+        # Flow down to result
+        path("M1052 166 L1052 205 L965 205", stroke=green, stroke_width=2),
+        # Node 4: Structured Result
+        rect(490, 190, 475, 122, panel, 10, green, 2),
+        rect(490, 190, 475, 28, "#064E3B", 10),
+        text(727, 209, "STRUCTURED CALLBACK & RECEIPT", 12, green, 700, family=MONO, text_anchor="middle"),
+        text(505, 238, "• status: completed", 12, paper, 600, family=MONO),
+        text(505, 260, "• conclusion + evidence[]", 12, "#94A3B8", 500, family=MONO),
+        text(505, 282, "• risks[] + artifacts[]", 12, "#94A3B8", 500, family=MONO),
+        text(730, 238, "• job receipt ~/.codex/...", 12, "#94A3B8", 500, family=MONO),
+        text(730, 260, "• result / continue / open", 12, green, 600, family=MONO),
+        text(730, 282, "• clean request purge", 12, "#94A3B8", 500, family=MONO),
+        # Return flow
+        path("M490 251 L460 251 L460 107 L490 107", stroke=green, stroke_width=2),
+    ]
+    return svg("Codex External Handoff", "Launch and supervise persistent, user-visible Codex App Server threads from external agents with structured callbacks.", bg, "external-appserver-thread-loop", body)
+
 HEROES = {
+    ROOT / "docs/skills/codex-external-handoff/assets/readme/hero.svg": external_handoff,
     ROOT / "assets/readme/portfolio-hero.svg": portfolio,
     ROOT / "docs/skills/codex-doctor/assets/readme/hero.svg": codex_doctor,
     ROOT / "docs/skills/codex-image-gen/assets/readme/hero.svg": codex_image_gen,

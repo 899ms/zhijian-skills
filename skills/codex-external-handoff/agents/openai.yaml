@@ -1,0 +1,6 @@
+interface:
+  display_name: "Codex External Handoff"
+  short_description: "从外部 Agent 创建并管理可见的持久 Codex Thread"
+  default_prompt: "Use $codex-external-handoff to send this substantial task to a persistent, named Codex thread and return its result."
+policy:
+  allow_implicit_invocation: true

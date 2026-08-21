@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 REGISTRY_PATH = ROOT / "registry" / "skills.json"
 EXPECTED_SKILLS = {
     "codex-doctor",
+    "codex-external-handoff",
     "codex-image-gen",
     "codex-handoff",
     "codex-model-routing-team",

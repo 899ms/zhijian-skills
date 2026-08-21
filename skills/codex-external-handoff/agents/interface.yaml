@@ -1,0 +1,24 @@
+interface:
+  display_name: "Codex External Handoff"
+  short_description: "从外部 Agent 创建并管理可见的持久 Codex Thread"
+  default_prompt: "Use $codex-external-handoff to send this substantial task to a persistent, named Codex thread and return its result."
+policy:
+  allow_implicit_invocation: true
+compatibility:
+  canonical_format: "agent-skills"
+  adapter_targets:
+    - "claude"
+    - "generic"
+  activation:
+    mode: "model"
+    paths: []
+  execution:
+    context: "inline"
+    shell: "bash"
+  trust:
+    source_tier: "local"
+    remote_inline_execution: "forbid"
+    remote_metadata_policy: "allow-metadata-only"
+  degradation:
+    claude: "canonical Skill; requires local codex CLI and Python 3"
+    generic: "run the deterministic Python CLI directly"

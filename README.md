@@ -1,7 +1,7 @@
 # Zhijian Skills
 
 <p align="center">
-  <img src="./assets/readme/portfolio-hero.svg" width="100%" alt="Zhijian Skills: one canonical portfolio of seventeen focused Agent Skills">
+  <img src="./assets/readme/portfolio-hero.svg" width="100%" alt="Zhijian Skills: one canonical portfolio of eighteen focused Agent Skills">
 </p>
 
 <p align="center"><strong>Install focused Agent Skills from one trusted source, with complete payloads and independently verified releases.</strong></p>
@@ -12,11 +12,11 @@
   <a href="./CONTRIBUTING.md">Contribute</a>
 </p>
 
-Zhijian Skills is the canonical source for seventeen focused Agent Skills spanning Codex operations and experience, workflow orchestration, model reasoning and infrastructure, knowledge systems, research, information design, and publishing.
+Zhijian Skills is the canonical source for eighteen focused Agent Skills spanning Codex operations and experience, workflow orchestration, model reasoning and infrastructure, knowledge systems, research, information design, and publishing.
 
 ## Start in 30 seconds
 
-List all seventeen Skills:
+List all eighteen Skills:
 
 ```bash
 npx skills add zjp1997720/zhijian-skills --list
@@ -42,6 +42,7 @@ npx skills add zjp1997720/zhijian-skills \
 | Area | Skill | Result | Documentation |
 | --- | --- | --- | --- |
 | Codex control | [`codex-doctor`](docs/skills/codex-doctor/README.md) | Diagnose context, configuration, and workspace drift without changing files | [Docs](docs/skills/codex-doctor/README.md) |
+| Cross-agent handoff | [`codex-external-handoff`](docs/skills/codex-external-handoff/README.md) | Launch and supervise persistent Codex App Server threads from WorkBuddy or Claude Code | [Docs](docs/skills/codex-external-handoff/README.md) |
 | Codex control | [`codex-handoff`](docs/skills/codex-handoff/README.md) | Continue an oversized or slow Codex task in a fresh task with compact context | [Docs](docs/skills/codex-handoff/README.md) |
 | Image generation | [`codex-image-gen`](docs/skills/codex-image-gen/README.md) | Reuse the logged-in Codex CLI OAuth state to generate and edit images without an API key | [Docs](docs/skills/codex-image-gen/README.md) |
 | Codex control | [`codex-model-routing-team`](docs/skills/codex-model-routing-team/README.md) | Compile parallel work into TeamPlans and route Workers to explicit models | [Docs](docs/skills/codex-model-routing-team/README.md) |
