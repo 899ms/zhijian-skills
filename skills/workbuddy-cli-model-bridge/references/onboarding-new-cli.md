@@ -24,7 +24,7 @@ Do not execute a newly discovered login, update, plugin, or install command unti
 Use this order:
 
 1. **CLIProxyAPI native Provider** — best preservation of OAuth refresh, tools, streaming, images, and reasoning controls.
-2. **Official OpenAI-compatible endpoint** — suitable when the CLI/vendor documents a stable Base URL and credential method.
+2. **Official OpenAI-compatible endpoint** — suitable when the CLI/vendor documents a stable Base URL and credential method. The bundled `glm-coding` Provider is this class: a GLM Coding Plan key plus the coding `/paas/v4` URL. See [glm-coding-plan.md](glm-coding-plan.md). Do not scrape 智谱清言 chat OAuth.
 3. **Declarative alias or payload mapping** — suitable when the upstream route already works but WorkBuddy needs a stable model ID or a verified Fast/priority variant.
 4. **Bounded local adapter** — last resort when no compatible protocol exists.
 

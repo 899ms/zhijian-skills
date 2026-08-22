@@ -52,6 +52,33 @@
         "A real authenticated request and declared capabilities are re-probed after repair",
         "The final report states any remaining unverified gate instead of claiming success"
       ]
+    },
+    {
+      "id": 5,
+      "prompt": "Grok 用量刚才耗尽过，WorkBuddy 先报额度不足，后来一直报 503。现在 Grok 页面已经显示额度恢复了，帮我修好，别乱换 Key。",
+      "expected_output": "Confirms the quota-error-to-auth_unavailable sequence using redacted evidence, restarts the active CLIProxyAPI service once to clear cached runtime state, waits for the loopback proxy, and reruns the affected Grok sync and full probes without rotating the WorkBuddy key or reauthorizing unnecessarily.",
+      "files": [],
+      "expectations": [
+        "The workflow distinguishes an upstream quota or balance error from an expired OAuth grant",
+        "Only status codes and redacted error fields are inspected; raw request bodies and credentials are not printed",
+        "The active CLIProxyAPI deployment is restarted once before any OAuth reauthorization is attempted",
+        "The existing WorkBuddy client key and xAI OAuth file are preserved when the restart restores the route",
+        "The affected model must return to the live model list and pass text, streaming, optional capability, and idempotent sync checks",
+        "A persistent quota error is reported as unavailable capacity rather than treated as an authentication failure"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "我有智谱 GLM Coding Plan 的 Key，想把 GLM 5.3 接到 WorkBuddy，和现在的 GPT、Grok、DeepSeek 一起出现，不要走清言网页登录。",
+      "expected_output": "Treats the key as a Coding Plan credential, adds the official coding OpenAI-compatible route to CLIProxyAPI without OAuth, probes glm-5.3, and merges it while preserving every existing WorkBuddy model.",
+      "files": [],
+      "expectations": [
+        "The workflow refuses 智谱清言 website OAuth and does not run authorize glm-coding",
+        "The Coding Plan chat-completions base URL is used instead of the ordinary /api/paas/v4 product URL",
+        "glm-5.3 is registered only after live text and streaming probes pass",
+        "Existing WorkBuddy models remain",
+        "The report contains no API key or account identifier"
+      ]
     }
   ]
 }

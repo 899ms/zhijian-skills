@@ -1,5 +1,12 @@
 # workbuddy-cli-model-bridge Changelog
 
+## 1.2.0 — 2026-08-22
+
+- Bundle a GLM Coding Plan Provider (`glm-coding`) for `glm-5.3` over the official coding OpenAI-compatible endpoint.
+- Document that Homebrew CLIProxyAPI 7.2.135 has no GLM OAuth flag; do not authorize `glm-coding` or scrape 智谱清言 chat login.
+- Keep `supportsReasoning` off until the reasoning-control probe passes; text, streaming, and tools remain independently probed.
+- Add GLM 5.3 sourced token limits (1,048,576 input / 128,000 output) and a no-OAuth-flag contract test.
+
 ## 1.1.0 — 2026-07-24
 
 - Make local model catalogs Provider-declared with safe JSON and TOML field mappings.

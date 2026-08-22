@@ -8,7 +8,7 @@
 
 <p align="center"><a href="./README.zh-CN.md">简体中文</a> · <a href="https://github.com/zjp1997720/zhijian-skills/tree/main/skills/workbuddy-cli-model-bridge">Canonical source</a></p>
 
-Use this Skill when you want Codex, Grok, or Antigravity/Gemini models to appear as WorkBuddy custom models, when an existing local model route stops working, or when you need to onboard another CLI Provider.
+Use this Skill when you want Codex, Grok, Antigravity/Gemini, or GLM Coding Plan models to appear as WorkBuddy custom models, when an existing local model route stops working, or when you need to onboard another CLI Provider.
 
 ## Agent install
 
@@ -32,7 +32,7 @@ The install payload also supports Claude Code and generic Agents-compatible Harn
 - Audits Homebrew, CLIProxyAPI, WorkBuddy, known CLIs, OAuth-file counts, and model availability without reading token contents.
 - Installs CLIProxyAPI through its official Homebrew formula on a clean macOS setup.
 - Keeps a healthy existing manual or LaunchAgent deployment in place.
-- Delegates authentication to CLIProxyAPI's native Codex, xAI, and Antigravity OAuth flows.
+- Delegates authentication to CLIProxyAPI's native Codex, xAI, and Antigravity OAuth flows. GLM Coding Plan uses the official coding OpenAI-compatible endpoint and a Coding Plan API key, not chat-website OAuth.
 - Probes text, streaming, tools, images, and reasoning controls before enabling WorkBuddy capability flags.
 - Writes context and output limits by exact model ID; each Provider can declare JSON/TOML catalogs whose exact route metadata overrides sourced manifest values.
 - Blocks registration when either limit is unknown, its evidence is invalid, or the route rejects the declared output limit, preventing a silent WorkBuddy fallback.
@@ -66,6 +66,7 @@ The OAuth command may open a browser. Approve the Provider grant, then the Agent
 | OpenAI Codex | `codex` | `--codex-login` | GPT Sol primary; verified Fast alias when exposed |
 | xAI Grok | `grok` | `--xai-login` | Grok primary and optional Fast model |
 | Google Antigravity | `antigravity` / `agy` | `--antigravity-login` | Gemini Flash primary |
+| GLM Coding Plan | Coding Plan key | none (API key) | `glm-5.3` via coding `/paas/v4`; see `references/glm-coding-plan.md` |
 
 Provider manifests select from the live `/v1/models` response. Exact current model IDs are preferences with fallbacks; the Skill does not invent unavailable aliases.
 

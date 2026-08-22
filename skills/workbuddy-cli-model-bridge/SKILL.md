@@ -1,6 +1,15 @@
 ---
 name: workbuddy-cli-model-bridge
-description: Install, audit, repair, and manage a loopback-only CLIProxyAPI bridge that registers subscription-backed Codex, Grok, Antigravity/Gemini, or newly added CLI models in WorkBuddy. Use whenever the user asks to connect a local CLI or agent model to WorkBuddy, install CLIProxyAPI, add or repair a WorkBuddy custom model, preserve image/tool/reasoning/Fast capabilities, onboard another CLI provider, or diagnose a WorkBuddy model that stopped working. This Skill is macOS-first and should be used even when the user names only the model or says their local WorkBuddy API has expired.
+description: Install, audit, repair, and manage a loopback-only CLIProxyAPI
+  bridge that registers subscription-backed Codex, Grok, Antigravity/Gemini,
+  GLM Coding Plan, or newly added CLI models in WorkBuddy. Use whenever the
+  user asks to connect a local CLI or agent model to WorkBuddy, install
+  CLIProxyAPI, add GLM-5.3 from a Coding Plan key, add or repair a WorkBuddy
+  custom model, preserve image/tool/reasoning/Fast capabilities, onboard
+  another CLI provider, or diagnose a WorkBuddy model that stopped working.
+  This Skill is macOS-first and should be used even when the user names only
+  the model or says their local WorkBuddy API has expired.
+disable-model-invocation: true
 ---
 
 # WorkBuddy CLI Model Bridge
@@ -59,7 +68,7 @@ Keep a healthy existing installation in place. Prefer official Homebrew installa
 
 ### 3. Authorize only relevant Providers
 
-Bundled Provider IDs are `codex`, `xai-grok`, and `antigravity`. Authorize a Provider when the user requested it or the audit found its CLI/login signal and CLIProxyAPI has no matching auth/model route.
+Bundled OAuth Provider IDs are `codex`, `xai-grok`, and `antigravity`. Authorize one when the user requested it or the audit found its CLI/login signal and CLIProxyAPI has no matching auth/model route.
 
 ```bash
 python3 <skill-dir>/scripts/bridge.py authorize codex
@@ -69,6 +78,8 @@ python3 <skill-dir>/scripts/bridge.py authorize antigravity
 
 The command delegates to CLIProxyAPI's native OAuth flag. Tell the user to approve the browser page, then continue automatically. Never paste, print, transform, or reuse OAuth tokens. Secure resulting auth JSON files to owner-only permissions.
 
+Bundled `glm-coding` is a Coding Plan API-key Provider, not OAuth. Do not run `authorize glm-coding`. Follow [glm-coding-plan.md](references/glm-coding-plan.md): add the official coding `/paas/v4` route to CLIProxyAPI, then `sync --providers glm-coding`. Do not use 智谱清言 website login.
+
 Do not authorize unrelated Providers merely because they are bundled.
 
 ### 4. Probe and synchronize WorkBuddy
@@ -76,7 +87,7 @@ Do not authorize unrelated Providers merely because they are bundled.
 Pass only the relevant Provider IDs:
 
 ```bash
-python3 <skill-dir>/scripts/bridge.py sync --providers codex,xai-grok --apply
+python3 <skill-dir>/scripts/bridge.py sync --providers codex,xai-grok,glm-coding --apply
 ```
 
 The sync command:
@@ -121,11 +132,12 @@ Never include API keys, OAuth URLs containing one-time codes, token file content
 
 For an expired or broken model:
 
-1. Run `audit` and distinguish proxy-down, missing key, missing OAuth, unavailable model, and WorkBuddy-cache failures.
+1. Run `audit` and distinguish proxy-down, missing key, missing OAuth, unavailable model, Provider quota, and WorkBuddy-cache failures.
 2. Start or repair the existing service before reinstalling anything.
-3. Rerun `authorize <provider>` only when auth is absent or an authenticated probe fails.
-4. Rerun `sync --providers <affected-provider> --apply`.
-5. Verify a real text request and every declared optional capability.
+3. For a recovered quota followed by persistent `503 auth_unavailable`, follow [Quota recovered but 503 persists](references/troubleshooting.md#quota-recovered-but-503-auth_unavailable-persists) before reauthorizing.
+4. Rerun `authorize <provider>` only when auth is absent or an authentication-specific probe fails.
+5. Rerun `sync --providers <affected-provider> --apply`.
+6. Verify a real text request and every declared optional capability.
 
 Do not rotate the WorkBuddy API key merely because a Provider OAuth session changed. The proxy client key and upstream OAuth credentials have different lifecycles.
 
