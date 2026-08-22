@@ -421,12 +421,12 @@
     {
       "name": "workbuddy-cli-model-bridge",
       "lifecycle": "active",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "path": "skills/workbuddy-cli-model-bridge",
       "documentation": "docs/skills/workbuddy-cli-model-bridge/README.md",
       "documentation_zh": "docs/skills/workbuddy-cli-model-bridge/README.zh-CN.md",
       "changelog": "docs/changelogs/workbuddy-cli-model-bridge.md",
-      "canonical_tag": "workbuddy-cli-model-bridge/v1.1.0",
+      "canonical_tag": "workbuddy-cli-model-bridge/v1.2.0",
       "validation": {
         "commands": [
           "python3 -m unittest discover -s skills/workbuddy-cli-model-bridge/tests -v"

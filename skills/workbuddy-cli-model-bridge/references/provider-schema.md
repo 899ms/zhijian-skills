@@ -119,12 +119,15 @@ Exact candidates win over regular expressions. A pattern match is constrained to
 
 Allowed fields:
 
+- `displayName`
 - `supportsToolCall`
 - `supportsImages`
 - `supportsReasoning`
 - `useCustomProtocol`
 - `onlyReasoning`
 - `reasoning`
+
+`displayName` optionally sets the WorkBuddy picker label while the model `id` remains the exact client-visible CLIProxyAPI route. Use it only when a stable routing alias must differ from the user-facing model name.
 
 Token limits are forbidden in the shared `workbuddy` object. Put confirmed limits and their sources under `limits_by_model` so an older fallback cannot inherit newer-model metadata. Registration is blocked when either token limit is unresolved or when the route rejects a lightweight request carrying the claimed output limit.
 

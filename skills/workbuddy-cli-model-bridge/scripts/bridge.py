@@ -383,6 +383,7 @@ def validate_provider(provider: Any, *, source: str = "provider") -> list[str]:
                 errors.append(f"{prefix}.workbuddy is required")
             else:
                 allowed = {
+                    "displayName",
                     "supportsToolCall",
                     "supportsImages",
                     "supportsReasoning",
@@ -393,6 +394,10 @@ def validate_provider(provider: Any, *, source: str = "provider") -> list[str]:
                 unknown = set(workbuddy) - allowed
                 if unknown:
                     errors.append(f"{prefix}.workbuddy has unknown keys: {sorted(unknown)}")
+                if "displayName" in workbuddy and (
+                    not isinstance(workbuddy["displayName"], str) or not workbuddy["displayName"].strip()
+                ):
+                    errors.append(f"{prefix}.workbuddy.displayName must be a non-empty string")
                 for flag_key in (
                     "supportsToolCall",
                     "supportsImages",
@@ -683,6 +688,17 @@ def probe_model(endpoint: str, api_key: str, model: str, workbuddy: dict[str, An
         {**base, "messages": [{"role": "user", "content": "Reply with OK."}]},
         message_exists,
     )
+    if not ok and workbuddy.get("supportsReasoning"):
+        ok, error = probe_json(
+            endpoint,
+            api_key,
+            {
+                **base,
+                "max_tokens": 256,
+                "messages": [{"role": "user", "content": "Reply with OK."}],
+            },
+            message_exists,
+        )
     results["text"] = {"ok": ok, "error": error}
     if "maxOutputTokens" in workbuddy:
         limit_ok, limit_error = probe_json(
@@ -723,6 +739,11 @@ def probe_model(endpoint: str, api_key: str, model: str, workbuddy: dict[str, An
             "tool_choice": {"type": "function", "function": {"name": "bridge_probe"}},
         }
         tool_ok, tool_error = probe_json(endpoint, api_key, tool_payload, tool_call_exists)
+        if not tool_ok:
+            auto_tool_payload = dict(tool_payload)
+            auto_tool_payload["tool_choice"] = "auto"
+            auto_tool_payload["max_tokens"] = 256
+            tool_ok, tool_error = probe_json(endpoint, api_key, auto_tool_payload, tool_call_exists)
         results["tools"] = {"ok": tool_ok, "error": tool_error}
     if workbuddy.get("supportsImages"):
         image_payload = {
@@ -895,7 +916,7 @@ def resolved_workbuddy_settings(
 def workbuddy_entry(model_id: str, endpoint: str, api_key: str, settings: dict[str, Any]) -> dict[str, Any]:
     entry: dict[str, Any] = {
         "id": model_id,
-        "name": model_id,
+        "name": str(settings.get("displayName") or model_id),
         "vendor": "Custom",
         "url": endpoint,
         "apiKey": api_key,
@@ -1165,7 +1186,10 @@ def cmd_authorize(args: argparse.Namespace) -> int:
         raise BridgeError("unknown_provider", f"Unknown provider: {args.provider}")
     login_flag = provider.get("cliproxy", {}).get("login_flag")
     if not login_flag:
-        raise BridgeError("oauth_not_supported", f"Provider {args.provider} has no native CLIProxyAPI login flag")
+        raise BridgeError(
+            "oauth_not_supported",
+            f"Provider {args.provider} has no native CLIProxyAPI login flag; configure its official OpenAI-compatible route first",
+        )
     binary = detect_proxy_binary(home)
     if not binary:
         raise BridgeError("cliproxy_missing", "Run bootstrap before authorization")

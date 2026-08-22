@@ -8,7 +8,7 @@
 
 <p align="center"><a href="./README.md">English</a> · <a href="https://github.com/zjp1997720/zhijian-skills/tree/main/skills/workbuddy-cli-model-bridge">唯一源码</a></p>
 
-当你希望在 WorkBuddy 中使用 Codex、Grok、AntiGravity/Gemini，现有本地模型链路失效，或者需要接入一个新的 CLI Provider 时，使用这个 Skill。
+当你希望在 WorkBuddy 中使用 Codex、Grok、AntiGravity/Gemini 或 GLM Coding Plan，现有本地模型链路失效，或者需要接入一个新的 CLI Provider 时，使用这个 Skill。
 
 ## 安装到 Agent
 
@@ -32,7 +32,7 @@ npx skills add zjp1997720/zhijian-skills \
 - 只读审计 Homebrew、CLIProxyAPI、WorkBuddy、已安装 CLI、OAuth 文件数量和模型可用性，不读取 Token 内容。
 - 在全新 macOS 环境中通过官方 Homebrew Formula 安装 CLIProxyAPI。
 - 发现健康的手工版或 LaunchAgent 部署时继续复用，不强制迁移。
-- 使用 CLIProxyAPI 原生的 Codex、xAI 和 AntiGravity OAuth 流程。
+- 使用 CLIProxyAPI 原生的 Codex、xAI 和 AntiGravity OAuth 流程。GLM Coding Plan 走官方 coding 兼容接口和套餐 Key，不走清言网页登录。
 - 注册前实测文本、流式输出、工具、图片和推理控制。
 - 按精确模型 ID 写入上下文与输出上限；Provider 可声明自己的 JSON/TOML 模型目录，精确本地路由值优先于带来源的清单规格。
 - 上下文或输出上限未知、证据来源无效、接口拒绝所声明输出上限时，阻止注册该模型，避免 WorkBuddy 静默采用错误默认值。
@@ -66,6 +66,7 @@ OAuth 阶段可能会打开浏览器。用户完成授权后，Agent 会继续�
 | OpenAI Codex | `codex` | `--codex-login` | GPT Sol 主力模型；已暴露且验证通过时注册 Fast 别名 |
 | xAI Grok | `grok` | `--xai-login` | Grok 主力模型和可选 Fast 模型 |
 | Google AntiGravity | `antigravity` / `agy` | `--antigravity-login` | Gemini Flash 主力模型 |
+| GLM Coding Plan | Coding Plan Key | 无（API Key） | `glm-5.3`，走 coding `/paas/v4`；见 `references/glm-coding-plan.md` |
 
 Provider 清单根据实时 `/v1/models` 选择模型。当前模型 ID 是带回退顺序的偏好，Skill 不会制造上游不存在的别名。
 

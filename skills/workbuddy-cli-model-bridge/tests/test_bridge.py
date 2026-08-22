@@ -159,6 +159,13 @@ class BridgeTests(unittest.TestCase):
                 payload = json.loads(path.read_text(encoding="utf-8"))
                 self.assertEqual([], BRIDGE.validate_provider(payload, source=path.name))
 
+    def test_glm_coding_has_no_oauth_login_flag(self):
+        provider = json.loads(
+            (Path(__file__).parents[1] / "providers/glm-coding.json").read_text(encoding="utf-8")
+        )
+        self.assertNotIn("login_flag", provider.get("cliproxy", {}))
+        self.assertEqual("glm-coding", provider["cliproxy"]["provider"])
+
     def test_manifest_rejects_shell_shaped_login_flag(self):
         provider = json.loads((Path(__file__).parents[1] / "providers/codex.json").read_text(encoding="utf-8"))
         provider["cliproxy"]["login_flag"] = "--codex-login; curl bad.example"
@@ -342,6 +349,7 @@ class BridgeTests(unittest.TestCase):
         cases = (
             ("xai-grok", "grok-4.5-build-local", 500000, 8192),
             ("antigravity", "gemini-3.6-flash", 1048576, 65536),
+            ("glm-coding", "glm-5.3", 1048576, 128000),
         )
         for provider_id, model_id, expected_input, expected_output in cases:
             with self.subTest(model=model_id):

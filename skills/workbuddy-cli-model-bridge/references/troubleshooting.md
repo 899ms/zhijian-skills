@@ -33,11 +33,42 @@ Check, in order:
 
 Avoid editing a second, inactive config file. Homebrew and manual LaunchAgent deployments commonly use different paths.
 
+## GLM Coding Plan key returns `1113` or missing `glm-5.3`
+
+The key is a coding-subscription credential, not a general BigModel balance pack. Use `https://open.bigmodel.cn/api/coding/paas/v4` on mainland or `https://api.z.ai/api/coding/paas/v4` internationally. The ordinary `/api/paas/v4` URL is the wrong product.
+
+Do not run `authorize glm-coding`. Homebrew CLIProxyAPI 7.2.135 has no `-zai-login`. Add the `glm-coding` compatibility provider, restart the existing proxy once, then `sync --providers glm-coding --apply`. Follow [glm-coding-plan.md](glm-coding-plan.md).
+
+If the route works only after leaving TUN Fake-IP, set that provider entry's `proxy-url: "direct"`. Do not send chatgpt.com DIRECT as a workaround.
+
+Leave `supportsReasoning` off when the reasoning-control probe fails. Internal thinking can still occur.
+
 ## Provider models are missing
 
 Run `authorize <provider>` again only when the Provider has no auth file or an authenticated request fails. A CLI login outside CLIProxyAPI is not proof that the proxy has a usable grant.
 
 After OAuth, query `/v1/models` again. If the expected model is absent, it may be unavailable under the account, renamed upstream, excluded by config, or in cooldown. Do not create a fake alias to a nonexistent model.
+
+## Quota recovered but `503 auth_unavailable` persists
+
+Some Provider quota or balance failures can leave CLIProxyAPI's in-memory auth route marked unavailable after the Provider's usage page shows capacity again. Treat this as a runtime-state recovery only when the evidence sequence is:
+
+1. the original upstream response is a quota or balance error such as `402`, `429`, or `usage balance exhausted`
+2. later requests fail with `503 auth_unavailable` for the same Provider and model
+3. the user confirms the Provider quota has reset or capacity is available again
+
+Inspect only status codes and redacted error fields. Never print request bodies, prompts, images, authorization headers, OAuth URLs, account identifiers, or token-file contents.
+
+Recover the existing deployment in this order:
+
+1. identify the active process, config, and service manager reported by `audit`; do not restart a second deployment
+2. restart the existing service once (for a Homebrew-owned deployment, use `brew services restart cliproxyapi`)
+3. poll `audit` until the loopback proxy is reachable; an immediate first audit may race service startup
+4. confirm the affected model returned to `/v1/models`
+5. run `sync --providers <affected-provider> --apply` without `--skip-probes`
+6. verify text, streaming, declared optional capabilities, and an idempotent second sync
+
+Keep both the dedicated WorkBuddy client key and the Provider OAuth files unchanged during this recovery. If the upstream quota error persists, stop and report that capacity is still unavailable. Reauthorize only for missing auth or an authentication-specific failure such as `401` or `invalid_grant`; a quota error is not evidence that OAuth expired.
 
 ## Text works but images or tools fail
 
@@ -58,7 +89,7 @@ For teaching or recording, ask the model to put an explicit problem decompositio
 
 ## A requested Fast model is absent
 
-Upgrade or inspect CLIProxyAPI before creating aliases. A working Fast route requires both a distinct client-visible alias and a Provider-supported priority/latency control. For OAuth-backed Codex routes, current CLIProxyAPI supports `oauth-model-alias` plus a matching `payload.override` rule that injects `service_tier: priority`.
+Upgrade or inspect CLIProxyAPI before creating aliases. A working Fast route requires both a distinct client-visible alias and a Provider-supported priority/latency control. For OAuth-backed Codex routes, current CLIProxyAPI supports `oauth-model-alias` plus a matching `payload.override` rule that injects `service_tier: priority`. Any alias that remaps `gpt-5.6-sol` must set `fork: true`; otherwise the native ID disappears from `/v1/models` and Codex Desktop fails with `unknown provider for model gpt-5.6-sol`. WorkBuddy may keep `gpt-5.6-sol-standard` / `gpt-5.6-sol-fast` as extra aliases, but Codex itself must keep requesting `gpt-5.6-sol`.
 
 After configuring the alias through CLIProxyAPI's documented configuration or loopback Management API, rerun `/v1/models` and the full bridge probes. Do not register the alias if it is missing from the model list or if the route behaves like an unsupported model.
 
