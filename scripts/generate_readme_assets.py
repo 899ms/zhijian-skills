@@ -64,14 +64,14 @@ def portfolio() -> str:
         text(58, 62, "ZHIJIAN / OPEN AGENT SKILLS", 16, mint, 650, family=MONO, letter_spacing="2"),
         text(58, 140, "Zhijian", 58, paper, 700),
         text(58, 200, "Skills", 58, paper, 700),
-        text(58, 244, "One source. Eighteen focused capabilities.", 22, muted, 450),
+        text(58, 244, "One source. Nineteen focused capabilities.", 22, muted, 450),
         rect(58, 278, 356, 46, mint, 8),
         text(78, 308, "$ npx skills add zjp1997720/zhijian-skills", 16, bg, 700, family=MONO),
         line(478, 42, 478, 318, "#355B75", 2),
         text(530, 62, "CHOOSE BY OUTCOME", 15, muted, 650, family=MONO, letter_spacing="2"),
     ]
     groups = [
-        (520, 90, "CONTROL", ["doctor", "routing", "external", "admin", "theme"], mint),
+        (520, 90, "CONTROL", ["doctor", "routing", "external", "admin", "theme", "codex-bridge"], mint),
         (735, 90, "CREATE", ["clone", "pro", "html", "image", "styler", "clip"], orange),
         (950, 90, "SHIP", ["plan", "release", "search", "harvest", "bridge"], "#A78BFA"),
     ]
@@ -80,7 +80,7 @@ def portfolio() -> str:
         for index, skill in enumerate(skills):
             yy = y + 14 + index * 40
             body += [rect(x, yy, 184, 32, "#173B57", 6), rect(x, yy, 5, 32, colour, 2), text(x + 18, yy + 22, skill, 15, paper, 600, family=MONO)]
-    return svg("Zhijian Skills", "One canonical portfolio of eighteen focused and independently verified Agent Skills.", bg, "portfolio-outcome-map", body)
+    return svg("Zhijian Skills", "One canonical portfolio of nineteen focused and independently verified Agent Skills.", bg, "portfolio-outcome-map", body)
 
 
 def codex_doctor() -> str:

@@ -3,6 +3,33 @@
   "schema_version": "2.0.0",
   "skills": [
     {
+      "name": "codex-cli-model-bridge",
+      "lifecycle": "active",
+      "version": "1.0.0",
+      "path": "skills/codex-cli-model-bridge",
+      "documentation": "docs/skills/codex-cli-model-bridge/README.md",
+      "documentation_zh": "docs/skills/codex-cli-model-bridge/README.zh-CN.md",
+      "changelog": "docs/changelogs/codex-cli-model-bridge.md",
+      "canonical_tag": "codex-cli-model-bridge/v1.0.0",
+      "validation": {
+        "commands": [
+          "python3 -m unittest discover -s skills/codex-cli-model-bridge/tests -v"
+        ],
+        "live_smoke": "python3 skills/codex-cli-model-bridge/scripts/bridge.py --help"
+      },
+      "capabilities": {
+        "network": "required",
+        "subprocess": "required",
+        "filesystem": "write",
+        "credentials": "required"
+      },
+      "harnesses": [
+        "codex",
+        "claude-code",
+        "agents"
+      ]
+    },
+    {
       "name": "codex-doctor",
       "lifecycle": "active",
       "version": "1.1.0",
