@@ -1,0 +1,294 @@
+{
+  "name": "zhijian-skills",
+  "owner": {
+    "name": "智见 AI"
+  },
+  "description": "智见 AI 开源 Skills，按需安装；各项运行条件请查看文档。",
+  "plugins": [
+    {
+      "name": "codex-cli-model-bridge",
+      "source": "./skills/codex-cli-model-bridge",
+      "description": "在 Codex 里接入已验证的 Grok、DeepSeek 等本机模型，同时保住 ChatGPT 的默认 Provider 和历史。",
+      "version": "1.0.1",
+      "author": {
+        "name": "智见 AI"
+      },
+      "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/codex-cli-model-bridge/README.zh-CN.md",
+      "repository": "https://github.com/zjp1997720/zhijian-skills",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "codex-doctor",
+      "source": "./skills/codex-doctor",
+      "description": "【需 Codex 宿主能力】一套面向 Codex 的只读健康检查 Skill，用来发现安装、配置和工作区上下文中的真实问题。",
+      "version": "1.1.0",
+      "author": {
+        "name": "智见 AI"
+      },
+      "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/codex-doctor/README.zh-CN.md",
+      "repository": "https://github.com/zjp1997720/zhijian-skills",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "codex-external-handoff",
+      "source": "./skills/codex-external-handoff",
+      "description": "从 WorkBuddy、Claude Code 或任何本地 Agent 无头调用 Codex App Server，创建可见、命名、持久的 Codex Thread——保留结构化结果回传、只读安全默认与随时人工接管能力。",
+      "version": "1.0.0",
+      "author": {
+        "name": "智见 AI"
+      },
+      "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/codex-external-handoff/README.zh-CN.md",
+      "repository": "https://github.com/zjp1997720/zhijian-skills",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "codex-handoff",
+      "source": "./skills/codex-handoff",
+      "description": "【需 Codex 宿主能力】把历史过大、响应变慢的 Codex task 换到一个全新的用户可见 task 中继续，不复制完整对话。",
+      "version": "1.0.0",
+      "author": {
+        "name": "智见 AI"
+      },
+      "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/codex-handoff/README.zh-CN.md",
+      "repository": "https://github.com/zjp1997720/zhijian-skills",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "codex-image-gen",
+      "source": "./skills/codex-image-gen",
+      "description": "把已经登录的 Codex CLI 变成任何 Agent 都能用的生图能力——不需要 API Key，一个零依赖的 Python 脚本。",
+      "version": "1.0.0",
+      "author": {
+        "name": "智见 AI"
+      },
+      "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/codex-image-gen/README.zh-CN.md",
+      "repository": "https://github.com/zjp1997720/zhijian-skills",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "codex-model-routing-team",
+      "source": "./skills/codex-model-routing-team",
+      "description": "【需 Codex 宿主能力】主 Agent 负责 TeamPlan、所有权、集成和验收；普通 Worker 默认走原生 Sol Medium，Luna 负责可机械验收的批量任务。",
+      "version": "3.1.0",
+      "author": {
+        "name": "智见 AI"
+      },
+      "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/codex-model-routing-team/README.zh-CN.md",
+      "repository": "https://github.com/zjp1997720/zhijian-skills",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "codex-skill-admin",
+      "source": "./skills/codex-skill-admin",
+      "description": "【需 Codex 宿主能力】审计、关闭、恢复并验证本地 Codex Skill，不用卸载，也不丢失恢复能力。",
+      "version": "1.0.2",
+      "author": {
+        "name": "智见 AI"
+      },
+      "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/codex-skill-admin/README.zh-CN.md",
+      "repository": "https://github.com/zjp1997720/zhijian-skills",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "codex-theme-studio",
+      "source": "./skills/codex-theme-studio",
+      "description": "不修改签名应用包，也能设计、应用、验证并恢复 macOS Codex 自定义皮肤。",
+      "version": "1.2.0",
+      "author": {
+        "name": "智见 AI"
+      },
+      "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/codex-theme-studio/README.zh-CN.md",
+      "repository": "https://github.com/zjp1997720/zhijian-skills",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "enterprise-clone-builder",
+      "source": "./skills/enterprise-clone-builder",
+      "description": "以企业本地资料为主、公开信息为补充，构建结构清晰、来源可追溯的企业数字分身仓库。",
+      "version": "1.0.2",
+      "author": {
+        "name": "智见 AI"
+      },
+      "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/enterprise-clone-builder/README.zh-CN.md",
+      "repository": "https://github.com/zjp1997720/zhijian-skills",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "gpt56-sol-pro-consult",
+      "source": "./skills/gpt56-sol-pro-consult",
+      "description": "【需 Codex 宿主能力】通过 Codex Chrome 获得有文件依据、完成模型核验的 GPT 5.6 Sol Pro 二次判断。",
+      "version": "1.0.0",
+      "author": {
+        "name": "智见 AI"
+      },
+      "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/gpt56-sol-pro-consult/README.zh-CN.md",
+      "repository": "https://github.com/zjp1997720/zhijian-skills",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "html-express",
+      "source": "./skills/html-express",
+      "description": "把高密度信息整理成清晰、自包含、双击即可打开的 HTML 报告。",
+      "version": "1.0.2",
+      "author": {
+        "name": "智见 AI"
+      },
+      "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/html-express/README.zh-CN.md",
+      "repository": "https://github.com/zjp1997720/zhijian-skills",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "leadbook",
+      "source": "./skills/leadbook",
+      "description": "把一个商业主题生产成有证据、有章节状态、可审计质量门的中文短书、白皮书、方法论书或操作手册。",
+      "version": "1.0.0",
+      "author": {
+        "name": "智见 AI"
+      },
+      "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/leadbook/README.zh-CN.md",
+      "repository": "https://github.com/zjp1997720/zhijian-skills",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "light-plan-and-work",
+      "source": "./skills/light-plan-and-work",
+      "description": "用几步短计划完成边界清楚的任务，立即执行、按风险验证，只在后果和协作成本确实更高时升级到重流程。",
+      "version": "1.0.0",
+      "author": {
+        "name": "智见 AI"
+      },
+      "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/light-plan-and-work/README.zh-CN.md",
+      "repository": "https://github.com/zjp1997720/zhijian-skills",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "skill-open-sourcer",
+      "source": "./skills/skill-open-sourcer",
+      "description": "把本地 Agent Skill 做成完整、经过验证、进入智见 Skills 的公开版本。",
+      "version": "2.4.2",
+      "author": {
+        "name": "智见 AI"
+      },
+      "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/skill-open-sourcer/README.zh-CN.md",
+      "repository": "https://github.com/zjp1997720/zhijian-skills",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "web-clipper",
+      "source": "./skills/web-clipper",
+      "description": "把公开文章 URL 和归档页变成可迁移、可追溯、支持 Agent 批量收藏的 Markdown。",
+      "version": "1.0.0",
+      "author": {
+        "name": "智见 AI"
+      },
+      "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/web-clipper/README.zh-CN.md",
+      "repository": "https://github.com/zjp1997720/zhijian-skills",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "wechat-article-search",
+      "source": "./skills/wechat-article-search",
+      "description": "按关键词发现公众号文章，输出标题、摘要、时间、来源和链接；无需 API Key。",
+      "version": "1.0.2",
+      "author": {
+        "name": "智见 AI"
+      },
+      "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/wechat-article-search/README.zh-CN.md",
+      "repository": "https://github.com/zjp1997720/zhijian-skills",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "wechat-styler",
+      "source": "./skills/wechat-styler",
+      "description": "把 Markdown 一键排成可直接粘进公众号编辑器的内联 HTML：8 套主题、确定性校验、零外部 CSS。",
+      "version": "1.10.0",
+      "author": {
+        "name": "智见 AI"
+      },
+      "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/wechat-styler/README.zh-CN.md",
+      "repository": "https://github.com/zjp1997720/zhijian-skills",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "workbuddy-cli-model-bridge",
+      "source": "./skills/workbuddy-cli-model-bridge",
+      "description": "自动安装、授权、探测并注册 CLI 订阅模型，避免手工处理凭证和 WorkBuddy 配置。",
+      "version": "1.2.0",
+      "author": {
+        "name": "智见 AI"
+      },
+      "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/workbuddy-cli-model-bridge/README.zh-CN.md",
+      "repository": "https://github.com/zjp1997720/zhijian-skills",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "wxmp-article-harvester",
+      "source": "./skills/wxmp-article-harvester",
+      "description": "把指定公众号加工成可迁移的 Markdown、索引和真实反映完成度的采集报告。",
+      "version": "1.0.0",
+      "author": {
+        "name": "智见 AI"
+      },
+      "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/wxmp-article-harvester/README.zh-CN.md",
+      "repository": "https://github.com/zjp1997720/zhijian-skills",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    }
+  ]
+}
