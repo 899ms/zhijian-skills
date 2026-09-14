@@ -22,24 +22,31 @@ class WorkBuddyMarketplaceTest(unittest.TestCase):
         for plugin in actual['plugins']:
             with self.subTest(plugin=plugin['name']):
                 self.assertEqual(plugin['version'], records[plugin['name']]['version'])
-                self.assertFalse(plugin['strict'])
-                self.assertEqual(plugin['skills'], ['./'])
+                self.assertTrue(plugin['strict'])
+                self.assertEqual(plugin['skills'], ['./skills/' + plugin['name']])
                 self.assertNotIn('mcpServers', plugin)
                 self.assertNotIn('hooks', plugin)
+        for path, expected in builder.artifacts(ROOT).items():
+            self.assertEqual((ROOT / path).read_text(), expected)
 
     def test_each_install_unit_survives_isolated_copy(self):
         for plugin in builder.build(ROOT)['plugins']:
             with self.subTest(plugin=plugin['name']), tempfile.TemporaryDirectory() as temporary:
                 source = (ROOT / plugin['source']).resolve()
-                self.assertTrue(source.is_relative_to(ROOT / 'skills'))
-                for item in source.rglob('*'):
+                self.assertTrue(source.is_relative_to(ROOT / 'plugins'))
+                payload = (source / plugin['skills'][0]).resolve()
+                self.assertEqual(payload, ROOT / 'skills' / plugin['name'])
+                for item in payload.rglob('*'):
                     if item.is_symlink():
-                        self.assertTrue(item.resolve().is_relative_to(source), str(item))
+                        self.assertTrue(item.resolve().is_relative_to(payload), str(item))
                 cache = Path(temporary) / plugin['name']
                 shutil.copytree(source, cache)
                 self.assertTrue((cache / plugin['skills'][0] / 'SKILL.md').is_file())
-                source_files = {p.relative_to(source): p.read_bytes() for p in source.rglob('*') if p.is_file()}
-                cache_files = {p.relative_to(cache): p.read_bytes() for p in cache.rglob('*') if p.is_file()}
+                installed = cache / plugin['skills'][0]
+                self.assertFalse(installed.is_symlink())
+                self.assertTrue((cache / '.codebuddy-plugin/plugin.json').is_file())
+                source_files = {p.relative_to(payload): p.read_bytes() for p in payload.rglob('*') if p.is_file()}
+                cache_files = {p.relative_to(installed): p.read_bytes() for p in installed.rglob('*') if p.is_file()}
                 self.assertEqual(source_files, cache_files)
 
 

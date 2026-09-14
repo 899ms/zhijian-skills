@@ -53,6 +53,8 @@ zjp1997720/zhijian-skills
 
 市场清单从 `registry/skills.json` 和已有中文文档生成。维护者更新条目或版本后运行 `python3 scripts/build_workbuddy_marketplace.py`；CI 会检查清单是否同步。
 
+`plugins/` 中的套件清单和仓库内符号链接均由脚本生成，源码仍只在 `skills/` 维护。安装器将链接物化成完整文件；Git 检出需要支持符号链接。已在 macOS WorkBuddy 验证，Windows 尚未实测。可用 `python3 scripts/verify_workbuddy_install.py --cli <WorkBuddy附带的codebuddy可执行文件>` 在临时配置目录验证安装、冷启动识别和文件哈希；加 `--source zjp1997720/zhijian-skills` 验证公开源。
+
 ## 选择一个 Skill
 
 | 场景 | Skill | 直接得到什么 | 文档 |

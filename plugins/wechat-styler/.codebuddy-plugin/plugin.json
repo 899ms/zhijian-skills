@@ -1,0 +1,13 @@
+{
+  "name": "wechat-styler",
+  "description": "把 Markdown 一键排成可直接粘进公众号编辑器的内联 HTML：8 套主题、确定性校验、零外部 CSS。",
+  "version": "1.10.0",
+  "author": {
+    "name": "智见 AI"
+  },
+  "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/wechat-styler/README.zh-CN.md",
+  "repository": "https://github.com/zjp1997720/zhijian-skills",
+  "skills": [
+    "./skills/wechat-styler"
+  ]
+}

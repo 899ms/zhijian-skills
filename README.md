@@ -53,6 +53,8 @@ Catalog availability does not imply WorkBuddy runtime compatibility. Entries mar
 
 Maintainers: the catalog is generated from `registry/skills.json` and existing Chinese documentation. Run `python3 scripts/build_workbuddy_marketplace.py` after catalog/version changes; CI checks for drift.
 
+The manifests and repository-local symlinks under `plugins/` are generated; editable Skill source remains under `skills/`. Installation materializes the links into complete files. Git checkouts must support symlinks. Verified with macOS WorkBuddy; Windows has not been tested. Run `python3 scripts/verify_workbuddy_install.py --cli <WorkBuddy-bundled-codebuddy>` to check installation, cold-start discovery, and payload hashes in a temporary config. Add `--source zjp1997720/zhijian-skills` to verify the public source.
+
 ## Choose a Skill
 
 | Area | Skill | Result | Documentation |

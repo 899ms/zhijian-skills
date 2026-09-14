@@ -1,0 +1,13 @@
+{
+  "name": "codex-handoff",
+  "description": "【需 Codex 宿主能力】把历史过大、响应变慢的 Codex task 换到一个全新的用户可见 task 中继续，不复制完整对话。",
+  "version": "1.0.0",
+  "author": {
+    "name": "智见 AI"
+  },
+  "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/codex-handoff/README.zh-CN.md",
+  "repository": "https://github.com/zjp1997720/zhijian-skills",
+  "skills": [
+    "./skills/codex-handoff"
+  ]
+}

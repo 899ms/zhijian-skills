@@ -1,0 +1,13 @@
+{
+  "name": "html-express",
+  "description": "把高密度信息整理成清晰、自包含、双击即可打开的 HTML 报告。",
+  "version": "1.0.2",
+  "author": {
+    "name": "智见 AI"
+  },
+  "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/html-express/README.zh-CN.md",
+  "repository": "https://github.com/zjp1997720/zhijian-skills",
+  "skills": [
+    "./skills/html-express"
+  ]
+}

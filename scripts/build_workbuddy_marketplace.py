@@ -41,16 +41,14 @@ def build(root: Path) -> dict:
             summary = '【需 Codex 宿主能力】' + summary
         plugins.append({
             'name': name,
-            'source': './' + path,
+            'source': './plugins/' + name,
             'description': summary,
             'version': record['version'],
             'author': {'name': '智见 AI'},
             'homepage': REPOSITORY + '/blob/main/' + record['documentation_zh'],
             'repository': REPOSITORY,
-            # The existing self-contained Skill directory is the plugin payload.
-            # No second copy or per-Skill manifest/version is maintained.
-            'strict': False,
-            'skills': ['./'],
+            'strict': True,
+            'skills': ['./skills/' + name],
         })
     return {
         'name': 'zhijian-skills',
@@ -60,18 +58,42 @@ def build(root: Path) -> dict:
     }
 
 
+def artifacts(root: Path) -> dict[Path, str]:
+    catalog = build(root)
+    result = {OUTPUT: json.dumps(catalog, ensure_ascii=False, indent=2) + '\n'}
+    for plugin in catalog['plugins']:
+        manifest = {k: v for k, v in plugin.items() if k not in {'source', 'strict'}}
+        path = Path('plugins') / plugin['name'] / '.codebuddy-plugin/plugin.json'
+        result[path] = json.dumps(manifest, ensure_ascii=False, indent=2) + '\n'
+    return result
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--check', action='store_true', help='Fail if the committed catalog is stale')
     args = parser.parse_args()
-    rendered = json.dumps(build(ROOT), ensure_ascii=False, indent=2) + '\n'
-    destination = ROOT / OUTPUT
-    if args.check:
-        if not destination.is_file() or destination.read_text(encoding='utf-8') != rendered:
-            parser.exit(1, 'WorkBuddy catalog is stale; run scripts/build_workbuddy_marketplace.py\n')
-    else:
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_text(rendered, encoding='utf-8')
+    for relative, rendered in artifacts(ROOT).items():
+        destination = ROOT / relative
+        if args.check:
+            if not destination.is_file() or destination.read_text(encoding='utf-8') != rendered:
+                parser.exit(1, f'WorkBuddy metadata is stale: {relative}\n')
+        else:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(rendered, encoding='utf-8')
+    for plugin in build(ROOT)['plugins']:
+        name = plugin['name']
+        link = ROOT / 'plugins' / name / 'skills' / name
+        target = '../../../skills/' + name
+        if args.check:
+            if not link.is_symlink() or str(link.readlink()) != target:
+                parser.exit(1, f'WorkBuddy payload link is stale: {name}\n')
+        elif not link.is_symlink() and link.exists():
+            parser.exit(1, f'Refusing to replace a real payload directory: {link}\n')
+        elif not link.is_symlink() or str(link.readlink()) != target:
+            link.parent.mkdir(parents=True, exist_ok=True)
+            if link.is_symlink():
+                link.unlink()
+            link.symlink_to(target, target_is_directory=True)
     print(f'WorkBuddy catalog: {len(build(ROOT)["plugins"])} Skills; {"checked" if args.check else "written"}')
     return 0
 

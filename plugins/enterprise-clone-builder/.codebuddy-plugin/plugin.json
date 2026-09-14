@@ -1,0 +1,13 @@
+{
+  "name": "enterprise-clone-builder",
+  "description": "以企业本地资料为主、公开信息为补充，构建结构清晰、来源可追溯的企业数字分身仓库。",
+  "version": "1.0.2",
+  "author": {
+    "name": "智见 AI"
+  },
+  "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/enterprise-clone-builder/README.zh-CN.md",
+  "repository": "https://github.com/zjp1997720/zhijian-skills",
+  "skills": [
+    "./skills/enterprise-clone-builder"
+  ]
+}

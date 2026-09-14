@@ -1,0 +1,13 @@
+{
+  "name": "codex-theme-studio",
+  "description": "不修改签名应用包，也能设计、应用、验证并恢复 macOS Codex 自定义皮肤。",
+  "version": "1.2.0",
+  "author": {
+    "name": "智见 AI"
+  },
+  "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/codex-theme-studio/README.zh-CN.md",
+  "repository": "https://github.com/zjp1997720/zhijian-skills",
+  "skills": [
+    "./skills/codex-theme-studio"
+  ]
+}

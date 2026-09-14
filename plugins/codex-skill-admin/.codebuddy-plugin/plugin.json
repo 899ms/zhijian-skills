@@ -1,0 +1,13 @@
+{
+  "name": "codex-skill-admin",
+  "description": "【需 Codex 宿主能力】审计、关闭、恢复并验证本地 Codex Skill，不用卸载，也不丢失恢复能力。",
+  "version": "1.0.2",
+  "author": {
+    "name": "智见 AI"
+  },
+  "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/codex-skill-admin/README.zh-CN.md",
+  "repository": "https://github.com/zjp1997720/zhijian-skills",
+  "skills": [
+    "./skills/codex-skill-admin"
+  ]
+}
