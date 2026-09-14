@@ -1,0 +1,13 @@
+{
+  "name": "wechat-article-search",
+  "description": "按关键词发现公众号文章，输出标题、摘要、时间、来源和链接；无需 API Key。",
+  "version": "1.0.2",
+  "author": {
+    "name": "智见 AI"
+  },
+  "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/wechat-article-search/README.zh-CN.md",
+  "repository": "https://github.com/zjp1997720/zhijian-skills",
+  "skills": [
+    "./skills/wechat-article-search"
+  ]
+}

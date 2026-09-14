@@ -1,0 +1,13 @@
+{
+  "name": "leadbook",
+  "description": "把一个商业主题生产成有证据、有章节状态、可审计质量门的中文短书、白皮书、方法论书或操作手册。",
+  "version": "1.0.0",
+  "author": {
+    "name": "智见 AI"
+  },
+  "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/leadbook/README.zh-CN.md",
+  "repository": "https://github.com/zjp1997720/zhijian-skills",
+  "skills": [
+    "./skills/leadbook"
+  ]
+}

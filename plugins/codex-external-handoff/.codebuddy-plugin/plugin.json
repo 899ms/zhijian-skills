@@ -1,0 +1,13 @@
+{
+  "name": "codex-external-handoff",
+  "description": "从 WorkBuddy、Claude Code 或任何本地 Agent 无头调用 Codex App Server，创建可见、命名、持久的 Codex Thread——保留结构化结果回传、只读安全默认与随时人工接管能力。",
+  "version": "1.0.0",
+  "author": {
+    "name": "智见 AI"
+  },
+  "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/codex-external-handoff/README.zh-CN.md",
+  "repository": "https://github.com/zjp1997720/zhijian-skills",
+  "skills": [
+    "./skills/codex-external-handoff"
+  ]
+}

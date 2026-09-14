@@ -1,0 +1,13 @@
+{
+  "name": "light-plan-and-work",
+  "description": "用几步短计划完成边界清楚的任务，立即执行、按风险验证，只在后果和协作成本确实更高时升级到重流程。",
+  "version": "1.0.0",
+  "author": {
+    "name": "智见 AI"
+  },
+  "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/light-plan-and-work/README.zh-CN.md",
+  "repository": "https://github.com/zjp1997720/zhijian-skills",
+  "skills": [
+    "./skills/light-plan-and-work"
+  ]
+}

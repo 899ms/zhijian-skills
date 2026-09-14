@@ -1,0 +1,13 @@
+{
+  "name": "workbuddy-cli-model-bridge",
+  "description": "自动安装、授权、探测并注册 CLI 订阅模型，避免手工处理凭证和 WorkBuddy 配置。",
+  "version": "1.2.0",
+  "author": {
+    "name": "智见 AI"
+  },
+  "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/workbuddy-cli-model-bridge/README.zh-CN.md",
+  "repository": "https://github.com/zjp1997720/zhijian-skills",
+  "skills": [
+    "./skills/workbuddy-cli-model-bridge"
+  ]
+}

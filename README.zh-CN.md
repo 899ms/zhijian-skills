@@ -37,6 +37,24 @@ npx skills add zjp1997720/zhijian-skills \
 
 > 这是唯一发布仓库。新增 Skill、版本发布、Issue 和代码贡献全部进入这里。
 
+## 在 WorkBuddy 中添加技能市场
+
+打开 **专家·技能·连接器 → 技能 → 套件 → 添加市场**，在「市场源」填写：
+
+```text
+zjp1997720/zhijian-skills
+```
+
+完整地址 `https://github.com/zjp1997720/zhijian-skills.git` 也可以。添加后选择 `zhijian-skills`，按需安装单个套件；添加市场不会自动安装全部 Skill。
+
+请使用仓库地址，不要填写 `/tree/main/skills` 目录网页或原始 JSON 地址。市场通过 Git 获取完整 Skill 文件，包括脚本、参考资料与素材。
+
+市场展示不等于所有功能都支持 WorkBuddy：标有「需 Codex 宿主能力」的条目依赖 Codex；其他条目也可能需要本地 CLI、登录或依赖包，安装前请查看对应文档。市场适配不会更改这些运行条件。
+
+市场清单从 `registry/skills.json` 和已有中文文档生成。维护者更新条目或版本后运行 `python3 scripts/build_workbuddy_marketplace.py`；CI 会检查清单是否同步。
+
+`plugins/` 中的套件清单和仓库内符号链接均由脚本生成，源码仍只在 `skills/` 维护。安装器将链接物化成完整文件；Git 检出需要支持符号链接。已在 macOS WorkBuddy 验证，Windows 尚未实测。可用 `python3 scripts/verify_workbuddy_install.py --cli <WorkBuddy附带的codebuddy可执行文件>` 在临时配置目录验证安装、冷启动识别和文件哈希；加 `--source zjp1997720/zhijian-skills` 验证公开源。
+
 ## 选择一个 Skill
 
 | 场景 | Skill | 直接得到什么 | 文档 |

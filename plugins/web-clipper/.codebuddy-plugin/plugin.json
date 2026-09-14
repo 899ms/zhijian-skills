@@ -1,0 +1,13 @@
+{
+  "name": "web-clipper",
+  "description": "把公开文章 URL 和归档页变成可迁移、可追溯、支持 Agent 批量收藏的 Markdown。",
+  "version": "1.0.0",
+  "author": {
+    "name": "智见 AI"
+  },
+  "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/web-clipper/README.zh-CN.md",
+  "repository": "https://github.com/zjp1997720/zhijian-skills",
+  "skills": [
+    "./skills/web-clipper"
+  ]
+}

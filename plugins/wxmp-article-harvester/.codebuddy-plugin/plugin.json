@@ -1,0 +1,13 @@
+{
+  "name": "wxmp-article-harvester",
+  "description": "把指定公众号加工成可迁移的 Markdown、索引和真实反映完成度的采集报告。",
+  "version": "1.0.0",
+  "author": {
+    "name": "智见 AI"
+  },
+  "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/wxmp-article-harvester/README.zh-CN.md",
+  "repository": "https://github.com/zjp1997720/zhijian-skills",
+  "skills": [
+    "./skills/wxmp-article-harvester"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "codex-model-routing-team",
+  "description": "【需 Codex 宿主能力】主 Agent 负责 TeamPlan、所有权、集成和验收；普通 Worker 默认走原生 Sol Medium，Luna 负责可机械验收的批量任务。",
+  "version": "3.1.0",
+  "author": {
+    "name": "智见 AI"
+  },
+  "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/codex-model-routing-team/README.zh-CN.md",
+  "repository": "https://github.com/zjp1997720/zhijian-skills",
+  "skills": [
+    "./skills/codex-model-routing-team"
+  ]
+}

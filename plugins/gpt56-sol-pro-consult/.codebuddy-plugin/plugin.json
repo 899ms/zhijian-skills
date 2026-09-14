@@ -1,0 +1,13 @@
+{
+  "name": "gpt56-sol-pro-consult",
+  "description": "【需 Codex 宿主能力】通过 Codex Chrome 获得有文件依据、完成模型核验的 GPT 5.6 Sol Pro 二次判断。",
+  "version": "1.0.0",
+  "author": {
+    "name": "智见 AI"
+  },
+  "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/gpt56-sol-pro-consult/README.zh-CN.md",
+  "repository": "https://github.com/zjp1997720/zhijian-skills",
+  "skills": [
+    "./skills/gpt56-sol-pro-consult"
+  ]
+}

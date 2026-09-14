@@ -1,0 +1,13 @@
+{
+  "name": "codex-cli-model-bridge",
+  "description": "在 Codex 里接入已验证的 Grok、DeepSeek 等本机模型，同时保住 ChatGPT 的默认 Provider 和历史。",
+  "version": "1.0.1",
+  "author": {
+    "name": "智见 AI"
+  },
+  "homepage": "https://github.com/zjp1997720/zhijian-skills/blob/main/docs/skills/codex-cli-model-bridge/README.zh-CN.md",
+  "repository": "https://github.com/zjp1997720/zhijian-skills",
+  "skills": [
+    "./skills/codex-cli-model-bridge"
+  ]
+}

@@ -37,6 +37,24 @@ npx skills add zjp1997720/zhijian-skills \
 
 > This is the only publishing repository. New Skills, releases, Issues, and contributions all belong here.
 
+## Add the WorkBuddy marketplace
+
+Open **Experts · Skills · Connectors → Skills → Bundles → Add marketplace** and enter:
+
+```text
+zjp1997720/zhijian-skills
+```
+
+The full Git URL `https://github.com/zjp1997720/zhijian-skills.git` also works. Select `zhijian-skills` after adding it and install individual bundles as needed. Adding the marketplace does not install every Skill.
+
+Use the repository URL, not a `/tree/main/skills` web page or raw JSON URL. Git distribution preserves each complete Skill payload, including scripts, references, and assets.
+
+Catalog availability does not imply WorkBuddy runtime compatibility. Entries marked `需 Codex 宿主能力` require Codex host capabilities. Other entries may still require local CLIs, authentication, or dependencies; consult their documentation. This adapter does not change those requirements.
+
+Maintainers: the catalog is generated from `registry/skills.json` and existing Chinese documentation. Run `python3 scripts/build_workbuddy_marketplace.py` after catalog/version changes; CI checks for drift.
+
+The manifests and repository-local symlinks under `plugins/` are generated; editable Skill source remains under `skills/`. Installation materializes the links into complete files. Git checkouts must support symlinks. Verified with macOS WorkBuddy; Windows has not been tested. Run `python3 scripts/verify_workbuddy_install.py --cli <WorkBuddy-bundled-codebuddy>` to check installation, cold-start discovery, and payload hashes in a temporary config. Add `--source zjp1997720/zhijian-skills` to verify the public source.
+
 ## Choose a Skill
 
 | Area | Skill | Result | Documentation |
